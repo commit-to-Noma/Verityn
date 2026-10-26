@@ -161,6 +161,14 @@ async function postJson(path: string, payload: unknown, signal?: AbortSignal): P
         body.error_code,
       )
     }
+    if (res.status === 404) {
+      throw new ApiError(
+        'http',
+        'Simulation route not found. Restart the backend from the project root, then try again.',
+        res.status,
+        'NOT_FOUND',
+      )
+    }
     throw new ApiError('http', `Backend replied HTTP ${res.status}.`, res.status, null)
   }
   if (body === null) {

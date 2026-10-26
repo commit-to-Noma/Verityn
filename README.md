@@ -4,7 +4,7 @@ A coach that steps back: learners predict what a circuit will do, build it,
 and compare against a deterministic simulation — with AI help that fades out.
 See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestones 1–5: scaffold, solver, evaluator, API, integration)
+## Implemented (Milestones 1–6: scaffold, solver, evaluator, API, integration, canvas)
 
 - React + Vite + TypeScript frontend with Tailwind CSS 4.
 - Flask backend with `GET /api/health` returning `{"status": "ok"}`.
@@ -15,6 +15,11 @@ See `docs/` for the architecture, UI spec, and test plan.
   IDs) and example predictions checked (verdict rows with deciding
   numbers). Network, HTTP, and malformed-payload failures render as
   error rows with retry; aborted requests stay silent.
+- Buildable circuit canvas (React Flow): place batteries and bulbs,
+  drag between terminals to add wires, delete parts, and run the
+  circuit. Results show measurements with lit-bulb glow, or name the
+  problem with the offending parts outlined. Canvas circuits convert
+  to netlists client-side; all physics stays server-side.
 - Deterministic circuit solver + validator (`src/verityn/solver.py`):
   battery, resistor, bulb (fixed 10 Ω), switch, and wire circuits solved
   with modified nodal analysis; rejected circuits return an error code,
@@ -32,9 +37,9 @@ See `docs/` for the architecture, UI spec, and test plan.
 
 ## Not yet implemented
 
-Canvas and circuit building, learning flow, help ladder, Meta AI
-integration, solo mode, persistence, deployment. The UI has example
-circuits and predictions only; free-form building arrives later.
+Switches and resistors on canvas, prediction-on-canvas, learning
+flow, help ladder, Meta AI integration, solo mode, persistence,
+deployment. Canvas predictions and free-form values arrive later.
 
 ## Prerequisites
 
@@ -103,3 +108,11 @@ python -m pytest backend/tests -q   # backend tests (venv active)
 If `npm` fails with `EPERM` on `~/.npm` (root-owned cache from an old npm
 bug), fix ownership once with `sudo chown -R $(id -u):$(id -g) ~/.npm`,
 or run npm with a disposable cache: `npm_config_cache=/tmp/npm-cache npm …`.
+
+If Run Simulation reports HTTP 404, the process on port 5000 is a stale
+backend that predates the API routes: stop it (Ctrl-C in its terminal, or
+find it with `lsof -iTCP:5000 -sTCP:LISTEN` and `kill` it), then start the
+backend fresh from the repo root with `source .venv/bin/activate` and
+`python backend/app.py`. A tell-tale sign is "Address already in use" when
+starting the backend (the stale process still holds the port), or an HTML
+404 page — the current backend answers unknown API routes with JSON.

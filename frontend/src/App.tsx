@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import CircuitCanvas from './components/CircuitCanvas'
 import EvaluatePanel from './components/EvaluatePanel'
 import HealthStatus from './components/HealthStatus'
 import SimulatePanel from './components/SimulatePanel'
@@ -16,6 +17,7 @@ export default function App() {
       </header>
       <main className="flex flex-col gap-8">
         <HealthStatus />
+        <CircuitCanvas />
         <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
         <EvaluatePanel key={preset.id} preset={preset} />
       </main>
