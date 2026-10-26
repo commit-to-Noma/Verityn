@@ -4,19 +4,24 @@ A coach that steps back: learners predict what a circuit will do, build it,
 and compare against a deterministic simulation — with AI help that fades out.
 See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestone 1: scaffold)
+## Implemented (Milestones 1–2: scaffold, solver)
 
 - React + Vite + TypeScript frontend with Tailwind CSS 4.
 - Flask backend with `GET /api/health` returning `{"status": "ok"}`.
 - Frontend health indicator: loading, connected, and error states.
-- Backend smoke tests for the health endpoint.
+- Deterministic circuit solver + validator (`src/verityn/solver.py`):
+  battery, resistor, bulb (fixed 10 Ω), switch, and wire circuits solved
+  with modified nodal analysis; rejected circuits return an error code,
+  a message, and the offending component ids instead of numbers.
+- Backend tests for the health endpoint and the solver.
 - Pinned backend dependencies (`backend/requirements.txt`).
 
 ## Not yet implemented
 
-Circuit solver and validator, canvas and circuit building, prediction flow,
+Prediction evaluator, canvas and circuit building, prediction flow,
 help ladder, Meta AI integration, solo mode, persistence, deployment.
-Nothing in the UI beyond the scaffold screen exists yet.
+Nothing in the UI beyond the scaffold screen exists yet, and the solver
+is not yet wired to any API route.
 
 ## Prerequisites
 
