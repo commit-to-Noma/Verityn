@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Scaffold theme. Values chosen fresh for Milestone 1; the full token set
+   from the design specification lands with the first real screens. */
+@theme {
+  --color-canvas: #0a0e1c;
+  --color-canvas-2: #141b38;
+  --color-glass: rgb(255 255 255 / 0.07);
+  --color-glass-strong: rgb(255 255 255 / 0.12);
+  --color-glass-border: rgb(255 255 255 / 0.13);
+  --color-glass-border-strong: rgb(255 255 255 / 0.26);
+  --color-ink: #e9edfa;
+  --color-ink-muted: #a4accf;
+  --color-on-accent: #0a0e1c;
+  --color-flow: #38d6e9;
+  --color-ok: #34d399;
+  --color-bad: #fb7185;
+  --color-unknown: #94a3b8;
+
+  --font-sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  background:
+    radial-gradient(1100px 640px at 12% -10%, var(--color-canvas-2), transparent 60%),
+    var(--color-canvas);
+  background-attachment: fixed;
+}
+
+.glass-panel {
+  background: var(--color-glass);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 16px;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background: var(--color-canvas-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
