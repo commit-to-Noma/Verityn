@@ -4,11 +4,17 @@ A coach that steps back: learners predict what a circuit will do, build it,
 and compare against a deterministic simulation — with AI help that fades out.
 See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestones 1–4: scaffold, solver, evaluator, API)
+## Implemented (Milestones 1–5: scaffold, solver, evaluator, API, integration)
 
 - React + Vite + TypeScript frontend with Tailwind CSS 4.
 - Flask backend with `GET /api/health` returning `{"status": "ok"}`.
 - Frontend health indicator: loading, connected, and error states.
+- Frontend integration: a typed API client calls `POST /api/simulate`
+  and `POST /api/evaluate` through the Vite proxy. Example circuits can
+  be simulated (measurements or an invalid-circuit banner with offender
+  IDs) and example predictions checked (verdict rows with deciding
+  numbers). Network, HTTP, and malformed-payload failures render as
+  error rows with retry; aborted requests stay silent.
 - Deterministic circuit solver + validator (`src/verityn/solver.py`):
   battery, resistor, bulb (fixed 10 Ω), switch, and wire circuits solved
   with modified nodal analysis; rejected circuits return an error code,
@@ -26,9 +32,9 @@ See `docs/` for the architecture, UI spec, and test plan.
 
 ## Not yet implemented
 
-Canvas and circuit building, prediction flow, help ladder, Meta AI
-integration, solo mode, persistence, deployment. Nothing in the UI beyond
-the scaffold screen exists yet.
+Canvas and circuit building, learning flow, help ladder, Meta AI
+integration, solo mode, persistence, deployment. The UI has example
+circuits and predictions only; free-form building arrives later.
 
 ## Prerequisites
 
@@ -77,8 +83,9 @@ backend and it shows the error state with a retry button.
 ## Checks
 
 ```sh
+cd frontend && npm test         # frontend unit tests (vitest)
 cd frontend && npm run build   # typecheck + production build
-python -m pytest backend/tests -q   # backend smoke tests (venv active)
+python -m pytest backend/tests -q   # backend tests (venv active)
 ```
 
 ## Notes
