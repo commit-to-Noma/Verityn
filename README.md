@@ -4,7 +4,7 @@ A coach that steps back: learners predict what a circuit will do, build it,
 and compare against a deterministic simulation — with AI help that fades out.
 See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestones 1–3: scaffold, solver, evaluator)
+## Implemented (Milestones 1–4: scaffold, solver, evaluator, API)
 
 - React + Vite + TypeScript frontend with Tailwind CSS 4.
 - Flask backend with `GET /api/health` returning `{"status": "ok"}`.
@@ -16,15 +16,19 @@ See `docs/` for the architecture, UI spec, and test plan.
 - Deterministic prediction evaluator (`src/verityn/evaluator.py`):
   judges `lit` and `compare_brightness` claims against solver output as
   CONSISTENT, CONTRADICTED, or UNASSESSABLE, with model-derived evidence.
-- Backend tests for the health endpoint, solver, and evaluator.
+- Flask API: `POST /api/simulate` takes a bare netlist and returns the
+  solver result; `POST /api/evaluate` takes `{"claim", "netlist"}`,
+  solves server-side, and returns both result and verdict. Judged
+  outcomes return HTTP 200; malformed requests return HTTP 400
+  `MALFORMED_REQUEST`; unknown routes and methods return JSON errors.
+- Backend tests for the health endpoint, solver, evaluator, and API.
 - Pinned backend dependencies (`backend/requirements.txt`).
 
 ## Not yet implemented
 
 Canvas and circuit building, prediction flow, help ladder, Meta AI
 integration, solo mode, persistence, deployment. Nothing in the UI beyond
-the scaffold screen exists yet, and neither solver nor evaluator is yet
-wired to any API route.
+the scaffold screen exists yet.
 
 ## Prerequisites
 
