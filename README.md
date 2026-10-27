@@ -1,4 +1,4 @@
-# Verityn — Predict. Build. Prove.
+# Verityn — Predict. Build. Reality check.
 
 A coach that steps back: learners predict what a circuit will do, build it,
 and compare against a deterministic simulation — with AI help that fades out.
