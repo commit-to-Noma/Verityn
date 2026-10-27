@@ -13,6 +13,7 @@ import type { ApiComponent, Netlist } from '../api/client'
 export interface CanvasNodeInput {
   id: string
   kind: string
+  closed?: boolean
 }
 
 export interface CanvasEdgeInput {
@@ -56,17 +57,22 @@ export function toNetlist(graph: CanvasGraph): Netlist {
     if (!isRecord(entry) || !isNonEmptyString(entry.id)) {
       continue
     }
-    if (entry.kind !== 'battery' && entry.kind !== 'bulb') {
+    if (entry.kind !== 'battery' && entry.kind !== 'bulb' && entry.kind !== 'switch') {
       continue
     }
-    const kind = entry.kind as 'battery' | 'bulb'
-    const base = {
-      id: entry.id,
-      type: kind,
-      a: junctionId(entry.id, 'a'),
-      b: junctionId(entry.id, 'b'),
+    if (entry.kind === 'switch' && typeof entry.closed !== 'boolean') {
+      continue
     }
-    components.push(kind === 'battery' ? { ...base, volts: BATTERY_VOLTS } : base)
+    const kind = entry.kind as 'battery' | 'bulb' | 'switch'
+    const id = entry.id
+    const junctions = { a: junctionId(id, 'a'), b: junctionId(id, 'b') }
+    if (kind === 'battery') {
+      components.push({ id, type: 'battery', volts: BATTERY_VOLTS, ...junctions })
+    } else if (kind === 'switch') {
+      components.push({ id, type: 'switch', closed: entry.closed as boolean, ...junctions })
+    } else {
+      components.push({ id, type: 'bulb', ...junctions })
+    }
   }
   for (const entry of edgesRaw) {
     if (!isRecord(entry)) {

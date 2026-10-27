@@ -13,7 +13,7 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { CircleX, Eraser, Lightbulb, LoaderCircle, Zap } from 'lucide-react'
+import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { SimulateResult } from '../api/client'
 import { ApiError, simulate } from '../api/client'
@@ -29,7 +29,7 @@ const BAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-bad
 /** Lit threshold shared with the evaluator's noise floor (watts). */
 const LIT_POWER = 1e-9
 
-type Tool = 'battery' | 'bulb' | 'delete' | null
+type Tool = 'battery' | 'bulb' | 'switch' | 'delete' | null
 
 type RunState =
   | { phase: 'idle' }
@@ -81,7 +81,7 @@ function CanvasInner() {
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
-  const counters = useRef({ battery: 0, bulb: 0, wire: 0 })
+  const counters = useRef({ battery: 0, bulb: 0, switch: 0, wire: 0 })
 
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -120,20 +120,39 @@ function CanvasInner() {
     }
   }
 
+  const toggleSwitch = (id: string) => {
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === id && node.data.kind === 'switch'
+          ? { ...node, data: { ...node.data, closed: !node.data.closed } }
+          : node,
+      ),
+    )
+    invalidate()
+  }
+
   const placeAt = (clientX: number, clientY: number) => {
-    if (tool !== 'battery' && tool !== 'bulb') {
+    if (tool !== 'battery' && tool !== 'bulb' && tool !== 'switch') {
       return
     }
     const position = screenToFlowPosition({ x: clientX, y: clientY })
     counters.current[tool] += 1
-    const id = `${tool === 'battery' ? 'B' : 'L'}${counters.current[tool]}`
+    const prefix = tool === 'battery' ? 'B' : tool === 'bulb' ? 'L' : 'S'
+    const id = `${prefix}${counters.current[tool]}`
     setNodes((current) => [
       ...current,
       {
         id,
         type: 'circuit',
         position: { x: Math.round(position.x / 20) * 20, y: Math.round(position.y / 20) * 20 },
-        data: { kind: tool, label: id, lit: false, invalid: false },
+        data: {
+          kind: tool,
+          label: id,
+          lit: false,
+          invalid: false,
+          closed: true,
+          onToggleClosed: toggleSwitch,
+        },
       },
     ])
     invalidate()
@@ -143,14 +162,22 @@ function CanvasInner() {
     setTool(kind)
     const position = screenToFlowPosition({ x: clientX, y: clientY })
     counters.current[kind] += 1
-    const id = `${kind === 'battery' ? 'B' : 'L'}${counters.current[kind]}`
+    const prefix = kind === 'battery' ? 'B' : kind === 'bulb' ? 'L' : 'S'
+    const id = `${prefix}${counters.current[kind]}`
     setNodes((current) => [
       ...current,
       {
         id,
         type: 'circuit',
         position: { x: Math.round(position.x / 20) * 20, y: Math.round(position.y / 20) * 20 },
-        data: { kind, label: id, lit: false, invalid: false },
+        data: {
+          kind,
+          label: id,
+          lit: false,
+          invalid: false,
+          closed: true,
+          onToggleClosed: toggleSwitch,
+        },
       },
     ])
     invalidate()
@@ -191,7 +218,7 @@ function CanvasInner() {
     const id = requestId.current
     setRunState({ phase: 'loading' })
     const netlist = toNetlist({
-      nodes: nodes.map((node) => ({ id: node.id, kind: node.data.kind })),
+      nodes: nodes.map((node) => ({ id: node.id, kind: node.data.kind, closed: node.data.closed })),
       edges: edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
@@ -257,6 +284,7 @@ function CanvasInner() {
   const tools = [
     { id: 'battery', label: 'Battery', Icon: Zap },
     { id: 'bulb', label: 'Bulb', Icon: Lightbulb },
+    { id: 'switch', label: 'Switch', Icon: ToggleLeft },
     { id: 'delete', label: 'Delete', Icon: Eraser },
   ] as const
 
@@ -300,6 +328,12 @@ function CanvasInner() {
                 <path d="M21 3c-7 0-12 5-12 11 0 5 3 8 6 10v3h12v-3c3-2 6-5 6-10 0-6-5-11-12-11Z" />
                 <path d="M15 27h12M17 30h8M16 13l5 5 5-5" />
               </svg>
+            ) : id === 'switch' ? (
+              <svg className="palette-part" viewBox="0 0 42 32" aria-hidden="true">
+                <path d="M4 24h6M32 24h6M10 24L28 8" />
+                <circle cx="10" cy="24" r="2.5" />
+                <circle cx="32" cy="24" r="2.5" />
+              </svg>
             ) : (
               <Icon className="h-5 w-5" aria-hidden="true" />
             )}
@@ -324,7 +358,7 @@ function CanvasInner() {
           onDrop={(event) => {
             event.preventDefault()
             const kind = event.dataTransfer.getData('application/verityn-component')
-            if (kind === 'battery' || kind === 'bulb') {
+            if (kind === 'battery' || kind === 'bulb' || kind === 'switch') {
               placeToolAt(kind, event.clientX, event.clientY)
             }
           }}

@@ -166,6 +166,21 @@ body {
   stroke: #fff3c4;
 }
 
+.switch-illustration {
+  fill: none;
+  stroke: #9da8ce;
+}
+
+.switch-illustration .component-lead,
+.switch-illustration .switch-blade {
+  stroke: var(--color-flow);
+}
+
+.switch-illustration .switch-contact {
+  fill: #d9e0ef;
+  stroke: none;
+}
+
 .battery-illustration text {
   fill: var(--color-ink);
   font-family: var(--font-sans);

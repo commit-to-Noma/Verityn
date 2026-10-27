@@ -89,7 +89,7 @@ describe('toNetlist', () => {
     ['null entries', { nodes: [null], edges: [null] }],
     ['non-record entries', { nodes: ['B1'], edges: ['W1'] }],
     ['empty ids', { nodes: [{ id: '', kind: 'bulb' }], edges: [] }],
-    ['unknown kind', { nodes: [{ id: 'S1', kind: 'switch' }], edges: [] }],
+    ['unknown kind', { nodes: [{ id: 'X1', kind: 'capacitor' }], edges: [] }],
   ])('never throws on malformed graphs: %s', (_label, graph) => {
     expect(() => toNetlist(graph as unknown as CanvasGraph)).not.toThrow()
   })
@@ -150,6 +150,55 @@ describe('toNetlist', () => {
   it('names junctions consistently', () => {
     expect(junctionId('B1', 'a')).toBe('B1.a')
     expect(junctionId('L12', 'b')).toBe('L12.b')
+  })
+
+  it('converts a closed switch exactly', () => {
+    expect(
+      toNetlist({ nodes: [{ id: 'S1', kind: 'switch', closed: true }], edges: [] }),
+    ).toEqual({
+      components: [{ id: 'S1', type: 'switch', closed: true, a: 'S1.a', b: 'S1.b' }],
+    })
+  })
+
+  it('converts an open switch exactly', () => {
+    expect(
+      toNetlist({ nodes: [{ id: 'S1', kind: 'switch', closed: false }], edges: [] }),
+    ).toEqual({
+      components: [{ id: 'S1', type: 'switch', closed: false, a: 'S1.a', b: 'S1.b' }],
+    })
+  })
+
+  it('converts a battery-switch-bulb loop with wires', () => {
+    const graph: CanvasGraph = {
+      nodes: [
+        node('B1', 'battery'),
+        { id: 'S1', kind: 'switch', closed: true },
+        node('L1', 'bulb'),
+      ],
+      edges: [
+        edge('W1', 'B1', 'a', 'S1', 'a'),
+        edge('W2', 'S1', 'b', 'L1', 'a'),
+        edge('W3', 'L1', 'b', 'B1', 'b'),
+      ],
+    }
+    expect(toNetlist(graph)).toEqual({
+      components: [
+        { id: 'B1', type: 'battery', volts: 6, a: 'B1.a', b: 'B1.b' },
+        { id: 'S1', type: 'switch', closed: true, a: 'S1.a', b: 'S1.b' },
+        { id: 'L1', type: 'bulb', a: 'L1.a', b: 'L1.b' },
+        { id: 'W1', type: 'wire', a: 'B1.a', b: 'S1.a' },
+        { id: 'W2', type: 'wire', a: 'S1.b', b: 'L1.a' },
+        { id: 'W3', type: 'wire', a: 'L1.b', b: 'B1.b' },
+      ],
+    })
+  })
+
+  it.each([[{}], [{ closed: 'yes' }]])('skips a switch with invalid closed (%j)', (extra) => {
+    const graph = {
+      nodes: [{ id: 'S1', kind: 'switch', ...extra }],
+      edges: [],
+    }
+    expect(toNetlist(graph as unknown as CanvasGraph)).toEqual({ components: [] })
   })
 })
 

@@ -15,9 +15,10 @@ See `docs/` for the architecture, UI spec, and test plan.
   IDs) and example predictions checked (verdict rows with deciding
   numbers). Network, HTTP, and malformed-payload failures render as
   error rows with retry; aborted requests stay silent.
-- Buildable circuit canvas (React Flow): place batteries and bulbs,
-  drag between terminals to add wires, delete parts, and run the
-  circuit. Results show measurements with lit-bulb glow, or name the
+- Buildable circuit canvas (React Flow): place batteries, bulbs, and
+  switches (each switch toggles open/closed), drag between terminals
+  to add wires, delete parts, and run the circuit. Results show
+  measurements with lit-bulb glow, or name the
   problem with the offending parts outlined. Canvas circuits convert
   to netlists client-side; all physics stays server-side.
 - Deterministic circuit solver + validator (`src/verityn/solver.py`):
