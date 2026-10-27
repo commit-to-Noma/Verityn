@@ -18,10 +18,13 @@ import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
-import type { Choice } from '../lessons/lesson'
-import { choiceToClaim } from '../lessons/lesson'
+import type { Challenge, Choice, Prediction } from '../lessons/lesson'
+import { LIT_POWER_W, choiceToClaim } from '../lessons/lesson'
+import type { CoachTraceOutcome } from '../lessons/trace'
+import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
+import EvidenceTrace from './EvidenceTrace'
 import ReadoutValue from './ReadoutValue'
 import SimulationResultView from './SimulationResultView'
 import type { CircuitNodeType } from './canvas/CircuitNode'
@@ -32,15 +35,12 @@ import type { LessonSeed } from '../lessons/lesson'
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
 const BAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-bad)' }
 
-/** Lit threshold shared with the evaluator's noise floor (watts). */
-const LIT_POWER = 1e-9
-
 type Tool = 'battery' | 'bulb' | 'switch' | 'delete' | null
 
 type RunState =
   | { phase: 'idle' }
   | { phase: 'loading' }
-  | { phase: 'done'; result: SimulateResult }
+  | { phase: 'done'; result: SimulateResult; netlist: Netlist }
   | { phase: 'error'; message: string }
 
 type VerdictState =
@@ -130,7 +130,15 @@ function seedCount(seed: LessonSeed | undefined, kind: string): number {
   return seed?.nodes.filter((node) => node.kind === kind).length ?? 0
 }
 
-function CoachAsk({ session, netlist }: { session: string | null; netlist: Netlist }) {
+function CoachAsk({
+  session,
+  netlist,
+  onResult,
+}: {
+  session: string | null
+  netlist: Netlist
+  onResult?: (outcome: CoachTraceOutcome) => void
+}) {
   const [coachState, setCoachState] = useState<CoachState>({ phase: 'idle' })
   const coachController = useRef<AbortController | null>(null)
 
@@ -138,10 +146,9 @@ function CoachAsk({ session, netlist }: { session: string | null; netlist: Netli
 
   const ask = () => {
     if (session === null) {
-      setCoachState({
-        phase: 'error',
-        message: "Coach unavailable: the prediction wasn't recorded.",
-      })
+      const message = "Coach unavailable: the prediction wasn't recorded."
+      setCoachState({ phase: 'error', message })
+      onResult?.({ phase: 'unavailable', message })
       return
     }
     coachController.current?.abort()
@@ -156,17 +163,18 @@ function CoachAsk({ session, netlist }: { session: string | null; netlist: Netli
         }
         if (answer.eligible) {
           setCoachState({ phase: 'done', text: answer.text, provider: answer.provider })
+          onResult?.({ phase: 'done', text: answer.text, provider: answer.provider })
         } else {
           setCoachState({ phase: 'refused', message: answer.message })
+          onResult?.({ phase: 'unavailable', message: answer.message })
         }
       } catch (err) {
         if (next.signal.aborted) {
           return
         }
-        setCoachState({
-          phase: 'error',
-          message: err instanceof ApiError ? err.message : 'Request failed.',
-        })
+        const message = err instanceof ApiError ? err.message : 'Request failed.'
+        setCoachState({ phase: 'error', message })
+        onResult?.({ phase: 'unavailable', message })
       }
     })()
   }
@@ -214,16 +222,20 @@ function CoachAsk({ session, netlist }: { session: string | null; netlist: Netli
   )
 }
 
-function TwistVerdict({
+function ClaimVerdict({
   state,
   choice,
   session,
   onRetry,
+  onCoached,
+  coachEnabled,
 }: {
   state: VerdictState
   choice: Choice
   session: string | null
   onRetry: () => void
+  onCoached?: (outcome: CoachTraceOutcome) => void
+  coachEnabled: boolean
 }) {
   if (state.phase === 'idle') {
     return (
@@ -277,8 +289,8 @@ function TwistVerdict({
             This tests your prediction against the model, not you.
           </p>
         </div>
-        {state.verdict.status === 'CONTRADICTED' && (
-          <CoachAsk session={session} netlist={state.netlist} />
+        {coachEnabled && state.verdict.status === 'CONTRADICTED' && (
+          <CoachAsk session={session} netlist={state.netlist} onResult={onCoached} />
         )}
       </>
     )
@@ -301,17 +313,23 @@ function TwistVerdict({
 function CanvasInner({
   seed,
   eyebrow = 'Step 2 of 3',
-  twistChoice,
-  twistClaim,
+  choice,
+  claim,
   coachSession,
   onSolved,
+  prediction,
+  challenge,
+  solo = false,
 }: {
   seed?: LessonSeed
   eyebrow?: string
-  twistChoice?: Choice
-  twistClaim?: { type: string; component: string }
+  choice?: Choice
+  claim?: { type: string; component: string }
   coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
+  prediction?: Prediction | null
+  challenge?: Challenge
+  solo?: boolean
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(seed))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(seedEdges(seed))
@@ -319,6 +337,7 @@ function CanvasInner({
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
+  const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
   const counters = useRef({
@@ -345,6 +364,7 @@ function CanvasInner({
     )
     setEdges((current) => current.map((edge) => ({ ...edge, style: FLOW_EDGE_STYLE })))
     setVerdictState({ phase: 'idle' })
+    setCoachOutcome(null)
   }
 
   const toggleSwitch = (id: string) => {
@@ -486,7 +506,7 @@ function CanvasInner({
               lit:
                 result.ok &&
                 node.data.kind === 'bulb' &&
-                (result.components[node.id]?.power ?? 0) > LIT_POWER,
+                (result.components[node.id]?.power ?? 0) > LIT_POWER_W,
               invalid: offenders.has(node.id),
               measurement: result.ok ? result.components[node.id] : undefined,
             },
@@ -498,11 +518,10 @@ function CanvasInner({
             style: offenders.has(edge.id) ? BAD_EDGE_STYLE : FLOW_EDGE_STYLE,
           })),
         )
-        setRunState({ phase: 'done', result })
+        setRunState({ phase: 'done', result, netlist })
         if (result.ok) {
           onSolved?.(result)
-          const verdictClaim =
-            twistChoice && twistClaim ? choiceToClaim(twistChoice, twistClaim) : null
+          const verdictClaim = choice && claim ? choiceToClaim(choice, claim) : null
           if (verdictClaim) {
             setVerdictState({ phase: 'checking' })
             try {
@@ -537,7 +556,7 @@ function CanvasInner({
         })
       }
     })()
-  }, [edges, nodes, onSolved, setEdges, setNodes, twistChoice, twistClaim])
+  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim])
 
   const loopClosed = isClosedLoop(nodes, edges)
 
@@ -702,12 +721,14 @@ function CanvasInner({
         </div>
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
-      {twistChoice && twistClaim && runState.phase === 'done' && runState.result.ok && (
-        <TwistVerdict
+      {choice && claim && runState.phase === 'done' && runState.result.ok && (
+        <ClaimVerdict
           state={verdictState}
-          choice={twistChoice}
+          choice={choice}
           session={coachSession ?? null}
           onRetry={run}
+          onCoached={setCoachOutcome}
+          coachEnabled={!solo}
         />
       )}
       {runState.phase === 'error' && (
@@ -723,6 +744,25 @@ function CanvasInner({
           </button>
         </div>
       )}
+      {runState.phase === 'done' && prediction && challenge && (
+        <EvidenceTrace
+          input={{
+            prediction,
+            question: challenge.question,
+            netlist: runState.netlist,
+            result: runState.result,
+            verdict:
+              verdictState.phase === 'done'
+                ? { status: verdictState.verdict.status, evidence: verdictState.verdict.evidence }
+                : null,
+            expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
+            coach: solo
+              ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE }
+              : coachOutcome,
+            coachAvailable: choice !== undefined || solo,
+          }}
+        />
+      )}
     </section>
   )
 }
@@ -731,27 +771,36 @@ function CanvasInner({
 export default function CircuitCanvas({
   seed,
   eyebrow,
-  twistChoice,
-  twistClaim,
+  choice,
+  claim,
   coachSession,
   onSolved,
+  prediction,
+  challenge,
+  solo,
 }: {
   seed?: LessonSeed
   eyebrow?: string
-  twistChoice?: Choice
-  twistClaim?: { type: string; component: string }
+  choice?: Choice
+  claim?: { type: string; component: string }
   coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
+  prediction?: Prediction | null
+  challenge?: Challenge
+  solo?: boolean
 }) {
   return (
     <ReactFlowProvider>
       <CanvasInner
         seed={seed}
         eyebrow={eyebrow}
-        twistChoice={twistChoice}
-        twistClaim={twistClaim}
+        choice={choice}
+        claim={claim}
         coachSession={coachSession}
         onSolved={onSolved}
+        prediction={prediction}
+        challenge={challenge}
+        solo={solo}
       />
     </ReactFlowProvider>
   )

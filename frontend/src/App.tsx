@@ -8,6 +8,7 @@ import type { SimulateResult } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
+import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
 import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
 
@@ -31,11 +32,20 @@ export default function App() {
   const [twistStarted, setTwistStarted] = useState(false)
   const [twistPrediction, setTwistPrediction] = useState<Prediction | null>(null)
   const [twistSession, setTwistSession] = useState<string | null>(null)
+  const [twistDone, setTwistDone] = useState(false)
+  const [transferStarted, setTransferStarted] = useState(false)
+  const [transferPrediction, setTransferPrediction] = useState<Prediction | null>(null)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const handleL1Solved = useCallback((result: SimulateResult) => {
     if (matchesExpected(result, L1.expectedFixed)) {
       setL1Done(true)
+    }
+  }, [])
+
+  const handleTwistSolved = useCallback((result: SimulateResult) => {
+    if (matchesExpected(result, L1.twist.expectedFixed)) {
+      setTwistDone(true)
     }
   }, [])
 
@@ -70,7 +80,13 @@ export default function App() {
         ) : !twistStarted ? (
           <>
             <PredictionSummary prediction={l1Prediction} hint={L1.fix.hint} />
-            <CircuitCanvas key="l1" seed={L1.seed} onSolved={handleL1Solved} />
+            <CircuitCanvas
+              key="l1"
+              seed={L1.seed}
+              onSolved={handleL1Solved}
+              prediction={l1Prediction}
+              challenge={L1}
+            />
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -91,16 +107,59 @@ export default function App() {
             eyebrow="Twist 1 of 2"
             onComplete={handleTwistPredicted}
           />
-        ) : (
+        ) : !transferStarted ? (
           <>
             <PredictionSummary prediction={twistPrediction} hint={L1.twist.fix.hint} />
             <CircuitCanvas
               key="twist"
               seed={L1.twist.seed}
               eyebrow="Twist 2 of 2"
-              twistChoice={twistPrediction.choice}
-              twistClaim={L1.twist.claim}
+              choice={twistPrediction.choice}
+              claim={L1.twist.claim}
               coachSession={twistSession}
+              onSolved={handleTwistSolved}
+              prediction={twistPrediction}
+              challenge={L1.twist}
+            />
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={!twistDone}
+                onClick={() => setTransferStarted(true)}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Start solo transfer
+              </button>
+              {!twistDone && (
+                <p className="text-ink-muted text-sm">Complete the Twist circuit first.</p>
+              )}
+            </div>
+          </>
+        ) : transferPrediction === null ? (
+          <PredictionScreen
+            challenge={TRANSFER}
+            eyebrow="Solo 1 of 2"
+            continueLabel="Continue to wire it"
+            onComplete={setTransferPrediction}
+          />
+        ) : (
+          <>
+            <PredictionSummary prediction={transferPrediction} hint={TRANSFER.fix.hint} />
+            <div className="glass-panel p-4" role="note">
+              <p className="text-ink-muted text-sm">
+                Solo mode — the AI coach is off for this challenge. Predict, build, and check
+                against the simulator.
+              </p>
+            </div>
+            <CircuitCanvas
+              key="transfer"
+              seed={TRANSFER.seed}
+              eyebrow="Solo 2 of 2"
+              choice={transferPrediction.choice}
+              claim={TRANSFER.claim}
+              prediction={transferPrediction}
+              challenge={TRANSFER}
+              solo
             />
           </>
         )}

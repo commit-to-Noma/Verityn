@@ -1,0 +1,46 @@
+{
+  "id": "L1T2",
+  "title": "Solo: the second bulb",
+  "question": "You wire a second bulb across the first bulb's terminals. Will the second bulb light?",
+  "start": {
+    "components": [
+      {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+      {"id": "S1", "type": "switch", "closed": true, "a": "p", "b": "m"},
+      {"id": "L1", "type": "bulb", "a": "m", "b": "n1"},
+      {"id": "W9", "type": "wire", "a": "n1", "b": "0"},
+      {"id": "L2", "type": "bulb", "a": "m", "b": "x2"}
+    ]
+  },
+  "expectedStart": {
+    "ok": false,
+    "code": "DANGLING_TERMINAL",
+    "component_ids": ["L2"],
+    "lit": false
+  },
+  "fix": {
+    "wire": {"a": "x2", "b": "n1"},
+    "hint": "Connect the loose terminal of the second bulb to the loop."
+  },
+  "expectedFixed": {
+    "ok": true,
+    "lit": true,
+    "component": "L2",
+    "current": 0.6,
+    "power": 3.6
+  },
+  "claim": {"type": "lit", "component": "L2"},
+  "seed": {
+    "nodes": [
+      {"id": "B1", "kind": "battery", "x": 40, "y": 140},
+      {"id": "S1", "kind": "switch", "closed": true, "x": 230, "y": 140},
+      {"id": "L1", "kind": "bulb", "x": 420, "y": 140},
+      {"id": "L2", "kind": "bulb", "x": 230, "y": 300}
+    ],
+    "edges": [
+      {"id": "W1", "source": "B1", "sourceTerminal": "a", "target": "S1", "targetTerminal": "a"},
+      {"id": "W2", "source": "S1", "sourceTerminal": "b", "target": "L1", "targetTerminal": "a"},
+      {"id": "W3", "source": "L1", "sourceTerminal": "b", "target": "B1", "targetTerminal": "b"},
+      {"id": "W4", "source": "L2", "sourceTerminal": "a", "target": "L1", "targetTerminal": "a"}
+    ]
+  }
+}

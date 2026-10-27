@@ -11,10 +11,12 @@ export default function PredictionScreen({
   challenge,
   eyebrow,
   onComplete,
+  continueLabel = 'Continue to fix it',
 }: {
   challenge: Challenge
   eyebrow: string
   onComplete: (prediction: Prediction) => void
+  continueLabel?: string
 }) {
   const [choice, setChoice] = useState<Choice | null>(null)
   const [why, setWhy] = useState('')
@@ -72,7 +74,7 @@ export default function PredictionScreen({
           }}
           className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Continue to fix it
+          {continueLabel}
         </button>
         {!ready && <p className="text-ink-muted text-sm">Choose Yes, No, or Not sure to continue.</p>}
       </div>

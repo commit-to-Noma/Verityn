@@ -3,7 +3,10 @@
  * This module knows nothing about circuits. All circuit-specific content
  * (netlists, wires, expected outcomes) lives in the lesson packs. */
 
-import type { Claim, Netlist, SimulateResult } from '../api/client'
+import type { Claim, Netlist, SimulateResult, VerdictStatus } from '../api/client'
+
+/** Bulb lit threshold, shared with the evaluator's noise floor (watts). */
+export const LIT_POWER_W = 1e-9
 
 export type Choice = 'yes' | 'no' | 'not_sure'
 
@@ -58,6 +61,18 @@ export function matchesExpected(result: SimulateResult, expected: ExpectedFixed)
     closeEnough(measurement.current, expected.current) &&
     closeEnough(measurement.power, expected.power)
   )
+}
+
+/** Compares a recorded choice with a lesson-pack expected outcome.
+ *
+ * Used only where the pack stores a solver-verified expectation (the
+ * broken starting circuit, which the evaluator correctly refuses to
+ * judge). Not sure is unassessable: no definite prediction was made. */
+export function compareWithExpected(choice: Choice, expectedLit: boolean): VerdictStatus {
+  if (choice === 'not_sure') {
+    return 'UNASSESSABLE'
+  }
+  return (choice === 'yes') === expectedLit ? 'CONSISTENT' : 'CONTRADICTED'
 }
 
 /** Maps a recorded choice to a lit claim, or null when there is nothing to judge. */

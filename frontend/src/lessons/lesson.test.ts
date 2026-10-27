@@ -7,6 +7,7 @@ import {
   canProceed,
   choiceToClaim,
   CHOICE_LABELS,
+  compareWithExpected,
   createPrediction,
   matchesExpected,
 } from './lesson'
@@ -209,6 +210,14 @@ describe('completion and twist claims', () => {
     expect(matchesExpected(result, dark)).toBe(true)
   })
 
+  it('unlocks the transfer only on the twist pack numbers', () => {
+    const done = solved({ L1: { voltage: 0, current: 0, power: 0 } })
+    expect(matchesExpected(done, L1.twist.expectedFixed)).toBe(true)
+    const litResult = solved({ L1: { voltage: 6, current: 0.6, power: 3.6 } })
+    expect(matchesExpected(litResult, L1.twist.expectedFixed)).toBe(false)
+    expect(matchesExpected(rejected(), L1.twist.expectedFixed)).toBe(false)
+  })
+
   it('rejects mismatched, missing, and failed results', () => {
     const litResult = solved({ L1: { voltage: 6, current: 0.6, power: 3.5999999999999996 } })
     expect(matchesExpected(litResult, dark)).toBe(false)
@@ -234,5 +243,18 @@ describe('completion and twist claims', () => {
   it('maps Not sure and unsupported claims to no verdict', () => {
     expect(choiceToClaim('not_sure', { type: 'lit', component: 'L1' })).toBeNull()
     expect(choiceToClaim('yes', { type: 'compare_brightness', component: 'L1' })).toBeNull()
+  })
+})
+
+describe('compareWithExpected', () => {
+  it.each([
+    ['yes', true, 'CONSISTENT'],
+    ['no', false, 'CONSISTENT'],
+    ['yes', false, 'CONTRADICTED'],
+    ['no', true, 'CONTRADICTED'],
+    ['not_sure', true, 'UNASSESSABLE'],
+    ['not_sure', false, 'UNASSESSABLE'],
+  ] as const)('choice %s against expected lit=%s is %s', (choice, expectedLit, status) => {
+    expect(compareWithExpected(choice, expectedLit)).toBe(status)
   })
 })
