@@ -5,7 +5,8 @@ import { useSwitchToggle } from './switchToggle'
 export type CircuitNodeData = {
   kind: 'battery' | 'bulb' | 'switch'
   label: string
-  lit: boolean
+  /** Continuous bulb glow 0..1 from solver power; 0 for other kinds. */
+  glow: number
   invalid: boolean
   measurement?: {
     voltage: number
@@ -70,11 +71,16 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
             <path d="M57 32h10M62 27v10" className="battery-positive" />
           </svg>
         ) : data.kind === 'bulb' ? (
-          <svg className={`component-illustration bulb-illustration ${data.lit ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
+          <>
+            {data.glow > 0 && (
+              <div aria-hidden="true" className="bulb-glow" style={{ opacity: data.glow }} />
+            )}
+            <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
             <path d="M35 5c-10 0-17 7-17 16 0 7 4 11 8 15v4h18v-4c4-4 8-8 8-15 0-9-7-16-17-16Z" />
             <path d="M27 40h16M28 45h14M31 49h8" className="bulb-base" />
             <path d="M28 20l7 7 7-7" className="bulb-filament" />
-          </svg>
+            </svg>
+          </>
         ) : (
           <svg className="component-illustration switch-illustration" viewBox="0 0 70 54" aria-hidden="true">
             <path d="M2 40H14M56 40H68" className="component-lead" />

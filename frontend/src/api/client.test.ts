@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, evaluateClaim, providerBadge, recordPrediction, simulate } from './client'
+import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -262,6 +262,57 @@ describe('askCoach', () => {
     expect(failure.kind).toBe('http')
     expect(failure.status).toBe(500)
     expect(failure.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+describe('proposeCircuit', () => {
+  const proposal = {
+    components: [
+      { id: 'B1', type: 'battery' },
+      { id: 'L1', type: 'bulb' },
+    ],
+    connections: [
+      { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: true },
+    ],
+  }
+  const good = { proposal, assumptions: ['Battery voltage assumed 6 V.'], provider: 'meta-spark' }
+
+  it('returns a guarded proposal unchanged', async () => {
+    stubFetch(() => okResponse(good))
+    await expect(proposeCircuit('data:image/png;base64,AA==')).resolves.toEqual(good)
+  })
+
+  it('posts the image to the vision endpoint', async () => {
+    const mock = vi.fn(async () => okResponse(good))
+    vi.stubGlobal('fetch', mock)
+    await proposeCircuit('data:image/png;base64,AA==')
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/vision/propose')
+    expect(JSON.parse(init.body as string)).toEqual({ image: 'data:image/png;base64,AA==' })
+  })
+
+  it.each([
+    ['missing proposal', { assumptions: [], provider: 'meta-spark' }],
+    ['bad component type', { ...good, proposal: { ...proposal, components: [{ id: 'X1', type: 'resistor' }] } }],
+    ['bad endpoint', { ...good, proposal: { ...proposal, connections: [{ from: { node: 'B1' }, to: { node: 'L1', terminal: 'a' }, uncertain: false }] } }],
+    ['uncertain mistyped', { ...good, proposal: { ...proposal, connections: [{ from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: 'no' }] } }],
+    ['assumptions mistyped', { ...good, assumptions: 'none' }],
+    ['not an object', []],
+  ])('rejects malformed payloads: %s', async (_label, body) => {
+    stubFetch(() => okResponse(body))
+    const failure = await proposeCircuit('data:image/png;base64,AA==').catch((err: unknown) => err)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('payload')
+  })
+
+  it('maps vision outages to http errors with the server code', async () => {
+    stubFetch(() => errResponse(500, { error_code: 'INTERNAL_ERROR', error_message: 'Vision unavailable.' }))
+    const failure = (await proposeCircuit('data:image/png;base64,AA==').catch(
+      (err: unknown) => err,
+    )) as ApiError
+    expect(failure.kind).toBe('http')
+    expect(failure.status).toBe(500)
+    expect(failure.message).toBe('Vision unavailable.')
   })
 })
 

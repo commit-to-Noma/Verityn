@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import CircuitCanvas from './components/CircuitCanvas'
 import EvaluatePanel from './components/EvaluatePanel'
 import HealthStatus from './components/HealthStatus'
 import PredictionScreen from './components/PredictionScreen'
 import SimulatePanel from './components/SimulatePanel'
+import SnapBuildLab from './components/SnapBuildLab'
 import type { SimulateResult } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
@@ -49,6 +50,26 @@ export default function App() {
     }
   }, [])
 
+  const stage = !l1Prediction
+    ? 'l1-predict'
+    : !twistStarted
+      ? 'l1-build'
+      : !twistPrediction
+        ? 'twist-predict'
+        : !transferStarted
+          ? 'twist-build'
+          : !transferPrediction
+            ? 'transfer-predict'
+            : 'transfer-build'
+  const firstStage = useRef(true)
+  useEffect(() => {
+    if (firstStage.current) {
+      firstStage.current = false
+      return
+    }
+    document.getElementById('lesson-flow')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [stage])
+
   const handleTwistPredicted = (prediction: Prediction) => {
     setTwistPrediction(prediction)
     void (async () => {
@@ -75,6 +96,7 @@ export default function App() {
       </header>
       <main className="flex flex-col gap-8">
         <HealthStatus />
+        <div id="lesson-flow" className="flex scroll-mt-4 flex-col gap-8">
         {l1Prediction === null ? (
           <PredictionScreen challenge={L1} eyebrow="Step 1 of 3" onComplete={setL1Prediction} />
         ) : !twistStarted ? (
@@ -163,8 +185,20 @@ export default function App() {
             />
           </>
         )}
-        <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
-        <EvaluatePanel key={preset.id} preset={preset} />
+        </div>
+        <details className="glass-panel p-4">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Dev / Debug Inspector
+            <span className="text-ink-muted ml-2 font-normal">
+              Raw API benches — not part of the learning flow.
+            </span>
+          </summary>
+          <div className="mt-4 flex flex-col gap-8">
+            <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
+            <EvaluatePanel key={preset.id} preset={preset} />
+          </div>
+        </details>
+        <SnapBuildLab />
       </main>
     </div>
   )

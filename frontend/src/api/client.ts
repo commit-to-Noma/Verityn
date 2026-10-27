@@ -293,3 +293,94 @@ export async function askCoach(
     await postJson('/api/coach/ask', { session_id: sessionId, netlist }, signal),
   )
 }
+
+/** Mirror of the server's image upload limits (pre-check only). */
+export const VISION_MAX_IMAGE_BYTES = 4 * 1024 * 1024
+export const VISION_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+
+export interface VisionComponent {
+  id: string
+  type: 'battery' | 'bulb' | 'switch'
+  closed?: boolean
+}
+
+export interface VisionEndpoint {
+  node: string
+  terminal: string
+}
+
+export interface VisionConnection {
+  from: VisionEndpoint
+  to: VisionEndpoint
+  uncertain: boolean
+}
+
+export interface VisionProposal {
+  components: VisionComponent[]
+  connections: VisionConnection[]
+}
+
+export interface VisionProposeResult {
+  proposal: VisionProposal
+  assumptions: string[]
+  provider: string
+}
+
+function isVisionEndpoint(value: unknown): value is VisionEndpoint {
+  return (
+    isRecord(value) &&
+    typeof value.node === 'string' &&
+    typeof value.terminal === 'string'
+  )
+}
+
+function guardVisionProposal(body: unknown): VisionProposal {
+  if (!isRecord(body) || !Array.isArray(body.components) || !Array.isArray(body.connections)) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  for (const component of body.components) {
+    if (
+      !isRecord(component) ||
+      typeof component.id !== 'string' ||
+      (component.type !== 'battery' && component.type !== 'bulb' && component.type !== 'switch') ||
+      (component.closed !== undefined && typeof component.closed !== 'boolean')
+    ) {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+  }
+  for (const connection of body.connections) {
+    if (
+      !isRecord(connection) ||
+      !isVisionEndpoint(connection.from) ||
+      !isVisionEndpoint(connection.to) ||
+      typeof connection.uncertain !== 'boolean'
+    ) {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+  }
+  return body as unknown as VisionProposal
+}
+
+function guardVisionProposeResult(body: unknown): VisionProposeResult {
+  if (
+    !isRecord(body) ||
+    !Array.isArray(body.assumptions) ||
+    !body.assumptions.every((entry) => typeof entry === 'string') ||
+    typeof body.provider !== 'string'
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  return {
+    proposal: guardVisionProposal(body.proposal),
+    assumptions: body.assumptions,
+    provider: body.provider,
+  }
+}
+
+/** POST /api/vision/propose; nothing proposed reaches the solver here. */
+export async function proposeCircuit(
+  image: string,
+  signal?: AbortSignal,
+): Promise<VisionProposeResult> {
+  return guardVisionProposeResult(await postJson('/api/vision/propose', { image }, signal))
+}

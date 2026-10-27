@@ -1,7 +1,9 @@
 # Verityn: UI build spec (draft)
 
-Scope: three screens. Circuit workspace is the visual centrepiece. No 3D, no extra screens.
-Tokens: `tokens.css` (CSS variables mapped into Tailwind 4). No raw hex in components.
+Scope: linear learning flow (predict → build → compare → transfer) plus
+example panels. Circuit workspace is the visual centrepiece. No 3D, no extra screens.
+Tokens: CSS variables mapped into Tailwind 4. No raw hex in components.
+Sections 11–13 carry the locked submission roadmap (deadline Nov 4, 9:00 PM ET).
 
 ## 1. Principles
 - The canvas gets the most space and the least decoration.
@@ -128,4 +130,46 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
 8. Backdrop-filter off: panels still readable (solid fallback).
 
 ## 10. Deferred (do not build until the core path passes)
-3D hero element, freehand/Pencil recognition, voice input, charts, second topic, accounts.
+3D hero element, freehand/Pencil recognition, charts, second topic, accounts.
+
+## 11. Roadmap: solver-vs-AI clarity (Priority 1)
+
+- Solver output (measurements, verdicts, offender IDs) and AI output
+  (guiding questions) must be visually distinguishable: verdicts use
+  verdict icon + word; coach content always carries its provider badge
+  (`Meta Spark`, `Prototype coach`, never one for the other).
+- Solo/transfer stages show a persistent restrained note that the AI
+  coach is off; no coaching controls render there at all.
+- Evidence Trace steps are titled Prediction, Circuit built,
+  Simulation, Comparison, Coach. Comparison notes name their basis
+  ("Judged by the deterministic evaluator…", "Compared with the
+  expected outcome…"). Coach content repeats the received question
+  with the footnote "A prompt to reconsider — not a diagnosis."
+- Forbidden UI claims: mastery, learning gains, intelligence scores,
+  "zero hallucinations", prototype output presented as Meta AI.
+
+## 12. Roadmap: physics brought to life (Priority 3, presentation only)
+
+- Bulb glow scales continuously with solver-computed power (P = I²R);
+  zero power means no glow. Glow-up animation at most 500ms.
+- Wire current animation (SVG stroke-dash flow) runs only while the
+  solver reports current > 0 on that branch; it freezes the moment a
+  switch opens or the circuit is edited (stale results clear first).
+- Component highlights are restricted to IDs grounded in validated
+  solver evidence (offender IDs, measured parts). No speculative
+  smoke, sparks, or broken-node effects.
+- `prefers-reduced-motion`: static arrowheads and current numbers
+  replace animation; identical information, no motion.
+
+## 13. Roadmap: voice and Snap & Build UI (Priorities 2 and 4)
+
+- Voice Why input (P4): optional mic button beside the Why field,
+  hidden when unavailable; transcript lands in the same one-line
+  field, editable before submit. Typed input always works.
+- Snap & Build (P2): upload control plus a JSON netlist preview panel
+  with explicit Confirm / Discard actions. Nothing model-proposed
+  reaches the solver or canvas without confirmation; the preview is
+  labelled as unverified model output.
+- Coach-requested highlights (P4): rendered only for IDs validated
+  against the current canvas netlist; unknown IDs are dropped
+  silently, never guessed.

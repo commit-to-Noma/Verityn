@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import {
+  Background,
+  BackgroundVariant,
   ConnectionMode,
   ReactFlow,
   ReactFlowProvider,
@@ -18,8 +20,11 @@ import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
+import type { CanvasImportRequest } from '../canvas/layout'
+import { counterStarts } from '../canvas/layout'
+import { flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
-import { LIT_POWER_W, choiceToClaim } from '../lessons/lesson'
+import { choiceToClaim } from '../lessons/lesson'
 import type { CoachTraceOutcome } from '../lessons/trace'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
@@ -34,6 +39,11 @@ import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
 const BAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-bad)' }
+const UNCERTAIN_EDGE_STYLE: CSSProperties = {
+  strokeWidth: 2,
+  stroke: 'var(--color-unknown)',
+  strokeDasharray: '6 4',
+}
 
 type Tool = 'battery' | 'bulb' | 'switch' | 'delete' | null
 
@@ -105,7 +115,7 @@ function seedNodes(seed: LessonSeed | undefined): CircuitNodeType[] {
       data: {
         kind: node.kind as 'battery' | 'bulb' | 'switch',
         label: node.id,
-        lit: false,
+        glow: 0,
         invalid: false,
         closed: node.kind === 'switch' ? (node.closed ?? true) : true,
       },
@@ -124,10 +134,6 @@ function seedEdges(seed: LessonSeed | undefined): Edge[] {
     targetHandle: edge.targetTerminal,
     style: FLOW_EDGE_STYLE,
   }))
-}
-
-function seedCount(seed: LessonSeed | undefined, kind: string): number {
-  return seed?.nodes.filter((node) => node.kind === kind).length ?? 0
 }
 
 function CoachAsk({
@@ -320,6 +326,7 @@ function CanvasInner({
   prediction,
   challenge,
   solo = false,
+  importRequest,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -330,21 +337,28 @@ function CanvasInner({
   prediction?: Prediction | null
   challenge?: Challenge
   solo?: boolean
+  importRequest?: CanvasImportRequest | null
 }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(seed))
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(seedEdges(seed))
+  const initialSeed = importRequest?.seed ?? seed
+  const initialUncertain = importRequest?.uncertainIds ?? []
+  const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(initialSeed))
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
+    seedEdges(initialSeed).map((edge) => ({
+      ...edge,
+      style: initialUncertain.includes(edge.id) ? UNCERTAIN_EDGE_STYLE : FLOW_EDGE_STYLE,
+    })),
+  )
   const { screenToFlowPosition } = useReactFlow()
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
+  const uncertainRef = useRef<string[]>(initialUncertain)
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
   const counters = useRef({
-    battery: seedCount(seed, 'battery'),
-    bulb: seedCount(seed, 'bulb'),
-    switch: seedCount(seed, 'switch'),
-    wire: seed?.edges.length ?? 0,
+    ...counterStarts(seedNodes(initialSeed)),
+    wire: initialSeed?.edges.length ?? 0,
   })
 
   useEffect(() => () => controller.current?.abort(), [])
@@ -355,14 +369,21 @@ function CanvasInner({
     setRunState({ phase: 'idle' })
     setNodes((current) =>
       current.map((node) =>
-        node.data.lit || node.data.invalid
-          ? { ...node, data: { ...node.data, lit: false, invalid: false, measurement: undefined } }
+        node.data.glow > 0 || node.data.invalid
+          ? { ...node, data: { ...node.data, glow: 0, invalid: false, measurement: undefined } }
           : node.data.measurement
             ? { ...node, data: { ...node.data, measurement: undefined } }
           : node,
       ),
     )
-    setEdges((current) => current.map((edge) => ({ ...edge, style: FLOW_EDGE_STYLE })))
+    setEdges((current) =>
+      current.map((edge) => ({
+        ...edge,
+        style: uncertainRef.current.includes(edge.id) ? UNCERTAIN_EDGE_STYLE : FLOW_EDGE_STYLE,
+        animated: false,
+        className: undefined,
+      })),
+    )
     setVerdictState({ phase: 'idle' })
     setCoachOutcome(null)
   }
@@ -414,7 +435,7 @@ function CanvasInner({
         data: {
           kind: tool,
           label: id,
-          lit: false,
+          glow: 0,
           invalid: false,
           closed: true,
         },
@@ -438,7 +459,7 @@ function CanvasInner({
         data: {
           kind,
           label: id,
-          lit: false,
+          glow: 0,
           invalid: false,
           closed: true,
         },
@@ -471,6 +492,7 @@ function CanvasInner({
   const clear = () => {
     setNodes([])
     setEdges([])
+    uncertainRef.current = []
     invalidate()
   }
 
@@ -503,20 +525,32 @@ function CanvasInner({
             ...node,
             data: {
               ...node.data,
-              lit:
-                result.ok &&
-                node.data.kind === 'bulb' &&
-                (result.components[node.id]?.power ?? 0) > LIT_POWER_W,
+              glow:
+                result.ok && node.data.kind === 'bulb'
+                  ? glowIntensity(result.components[node.id]?.power ?? 0)
+                  : 0,
               invalid: offenders.has(node.id),
               measurement: result.ok ? result.components[node.id] : undefined,
             },
           })),
         )
         setEdges((current) =>
-          current.map((edge) => ({
-            ...edge,
-            style: offenders.has(edge.id) ? BAD_EDGE_STYLE : FLOW_EDGE_STYLE,
-          })),
+          current.map((edge) => {
+            const bad = offenders.has(edge.id)
+            const flow = bad
+              ? 'still'
+              : flowForCurrent(result.components[edge.id]?.current ?? 0)
+            return {
+              ...edge,
+              style: bad
+                ? BAD_EDGE_STYLE
+                : uncertainRef.current.includes(edge.id)
+                  ? UNCERTAIN_EDGE_STYLE
+                  : FLOW_EDGE_STYLE,
+              animated: flow !== 'still',
+              className: flow === 'reverse' ? 'flow-reverse' : undefined,
+            }
+          }),
         )
         setRunState({ phase: 'done', result, netlist })
         if (result.ok) {
@@ -605,8 +639,12 @@ function CanvasInner({
                 handlePaletteDragStart(event, id)
               }
             }}
-            className={`border-glass-border flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border text-ink ${
-              tool === id ? 'border-flow' : ''
+            className={`flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border text-ink transition hover:-translate-y-0.5 hover:shadow-lg ${
+              tool === id
+                ? id === 'delete'
+                  ? 'border-bad bg-glass-strong shadow-md'
+                  : 'border-flow bg-glass-strong shadow-md'
+                : 'border-glass-border bg-glass'
             }`}
           >
             {id === 'battery' ? (
@@ -635,7 +673,7 @@ function CanvasInner({
       <p className="text-ink-muted text-sm">
         Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.
       </p>
-      <div className="canvas-grid border-glass-border relative h-105 overflow-hidden rounded-2xl border">
+      <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
             nodes={nodes}
@@ -674,7 +712,9 @@ function CanvasInner({
             snapGrid={[20, 20]}
             colorMode="dark"
             aria-label="Circuit canvas"
-          />
+          >
+            <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#334155" />
+          </ReactFlow>
         </SwitchToggleContext.Provider>
         {nodes.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -778,6 +818,7 @@ export default function CircuitCanvas({
   prediction,
   challenge,
   solo,
+  importRequest,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -788,6 +829,7 @@ export default function CircuitCanvas({
   prediction?: Prediction | null
   challenge?: Challenge
   solo?: boolean
+  importRequest?: CanvasImportRequest | null
 }) {
   return (
     <ReactFlowProvider>
@@ -801,6 +843,7 @@ export default function CircuitCanvas({
         prediction={prediction}
         challenge={challenge}
         solo={solo}
+        importRequest={importRequest}
       />
     </ReactFlowProvider>
   )

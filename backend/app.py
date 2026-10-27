@@ -17,7 +17,7 @@ from werkzeug.exceptions import BadRequest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from verityn import coach, evaluator, fake_coach, meta_coach, solver  # noqa: E402
+from verityn import coach, evaluator, fake_coach, meta_coach, solver, vision  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
 
@@ -61,7 +61,7 @@ def _malformed_request(message):
     }), 400
 
 
-def create_app(provider=None, fallback=None) -> Flask:
+def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
     app = Flask(__name__)
 
     def _quiet_log_exception(exc_info):
@@ -73,6 +73,7 @@ def create_app(provider=None, fallback=None) -> Flask:
     store = coach.SessionStore()
     active_provider = provider or fake_coach.FakeCoachProvider()
     active_fallback = fallback
+    active_vision = vision_provider
 
     @app.get("/api/health")
     def health():
@@ -137,6 +138,31 @@ def create_app(provider=None, fallback=None) -> Flask:
             store, session_id, netlist, active_provider,
             fallback=active_fallback))
 
+    @app.post("/api/vision/propose")
+    def vision_propose():
+        body = _read_json_object()
+        if body is None:
+            return _malformed_request("Request body must be a JSON object.")
+        if active_vision is None:
+            return jsonify({"error_code": "INTERNAL_ERROR",
+                            "error_message": "Vision unavailable."}), 500
+        try:
+            data_url = vision.parse_data_url(body.get("image"))
+        except vision.VisionRequestError:
+            return _malformed_request("Invalid image payload.")
+        try:
+            proposal = active_vision.propose(data_url)
+        except coach.CoachProviderError as err:
+            app.logger.warning(
+                "vision propose failed: stage=%s http_status=%s "
+                "shape=%s reason=%s",
+                err.stage, err.http_status, err.shape, err.reason)
+            return jsonify({"error_code": "INTERNAL_ERROR",
+                            "error_message": "Unexpected server error."}), 500
+        return jsonify({"proposal": proposal,
+                        "assumptions": vision.ASSUMPTIONS,
+                        "provider": active_vision.name})
+
     @app.errorhandler(404)
     def not_found(_error):
         return jsonify({"error_code": "NOT_FOUND",
@@ -167,6 +193,8 @@ if __name__ == "__main__":
             meta_coach.MetaSparkProvider(
                 api_key=os.environ["MODEL_API_KEY"]),
             fallback=fake_coach.FakeCoachProvider(),
+            vision_provider=vision.MetaVisionProvider(
+                api_key=os.environ["MODEL_API_KEY"]),
         )
     # Debug mode stays off: the interactive debugger must never run.
     app.run(host="127.0.0.1", port=5000, debug=False)

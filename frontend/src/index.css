@@ -19,6 +19,7 @@
   --color-ok: #34d399;
   --color-bad: #fb7185;
   --color-unknown: #94a3b8;
+  --color-unsure: #a78bfa;
 
   --font-sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -164,6 +165,34 @@ body {
 .bulb-illustration.is-lit .bulb-base,
 .bulb-illustration.is-lit .bulb-filament {
   stroke: #fff3c4;
+}
+
+.bulb-glow {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--color-glow-light) 0%, transparent 62%);
+  filter: blur(8px);
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.react-flow__edge.flow-reverse.animated path {
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.animated path {
+    animation: none !important;
+  }
+
+  .bulb-glow {
+    transition: none;
+  }
 }
 
 .switch-illustration {

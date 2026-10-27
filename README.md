@@ -1,10 +1,17 @@
 # Verityn — Predict. Build. Reality check.
 
-A coach that steps back: learners predict what a circuit will do, build it,
-and compare against a deterministic simulation — with AI help that fades out.
-See `docs/` for the architecture, UI spec, and test plan.
+Verityn is a simulation-grounded, AI-guided circuit-learning system with a
+neuro-symbolic division of responsibilities: a modified-nodal-analysis solver
+establishes physical ground truth, Muse Spark guides Socratic reasoning, and
+the learner must predict, build, and transfer. It is not a chatbot tutor:
+there is no open chat, predictions are constrained choices, verdicts are
+derived server-side from the solver, the model never touches physics, and a
+solo stage removes AI assistance entirely. Model outputs are treated as
+proposals and pass grounded evidence verification — schema checks, leak
+checks, and numbers allowed only from solver facts — before reaching the
+learner. See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestones 1–6: scaffold, solver, evaluator, API, integration, canvas)
+## Implemented (Milestones 1–8, M9a Meta coach, Evidence Trace, solo transfer)
 
 - React + Vite + TypeScript frontend with Tailwind CSS 4.
 - Flask backend with `GET /api/health` returning `{"status": "ok"}`.
@@ -24,11 +31,20 @@ See `docs/` for the architecture, UI spec, and test plan.
   expected 0.6 A / 3.6 W. Fresh prediction on the repaired-but-open
   circuit, independent rebuild on a fresh canvas, verdict from the
   existing evaluator against the learner's own built netlist.
-- Prototype coach (M8, fake templates behind a server interface): after a
-  contradicted Twist verdict the learner can ask for one R1 guiding
-  question. Eligibility is derived server-side from the recorded
-  prediction and a fresh solve; sessions are in-memory only, so a
-  backend restart clears them.
+- Coach interface with Meta Spark primary + template fallback (M8/M9a):
+  after a contradicted Twist verdict the learner can ask for one R1
+  guiding question. Eligibility is derived server-side from the recorded
+  prediction and a fresh solve; model output must match a constrained
+  JSON schema and pass leak/number guards or the template serves instead.
+  Sessions are in-memory only, so a backend restart clears them.
+- Evidence Trace: per-challenge timeline of prediction, built circuit,
+  solver outcome, comparison, and coaching, derived from existing
+  client state. It shows observed simulation evidence, not proof of
+  mastery.
+- Solo transfer (second bulb): unlocked after the Twist circuit meets its
+  pack values. A new parallel-branch prediction and build with the AI
+  coach fully off — no session is recorded and the backend rejects the
+  transfer challenge id.
 - Buildable circuit canvas (React Flow): place batteries, bulbs, and
   switches (each switch toggles open/closed), drag between terminals
   to add wires, delete parts, and run the circuit. Results show
@@ -50,11 +66,34 @@ See `docs/` for the architecture, UI spec, and test plan.
 - Backend tests for the health endpoint, solver, evaluator, and API.
 - Pinned backend dependencies (`backend/requirements.txt`).
 
-## Not yet implemented
+## Roadmap (hackathon submission: Nov 4, 9:00 PM ET)
 
-Switches and resistors on canvas, prediction-on-canvas, learning
-flow, help ladder, Meta AI integration, solo mode, persistence,
-deployment. Canvas predictions and free-form values arrive later.
+Locked-in priorities, in order. Nothing below outranks a reliable demo.
+
+1. **Priority 1 — Reliable demo & framing (essential).**
+   L1 → Twist → Transfer end-to-end browser loop verified; solver vs. AI
+   responsibilities made explicit in the UI; Evidence Trace framed as
+   proof of observed simulation, never proof of mastery; existing
+   defects fixed before any new complexity.
+2. **Priority 2 — Multimodal "Snap & Build" (high-value stretch).**
+   Learner uploads a schematic or hand-drawn photo; Muse Spark Vision
+   extracts a candidate netlist shown as a JSON preview. Guardrail: the
+   learner must review and confirm before it ever reaches the solver —
+   the model never directly controls solver state.
+3. **Priority 3 — Physics brought to life (visual polish).**
+   Bulb glow scaled continuously by solver-computed power (P = I²R);
+   wire current animation (SVG stroke-dash) active only when the solver
+   calculates current > 0, freezing the moment a switch opens;
+   component highlights restricted to IDs grounded in validated solver
+   evidence — no speculative smoke or broken-node effects.
+4. **Priority 4 — Voice & visual coaching (optional).**
+   Muse Voice Transcribe for voice explanations of learner predictions;
+   coach-requested component highlights validated strictly against the
+   canvas netlist.
+
+Infrastructure: the Meta Model API (Muse Spark) stays the primary
+integration. External open-weight hosting (Baseten/Modal) is deferred
+until the primary browser demo is rock-solid.
 
 ## Prerequisites
 
@@ -118,10 +157,19 @@ cd frontend && npm run build   # typecheck + production build
 python -m pytest backend/tests -q   # backend tests (venv active)
 ```
 
+## Built with Muse Code
+
+The deterministic solver, prediction evaluator, validation guards, Flask
+API, lesson packs, and the backend/frontend test suites were built with
+Muse Code (agentic CLI, Meta Muse Spark) under human direction: the human
+set every milestone scope, reviewed each diff, ran the live API
+diagnostics, and made all product decisions. No application code was
+copied from outside the project.
+
 ## Notes
 
-- No API keys or secrets exist yet; when they do, they stay server-side in
-  an untracked `.env` file, never in the frontend or Git history.
+- API keys stay server-side in an untracked `.env` file, never in the
+  frontend or Git history.
 - Vite proxies `/api/*` to the Flask backend during development.
 - Lucide icons use current canonical names (`CircleCheckBig`, `CircleX`,
   `LoaderCircle`); the spec doc predates the rename.

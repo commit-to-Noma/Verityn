@@ -25,7 +25,7 @@ export default function CircuitPreview({ seed, label }: { seed: LessonSeed; labe
       data: {
         kind: node.kind,
         label: node.id,
-        lit: false,
+        glow: 0,
         invalid: false,
         closed: node.kind === 'switch' ? (node.closed ?? true) : true,
         readOnly: true,
