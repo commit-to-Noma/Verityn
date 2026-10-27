@@ -201,8 +201,11 @@ export type CoachAskResult =
   | { eligible: true; rung: string; text: string; provider: string; claim: Claim }
   | { eligible: false; reason_code: string; message: string }
 
-/** Provider value to honest badge text. Only the prototype exists in M8. */
+/** Provider value to honest badge text. Fake output is never Meta. */
 export function providerBadge(provider: string): string {
+  if (provider === 'meta-spark') {
+    return 'Meta Spark'
+  }
   return provider === 'prototype-fake' ? 'Prototype coach' : 'Coach'
 }
 

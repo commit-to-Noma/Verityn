@@ -17,7 +17,7 @@ from werkzeug.exceptions import BadRequest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from verityn import coach, evaluator, fake_coach, solver  # noqa: E402
+from verityn import coach, evaluator, fake_coach, meta_coach, solver  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
 
@@ -61,10 +61,18 @@ def _malformed_request(message):
     }), 400
 
 
-def create_app(provider=None) -> Flask:
+def create_app(provider=None, fallback=None) -> Flask:
     app = Flask(__name__)
+
+    def _quiet_log_exception(exc_info):
+        # Fixed line only: tracebacks, messages, and request details
+        # must never reach logs or clients. Local debugging uses tests.
+        app.logger.error("unhandled error; fixed response returned")
+
+    app.log_exception = _quiet_log_exception
     store = coach.SessionStore()
     active_provider = provider or fake_coach.FakeCoachProvider()
+    active_fallback = fallback
 
     @app.get("/api/health")
     def health():
@@ -126,7 +134,8 @@ def create_app(provider=None) -> Flask:
             return _malformed_request(
                 "Request needs a session id string and a netlist object.")
         return jsonify(coach.derive_eligibility(
-            store, session_id, netlist, active_provider))
+            store, session_id, netlist, active_provider,
+            fallback=active_fallback))
 
     @app.errorhandler(404)
     def not_found(_error):
@@ -153,4 +162,11 @@ if __name__ == "__main__":
     # Test-only switch for the provider-failure path; never set it live.
     if os.environ.get("VERITYN_COACH_FAIL") == "1":
         app = create_app(fake_coach.FakeCoachProvider(fail=True))
-    app.run(host="127.0.0.1", port=5000)
+    elif os.environ.get("MODEL_API_KEY"):
+        app = create_app(
+            meta_coach.MetaSparkProvider(
+                api_key=os.environ["MODEL_API_KEY"]),
+            fallback=fake_coach.FakeCoachProvider(),
+        )
+    # Debug mode stays off: the interactive debugger must never run.
+    app.run(host="127.0.0.1", port=5000, debug=False)

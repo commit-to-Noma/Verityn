@@ -268,6 +268,7 @@ describe('askCoach', () => {
 describe('providerBadge', () => {
   it('labels the prototype honestly and claims nothing else', () => {
     expect(providerBadge('prototype-fake')).toBe('Prototype coach')
+    expect(providerBadge('meta-spark')).toBe('Meta Spark')
     expect(providerBadge('anything-else')).toBe('Coach')
   })
 })

@@ -78,6 +78,16 @@ cd frontend
 npm install
 ```
 
+## Coach providers
+
+Coaching defaults to fixed fake templates (no network, no key needed).
+To use Meta Spark with template fallback, set `MODEL_API_KEY` in an
+untracked `.env` file at the repo root, then start the backend normally;
+recorded predictions and Why text are sent to the Meta Model API only
+in that mode. `VERITYN_COACH_FAIL=1` forces the provider-failure path
+for local testing. The automated suites mock all model HTTP and never
+spend credits.
+
 ## Launch
 
 Terminal 1 — backend (from the repo root):

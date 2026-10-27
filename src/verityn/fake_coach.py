@@ -51,7 +51,9 @@ class FakeCoachProvider:
     def __init__(self, fail=False):
         self.fail = fail
 
-    def r1_question(self, *, choice, why):
+    def r1_question(self, *, choice, why, facts=None):
+        # facts unused: fixed templates need no solver numbers.
         if self.fail:
-            raise CoachProviderError("Fake provider forced failure.")
+            raise CoachProviderError("Fake provider forced failure.",
+                                     stage="transport")
         return route_template(choice, why)

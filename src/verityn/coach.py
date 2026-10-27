@@ -14,11 +14,15 @@ store, so tests stay isolated.
 """
 
 import json
+import logging
+import re
 import secrets
 from pathlib import Path
 from typing import Protocol
 
 from verityn import evaluator, solver
+
+log = logging.getLogger(__name__)
 
 LESSON_PATH = Path(__file__).resolve().parent / "lessons" / "l1.json"
 
@@ -38,20 +42,73 @@ class CoachValidationError(ValueError):
 
 
 class CoachProviderError(RuntimeError):
-    """The coaching provider failed (maps to HTTP 500, never leaks)."""
+    """The coaching provider failed (maps to HTTP 500, never leaks).
+
+    Carries only controlled fields: stage is a fixed category,
+    http_status an int or None, shape an allowlisted structural sketch
+    or None, reason a fixed rule code or None. Logs and responses must
+    use these fields, never the message, which callers could fill
+    arbitrarily.
+    """
+
+    def __init__(self, message, *, stage, http_status=None, shape=None,
+                 reason=None):
+        super().__init__(message)
+        self.stage = stage
+        self.http_status = http_status
+        self.shape = shape
+        self.reason = reason
+
+
+LEAK_PHRASES = ("dark", "lit", "won't", "will not", "does not light",
+                "doesn't light", "stays", "no current", "current", "power",
+                "volt", "ampere", "connect", "wire", "join", "attach",
+                "between", "add a", "should", "must", "open it", "close it",
+                "answer", "because")
+
+_QUOTE_TABLE = str.maketrans({"\u2019": "'", "\u201c": '"', "\u201d": '"'})
+
+
+def _leak_pattern(phrase):
+    if " " in phrase:
+        return re.compile(r"\b" + re.escape(phrase) + r"\b")
+    return re.compile(r"\b" + re.escape(phrase) + r"[a-z]*")
+
+
+_LEAK_PATTERNS = tuple((_leak_pattern(phrase), phrase)
+                       for phrase in LEAK_PHRASES)
+
+
+def find_leak(text):
+    """Return the first leak phrase in text, or None.
+
+    Case-insensitive. Single words match at a word start so inflections
+    ("darkness", "wired") still match while innocent words ("split")
+    do not. Curly quotes are normalized first.
+    """
+    lowered = text.translate(_QUOTE_TABLE).lower()
+    for pattern, phrase in _LEAK_PATTERNS:
+        if pattern.search(lowered):
+            return phrase
+    return None
 
 
 class CoachProvider(Protocol):
     """Narrow provider contract: one rung, one question.
 
-    M8 ships the fake implementation only. A real provider plugs in
-    here in M10; the eligibility logic above it does not change.
+    M8 ships the fake implementation; M9a adds the real one behind the
+    same contract. The eligibility logic below does not change.
     """
 
     name: str
 
-    def r1_question(self, *, choice: str, why: str) -> str:
-        """Return a fixed R1 guiding question for a definite prediction."""
+    def r1_question(self, *, choice: str, why: str,
+                    facts: dict | None = None) -> str:
+        """Return an R1 guiding question for a definite prediction.
+
+        facts carries solver numbers for output validation; providers
+        that need none may ignore it.
+        """
         ...
 
 
@@ -140,12 +197,24 @@ def _refused(reason_code, message):
             "message": message}
 
 
-def derive_eligibility(store, session_id, netlist, provider, pack=None):
+def solver_facts(result):
+    """Flatten a solved result into per-part solver numbers."""
+    facts = {}
+    for cid, measurement in result.components.items():
+        facts[f"{cid}.power_W"] = measurement["power"]
+        facts[f"{cid}.current_A"] = measurement["current"]
+        facts[f"{cid}.voltage_V"] = measurement["voltage"]
+    return facts
+
+
+def derive_eligibility(store, session_id, netlist, provider, pack=None,
+                       fallback=None):
     """Decide coaching eligibility from server-side records and evidence.
 
     The provider is called only on the eligible path, after a
     server-computed CONTRADICTED verdict. Every other path refuses
-    without touching the provider.
+    without touching the provider. A failing primary falls back to the
+    fallback provider when one is configured, else the error stands.
     """
     pack = load_pack(pack)
     if not isinstance(session_id, str) or session_id not in store.sessions:
@@ -172,11 +241,24 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None):
     if verdict.status != evaluator.CONTRADICTED:
         return _refused(NOT_ASSESSABLE,
                         "The claim cannot be judged against this circuit.")
+    facts = solver_facts(result)
+    try:
+        text = provider.r1_question(choice=recorded["choice"],
+                                    why=recorded["why"], facts=facts)
+        serving = provider.name
+    except CoachProviderError as err:
+        log.warning("coach primary failed: stage=%s http_status=%s "
+                    "shape=%s reason=%s",
+                    err.stage, err.http_status, err.shape, err.reason)
+        if fallback is None:
+            raise
+        text = fallback.r1_question(choice=recorded["choice"],
+                                    why=recorded["why"], facts=facts)
+        serving = fallback.name
     return {
         "eligible": True,
         "rung": "R1",
-        "text": provider.r1_question(choice=recorded["choice"],
-                                     why=recorded["why"]),
-        "provider": provider.name,
+        "text": text,
+        "provider": serving,
         "claim": claim,
     }

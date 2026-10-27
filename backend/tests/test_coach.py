@@ -50,7 +50,7 @@ class CountingProvider:
     def __init__(self):
         self.calls = []
 
-    def r1_question(self, *, choice, why):
+    def r1_question(self, *, choice, why, facts=None):
         self.calls.append((choice, why))
         return fake_coach.route_template(choice, why)
 
@@ -261,12 +261,6 @@ def test_provider_failure_is_safe_500():
     assert "Traceback" not in res.get_data(as_text=True)
 
 
-FORBIDDEN = ["dark", "lit", "won't", "will not", "does not light",
-             "doesn't light", "stays", "no current", "current", "power",
-             "volt", "ampere", "connect", "wire", "join", "attach",
-             "between", "add a", "should", "must", "open it", "close it",
-             "answer", "because"]
-
 WHY_CORPUS = ["The switch is open I think",
               "maybe the wire gap matters",
               "CONNECT the thing already",
@@ -285,9 +279,31 @@ def test_templates_are_questions_without_leaks():
     for text in fake_coach.ALL_TEXTS:
         assert text.endswith("?")
         assert not any(char.isdigit() for char in text)
-        lowered = text.lower()
-        for phrase in FORBIDDEN:
-            assert phrase not in lowered, (phrase, text)
+        assert coach.find_leak(text) is None, text
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("Is it dark?", "dark"),
+    ("Utter darkness?", "dark"),
+    ("Is it lit?", "lit"),
+    ("What splits the loop?", None),
+    ("The switch stays open?", "stays"),
+    ("6 volts?", "volt"),
+    ("Wired shut?", "wire"),
+    ("Connected now?", "connect"),
+    ("Open item?", None),
+    ("Open it?", "open it"),
+    ("won’t it light?", "won't"),
+    ("No current flows?", "no current"),
+    ("What current flows?", "current"),
+    ("Add a part?", "add a"),
+    ("Because reasons?", "because"),
+    # Accepted residual: conservative match on a word no real
+    # question contains; the fallback stays safe either way.
+    ("mustard?", "must"),
+])
+def test_find_leak_boundaries(text, expected):
+    assert coach.find_leak(text) == expected
 
 
 @pytest.mark.parametrize("choice", ["yes", "no"])
