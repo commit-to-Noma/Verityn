@@ -1,5 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
+import { useSwitchToggle } from './switchToggle'
 
 export type CircuitNodeData = {
   kind: 'battery' | 'bulb' | 'switch'
@@ -13,16 +14,30 @@ export type CircuitNodeData = {
   }
   /** Switch contact state. New switches start closed; ignored for other kinds. */
   closed: boolean
-  /** Called with the node id when the learner flips a switch toggle. */
-  onToggleClosed: (id: string) => void
+  /** Read-only display: the switch state shows as text with no toggle button. */
+  readOnly?: boolean
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
 
 const KIND_NAME = { battery: 'Battery', bulb: 'Bulb', switch: 'Switch' } as const
 
+function SwitchState({ closed }: { closed: boolean }) {
+  return (
+    <>
+      {closed ? (
+        <ToggleRight className="h-4 w-4 text-flow" aria-hidden="true" />
+      ) : (
+        <ToggleLeft className="h-4 w-4 text-flow" aria-hidden="true" />
+      )}
+      {closed ? 'Closed' : 'Open'}
+    </>
+  )
+}
+
 /** CircuitNode: clear schematic-like battery, bulb, and switch variants with terminals. */
 export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
+  const onToggleClosed = useSwitchToggle()
   return (
     <div
       aria-label={`${KIND_NAME[data.kind]} ${data.label}`}
@@ -80,22 +95,22 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
               : `Switch · ${data.label}`}
         </span>
       </div>
-      {data.kind === 'switch' && (
-        <button
-          type="button"
-          aria-pressed={data.closed}
-          aria-label={`Switch ${data.label}, ${data.closed ? 'closed' : 'open'}`}
-          onClick={() => data.onToggleClosed(id)}
-          className="nodrag mt-1 flex min-h-[44px] items-center gap-2 rounded-[10px] border border-glass-border px-3 text-sm font-medium text-ink"
-        >
-          {data.closed ? (
-            <ToggleRight className="h-4 w-4 text-flow" aria-hidden="true" />
-          ) : (
-            <ToggleLeft className="h-4 w-4 text-flow" aria-hidden="true" />
-          )}
-          {data.closed ? 'Closed' : 'Open'}
-        </button>
-      )}
+      {data.kind === 'switch' &&
+        (data.readOnly ? (
+          <span className="mt-1 flex min-h-[44px] items-center gap-2 rounded-[10px] border border-glass-border px-3 text-sm font-medium text-ink">
+            <SwitchState closed={data.closed} />
+          </span>
+        ) : (
+          <button
+            type="button"
+            aria-pressed={data.closed}
+            aria-label={`Switch ${data.label}, ${data.closed ? 'closed' : 'open'}`}
+            onClick={() => onToggleClosed(id)}
+            className="nodrag mt-1 flex min-h-[44px] items-center gap-2 rounded-[10px] border border-glass-border px-3 text-sm font-medium text-ink"
+          >
+            <SwitchState closed={data.closed} />
+          </button>
+        ))}
       {data.measurement ? (
         <div className="component-readout" aria-label={`${data.label} measurement`}>
           <span>{data.measurement.voltage.toFixed(1)} V</span>

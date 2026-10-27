@@ -15,6 +15,11 @@ See `docs/` for the architecture, UI spec, and test plan.
   IDs) and example predictions checked (verdict rows with deciding
   numbers). Network, HTTP, and malformed-payload failures render as
   error rows with retry; aborted requests stay silent.
+- Prediction screen + fixed L1 lesson pack (`src/verityn/lessons/l1.json`):
+  the learner sees the broken starting circuit, must choose Yes, No,
+  or Not sure plus an optional one-line Why, then proceeds to the
+  canvas to fix the circuit with one wire. The broken start's outcome
+  lives in the pack; the evaluator is never asked to judge it.
 - Buildable circuit canvas (React Flow): place batteries, bulbs, and
   switches (each switch toggles open/closed), drag between terminals
   to add wires, delete parts, and run the circuit. Results show

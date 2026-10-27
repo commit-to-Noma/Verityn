@@ -1,0 +1,41 @@
+{
+  "id": "L1",
+  "title": "Light the bulb",
+  "question": "Will the bulb light?",
+  "start": {
+    "components": [
+      {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+      {"id": "S1", "type": "switch", "closed": true, "a": "p", "b": "m"},
+      {"id": "L1", "type": "bulb", "a": "m", "b": "n1"}
+    ]
+  },
+  "expectedStart": {
+    "ok": false,
+    "code": "DANGLING_TERMINAL",
+    "component_ids": ["B1", "L1"],
+    "lit": false
+  },
+  "fix": {
+    "wire": {"a": "n1", "b": "0"},
+    "hint": "Connect the two open ends with one wire."
+  },
+  "expectedFixed": {
+    "ok": true,
+    "lit": true,
+    "component": "L1",
+    "current": 0.6,
+    "power": 3.6
+  },
+  "claim": {"type": "lit", "component": "L1"},
+  "seed": {
+    "nodes": [
+      {"id": "B1", "kind": "battery", "x": 40, "y": 140},
+      {"id": "S1", "kind": "switch", "closed": true, "x": 230, "y": 140},
+      {"id": "L1", "kind": "bulb", "x": 420, "y": 140}
+    ],
+    "edges": [
+      {"id": "W1", "source": "B1", "sourceTerminal": "a", "target": "S1", "targetTerminal": "a"},
+      {"id": "W2", "source": "S1", "sourceTerminal": "b", "target": "L1", "targetTerminal": "a"}
+    ]
+  }
+}

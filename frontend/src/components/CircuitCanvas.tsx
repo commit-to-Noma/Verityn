@@ -19,9 +19,10 @@ import type { SimulateResult } from '../api/client'
 import { ApiError, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
 import SimulationResultView from './SimulationResultView'
-import CircuitNode, { type CircuitNodeType } from './canvas/CircuitNode'
-
-const nodeTypes = { circuit: CircuitNode }
+import type { CircuitNodeType } from './canvas/CircuitNode'
+import { circuitNodeTypes } from './canvas/nodeTypes'
+import { SwitchToggleContext } from './canvas/switchToggle'
+import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
 const BAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-bad)' }
@@ -73,15 +74,58 @@ function isClosedLoop(nodes: CircuitNodeType[], edges: Edge[]): boolean {
   return connected.size === nodes.length
 }
 
-function CanvasInner() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+function seedNodes(seed: LessonSeed | undefined): CircuitNodeType[] {
+  if (!seed) {
+    return []
+  }
+  return seed.nodes
+    .filter((node) => node.kind === 'battery' || node.kind === 'bulb' || node.kind === 'switch')
+    .map((node) => ({
+      id: node.id,
+      type: 'circuit',
+      position: { x: node.x, y: node.y },
+      data: {
+        kind: node.kind as 'battery' | 'bulb' | 'switch',
+        label: node.id,
+        lit: false,
+        invalid: false,
+        closed: node.kind === 'switch' ? (node.closed ?? true) : true,
+      },
+    }))
+}
+
+function seedEdges(seed: LessonSeed | undefined): Edge[] {
+  if (!seed) {
+    return []
+  }
+  return seed.edges.map((edge) => ({
+    id: edge.id,
+    source: edge.source,
+    sourceHandle: edge.sourceTerminal,
+    target: edge.target,
+    targetHandle: edge.targetTerminal,
+    style: FLOW_EDGE_STYLE,
+  }))
+}
+
+function seedCount(seed: LessonSeed | undefined, kind: string): number {
+  return seed?.nodes.filter((node) => node.kind === kind).length ?? 0
+}
+
+function CanvasInner({ seed }: { seed?: LessonSeed }) {
+  const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(seed))
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(seedEdges(seed))
   const { screenToFlowPosition } = useReactFlow()
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
-  const counters = useRef({ battery: 0, bulb: 0, switch: 0, wire: 0 })
+  const counters = useRef({
+    battery: seedCount(seed, 'battery'),
+    bulb: seedCount(seed, 'bulb'),
+    switch: seedCount(seed, 'switch'),
+    wire: seed?.edges.length ?? 0,
+  })
 
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -101,6 +145,17 @@ function CanvasInner() {
     setEdges((current) => current.map((edge) => ({ ...edge, style: FLOW_EDGE_STYLE })))
   }
 
+  const toggleSwitch = (id: string) => {
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === id && node.data.kind === 'switch'
+          ? { ...node, data: { ...node.data, closed: !node.data.closed } }
+          : node,
+      ),
+    )
+    invalidate()
+  }
+
   const handleNodesChange = (changes: NodeChange<CircuitNodeType>[]) => {
     onNodesChange(changes)
     const removed = changes.filter((change) => change.type === 'remove').map((change) => change.id)
@@ -118,17 +173,6 @@ function CanvasInner() {
     if (changes.some((change) => change.type === 'add' || change.type === 'remove' || change.type === 'replace')) {
       invalidate()
     }
-  }
-
-  const toggleSwitch = (id: string) => {
-    setNodes((current) =>
-      current.map((node) =>
-        node.id === id && node.data.kind === 'switch'
-          ? { ...node, data: { ...node.data, closed: !node.data.closed } }
-          : node,
-      ),
-    )
-    invalidate()
   }
 
   const placeAt = (clientX: number, clientY: number) => {
@@ -151,7 +195,6 @@ function CanvasInner() {
           lit: false,
           invalid: false,
           closed: true,
-          onToggleClosed: toggleSwitch,
         },
       },
     ])
@@ -176,7 +219,6 @@ function CanvasInner() {
           lit: false,
           invalid: false,
           closed: true,
-          onToggleClosed: toggleSwitch,
         },
       },
     ])
@@ -345,44 +387,46 @@ function CanvasInner() {
         Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.
       </p>
       <div className="canvas-grid border-glass-border relative h-105 overflow-hidden rounded-2xl border">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
-          onConnect={onConnect}
-          onDragOver={(event) => {
-            event.preventDefault()
-            event.dataTransfer.dropEffect = 'copy'
-          }}
-          onDrop={(event) => {
-            event.preventDefault()
-            const kind = event.dataTransfer.getData('application/verityn-component')
-            if (kind === 'battery' || kind === 'bulb' || kind === 'switch') {
-              placeToolAt(kind, event.clientX, event.clientY)
-            }
-          }}
-          onPaneClick={(event) => placeAt(event.clientX, event.clientY)}
-          onNodeClick={(_event, node) => {
-            if (tool === 'delete') {
-              removeNode(node.id)
-            }
-          }}
-          onEdgeClick={(_event, edge) => {
-            if (tool === 'delete') {
-              setEdges((current) => current.filter((entry) => entry.id !== edge.id))
-              invalidate()
-            }
-          }}
-          isValidConnection={isValidWire}
-          nodeTypes={nodeTypes}
-          connectionMode={ConnectionMode.Loose}
-          defaultEdgeOptions={{ style: FLOW_EDGE_STYLE }}
-          snapToGrid
-          snapGrid={[20, 20]}
-          colorMode="dark"
-          aria-label="Circuit canvas"
-        />
+        <SwitchToggleContext.Provider value={toggleSwitch}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            onConnect={onConnect}
+            onDragOver={(event) => {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'copy'
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              const kind = event.dataTransfer.getData('application/verityn-component')
+              if (kind === 'battery' || kind === 'bulb' || kind === 'switch') {
+                placeToolAt(kind, event.clientX, event.clientY)
+              }
+            }}
+            onPaneClick={(event) => placeAt(event.clientX, event.clientY)}
+            onNodeClick={(_event, node) => {
+              if (tool === 'delete') {
+                removeNode(node.id)
+              }
+            }}
+            onEdgeClick={(_event, edge) => {
+              if (tool === 'delete') {
+                setEdges((current) => current.filter((entry) => entry.id !== edge.id))
+                invalidate()
+              }
+            }}
+            isValidConnection={isValidWire}
+            nodeTypes={circuitNodeTypes}
+            connectionMode={ConnectionMode.Loose}
+            defaultEdgeOptions={{ style: FLOW_EDGE_STYLE }}
+            snapToGrid
+            snapGrid={[20, 20]}
+            colorMode="dark"
+            aria-label="Circuit canvas"
+          />
+        </SwitchToggleContext.Provider>
         {nodes.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <p className="text-ink-muted text-sm">Place a battery to begin</p>
@@ -446,10 +490,10 @@ function CanvasInner() {
 }
 
 /** Circuit canvas with provider for pane-click placement. */
-export default function CircuitCanvas() {
+export default function CircuitCanvas({ seed }: { seed?: LessonSeed }) {
   return (
     <ReactFlowProvider>
-      <CanvasInner />
+      <CanvasInner seed={seed} />
     </ReactFlowProvider>
   )
 }
