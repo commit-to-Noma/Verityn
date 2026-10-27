@@ -190,3 +190,103 @@ export async function evaluateClaim(
 ): Promise<EvaluateResult> {
   return guardEvaluateResult(await postJson('/api/evaluate', { claim, netlist }, signal))
 }
+
+export interface CoachPredictResult {
+  session_id: string
+  challenge_id: string
+  choice: string
+}
+
+export type CoachAskResult =
+  | { eligible: true; rung: string; text: string; provider: string; claim: Claim }
+  | { eligible: false; reason_code: string; message: string }
+
+/** Provider value to honest badge text. Only the prototype exists in M8. */
+export function providerBadge(provider: string): string {
+  return provider === 'prototype-fake' ? 'Prototype coach' : 'Coach'
+}
+
+function guardClaim(body: unknown): Claim {
+  if (
+    isRecord(body) &&
+    body.type === 'lit' &&
+    typeof body.component === 'string' &&
+    typeof body.value === 'boolean'
+  ) {
+    return { type: 'lit', component: body.component, value: body.value }
+  }
+  if (
+    isRecord(body) &&
+    body.type === 'compare_brightness' &&
+    typeof body.a === 'string' &&
+    typeof body.b === 'string' &&
+    (body.relation === 'brighter' || body.relation === 'dimmer' || body.relation === 'equal')
+  ) {
+    return { type: 'compare_brightness', a: body.a, b: body.b, relation: body.relation }
+  }
+  throw new ApiError('payload', 'Unexpected response from the server.')
+}
+
+function guardCoachPredictResult(body: unknown): CoachPredictResult {
+  if (
+    !isRecord(body) ||
+    typeof body.session_id !== 'string' ||
+    typeof body.challenge_id !== 'string' ||
+    typeof body.choice !== 'string'
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  return { session_id: body.session_id, challenge_id: body.challenge_id, choice: body.choice }
+}
+
+function guardCoachAskResult(body: unknown): CoachAskResult {
+  if (!isRecord(body) || typeof body.eligible !== 'boolean') {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  if (body.eligible) {
+    if (
+      typeof body.rung !== 'string' ||
+      typeof body.text !== 'string' ||
+      typeof body.provider !== 'string'
+    ) {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+    return {
+      eligible: true,
+      rung: body.rung,
+      text: body.text,
+      provider: body.provider,
+      claim: guardClaim(body.claim),
+    }
+  }
+  if (typeof body.reason_code !== 'string' || typeof body.message !== 'string') {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  return { eligible: false, reason_code: body.reason_code, message: body.message }
+}
+
+/** POST /api/coach/predict; records a prediction server-side. */
+export async function recordPrediction(
+  challengeId: string,
+  choice: string,
+  why: string,
+  sessionId?: string,
+  signal?: AbortSignal,
+): Promise<CoachPredictResult> {
+  const payload: Record<string, string> = { challenge_id: challengeId, choice, why }
+  if (sessionId !== undefined) {
+    payload.session_id = sessionId
+  }
+  return guardCoachPredictResult(await postJson('/api/coach/predict', payload, signal))
+}
+
+/** POST /api/coach/ask; eligibility is derived server-side. */
+export async function askCoach(
+  sessionId: string,
+  netlist: Netlist,
+  signal?: AbortSignal,
+): Promise<CoachAskResult> {
+  return guardCoachAskResult(
+    await postJson('/api/coach/ask', { session_id: sessionId, netlist }, signal),
+  )
+}

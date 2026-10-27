@@ -1,12 +1,14 @@
 """Verityn backend.
 
-Milestones 1-4: health, circuit simulation, and prediction evaluation.
-Deterministic Flask layer over src/verityn/: no AI, no network calls,
-no sessions. Judged outcomes always return HTTP 200; only malformed
+Milestones 1-8: health, circuit simulation, prediction evaluation,
+and prototype coaching. Deterministic Flask layer over src/verityn/:
+prototype coach only, no network calls, in-memory sessions only.
+Judged outcomes always return HTTP 200; only malformed
 requests return HTTP 400, and unknown routes or methods return JSON
 errors. Stack traces never leave the server.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -15,7 +17,7 @@ from werkzeug.exceptions import BadRequest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from verityn import evaluator, solver  # noqa: E402
+from verityn import coach, evaluator, fake_coach, solver  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
 
@@ -59,8 +61,10 @@ def _malformed_request(message):
     }), 400
 
 
-def create_app() -> Flask:
+def create_app(provider=None) -> Flask:
     app = Flask(__name__)
+    store = coach.SessionStore()
+    active_provider = provider or fake_coach.FakeCoachProvider()
 
     @app.get("/api/health")
     def health():
@@ -91,6 +95,39 @@ def create_app() -> Flask:
             "verdict": _verdict_to_dict(verdict),
         })
 
+    @app.post("/api/coach/predict")
+    def coach_predict():
+        body = _read_json_object()
+        if body is None:
+            return _malformed_request("Request body must be a JSON object.")
+        try:
+            session_id = store.record_prediction(
+                body.get("challenge_id"),
+                body.get("choice"),
+                body.get("why", ""),
+                body.get("session_id"),
+            )
+        except coach.CoachValidationError as err:
+            return _malformed_request(str(err))
+        return jsonify({
+            "session_id": session_id,
+            "challenge_id": body.get("challenge_id"),
+            "choice": body.get("choice"),
+        })
+
+    @app.post("/api/coach/ask")
+    def coach_ask():
+        body = _read_json_object()
+        if body is None:
+            return _malformed_request("Request body must be a JSON object.")
+        session_id = body.get("session_id")
+        netlist = body.get("netlist")
+        if not isinstance(session_id, str) or not isinstance(netlist, dict):
+            return _malformed_request(
+                "Request needs a session id string and a netlist object.")
+        return jsonify(coach.derive_eligibility(
+            store, session_id, netlist, active_provider))
+
     @app.errorhandler(404)
     def not_found(_error):
         return jsonify({"error_code": "NOT_FOUND",
@@ -113,4 +150,7 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    # Test-only switch for the provider-failure path; never set it live.
+    if os.environ.get("VERITYN_COACH_FAIL") == "1":
+        app = create_app(fake_coach.FakeCoachProvider(fail=True))
     app.run(host="127.0.0.1", port=5000)

@@ -15,8 +15,8 @@ import {
 import '@xyflow/react/dist/style.css'
 import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import type { Claim, SimulateResult, VerdictResult } from '../api/client'
-import { ApiError, evaluateClaim, simulate } from '../api/client'
+import type { Claim, Netlist, SimulateResult, VerdictResult } from '../api/client'
+import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
 import type { Choice } from '../lessons/lesson'
 import { choiceToClaim } from '../lessons/lesson'
@@ -46,7 +46,14 @@ type RunState =
 type VerdictState =
   | { phase: 'idle' }
   | { phase: 'checking' }
-  | { phase: 'done'; claim: Claim; verdict: VerdictResult }
+  | { phase: 'done'; claim: Claim; verdict: VerdictResult; netlist: Netlist }
+  | { phase: 'error'; message: string }
+
+type CoachState =
+  | { phase: 'idle' }
+  | { phase: 'asking' }
+  | { phase: 'done'; text: string; provider: string }
+  | { phase: 'refused'; message: string }
   | { phase: 'error'; message: string }
 
 function isValidWire(edge: Edge | Connection): boolean {
@@ -123,13 +130,99 @@ function seedCount(seed: LessonSeed | undefined, kind: string): number {
   return seed?.nodes.filter((node) => node.kind === kind).length ?? 0
 }
 
+function CoachAsk({ session, netlist }: { session: string | null; netlist: Netlist }) {
+  const [coachState, setCoachState] = useState<CoachState>({ phase: 'idle' })
+  const coachController = useRef<AbortController | null>(null)
+
+  useEffect(() => () => coachController.current?.abort(), [])
+
+  const ask = () => {
+    if (session === null) {
+      setCoachState({
+        phase: 'error',
+        message: "Coach unavailable: the prediction wasn't recorded.",
+      })
+      return
+    }
+    coachController.current?.abort()
+    const next = new AbortController()
+    coachController.current = next
+    setCoachState({ phase: 'asking' })
+    void (async () => {
+      try {
+        const answer = await askCoach(session, netlist, next.signal)
+        if (next.signal.aborted) {
+          return
+        }
+        if (answer.eligible) {
+          setCoachState({ phase: 'done', text: answer.text, provider: answer.provider })
+        } else {
+          setCoachState({ phase: 'refused', message: answer.message })
+        }
+      } catch (err) {
+        if (next.signal.aborted) {
+          return
+        }
+        setCoachState({
+          phase: 'error',
+          message: err instanceof ApiError ? err.message : 'Request failed.',
+        })
+      }
+    })()
+  }
+
+  if (coachState.phase === 'done') {
+    return (
+      <div className="glass-panel flex flex-col gap-2 p-4" aria-live="polite">
+        <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
+          {providerBadge(coachState.provider)}
+        </span>
+        <p className="text-base">{coachState.text}</p>
+      </div>
+    )
+  }
+  if (coachState.phase === 'asking') {
+    return (
+      <div className="glass-panel flex items-center gap-3 p-4" aria-live="polite">
+        <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+        <p className="text-ink-muted text-sm">Asking the coach…</p>
+      </div>
+    )
+  }
+  if (coachState.phase === 'refused') {
+    return (
+      <div className="glass-panel p-4" aria-live="polite">
+        <p className="text-ink-muted text-sm">{coachState.message}</p>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={ask}
+        className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+      >
+        Ask the coach
+      </button>
+      {coachState.phase === 'error' && (
+        <p className="text-ink-muted text-sm" role="alert">
+          {coachState.message}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function TwistVerdict({
   state,
   choice,
+  session,
   onRetry,
 }: {
   state: VerdictState
   choice: Choice
+  session: string | null
   onRetry: () => void
 }) {
   if (state.phase === 'idle') {
@@ -159,28 +252,35 @@ function TwistVerdict({
           : `${state.claim.component} stays dark`
         : 'Prediction checked'
     return (
-      <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
-        <div className="flex items-center gap-3">
-          <VerdictIcon status={state.verdict.status} />
-          <div>
-            <p className="text-base font-medium text-ink">{VERDICT_LABELS[state.verdict.status]}</p>
-            <p className="text-ink-muted text-sm">{text}</p>
+      <>
+        <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+          <div className="flex items-center gap-3">
+            <VerdictIcon status={state.verdict.status} />
+            <div>
+              <p className="text-base font-medium text-ink">
+                {VERDICT_LABELS[state.verdict.status]}
+              </p>
+              <p className="text-ink-muted text-sm">{text}</p>
+            </div>
           </div>
+          {Object.entries(state.verdict.evidence).map(([key, power]) => {
+            const [cid] = key.split('.')
+            return (
+              <p key={key} className="text-ink-muted pl-9 text-sm">
+                <span className="font-mono">{cid}</span>
+                {' · '}
+                <ReadoutValue value={power} unit="W" />
+              </p>
+            )
+          })}
+          <p className="text-ink-muted pl-9 text-xs">
+            This tests your prediction against the model, not you.
+          </p>
         </div>
-        {Object.entries(state.verdict.evidence).map(([key, power]) => {
-          const [cid] = key.split('.')
-          return (
-            <p key={key} className="text-ink-muted pl-9 text-sm">
-              <span className="font-mono">{cid}</span>
-              {' · '}
-              <ReadoutValue value={power} unit="W" />
-            </p>
-          )
-        })}
-        <p className="text-ink-muted pl-9 text-xs">
-          This tests your prediction against the model, not you.
-        </p>
-      </div>
+        {state.verdict.status === 'CONTRADICTED' && (
+          <CoachAsk session={session} netlist={state.netlist} />
+        )}
+      </>
     )
   }
   return (
@@ -203,12 +303,14 @@ function CanvasInner({
   eyebrow = 'Step 2 of 3',
   twistChoice,
   twistClaim,
+  coachSession,
   onSolved,
 }: {
   seed?: LessonSeed
   eyebrow?: string
   twistChoice?: Choice
   twistClaim?: { type: string; component: string }
+  coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(seed))
@@ -408,7 +510,12 @@ function CanvasInner({
               if (requestId.current !== id) {
                 return
               }
-              setVerdictState({ phase: 'done', claim: verdictClaim, verdict: judged.verdict })
+              setVerdictState({
+                phase: 'done',
+                claim: verdictClaim,
+                verdict: judged.verdict,
+                netlist,
+              })
             } catch (verdictErr) {
               if (next.signal.aborted || requestId.current !== id) {
                 return
@@ -596,7 +703,12 @@ function CanvasInner({
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
       {twistChoice && twistClaim && runState.phase === 'done' && runState.result.ok && (
-        <TwistVerdict state={verdictState} choice={twistChoice} onRetry={run} />
+        <TwistVerdict
+          state={verdictState}
+          choice={twistChoice}
+          session={coachSession ?? null}
+          onRetry={run}
+        />
       )}
       {runState.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">
@@ -621,12 +733,14 @@ export default function CircuitCanvas({
   eyebrow,
   twistChoice,
   twistClaim,
+  coachSession,
   onSolved,
 }: {
   seed?: LessonSeed
   eyebrow?: string
   twistChoice?: Choice
   twistClaim?: { type: string; component: string }
+  coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
 }) {
   return (
@@ -636,6 +750,7 @@ export default function CircuitCanvas({
         eyebrow={eyebrow}
         twistChoice={twistChoice}
         twistClaim={twistClaim}
+        coachSession={coachSession}
         onSolved={onSolved}
       />
     </ReactFlowProvider>

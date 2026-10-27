@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, evaluateClaim, simulate } from './client'
+import { ApiError, askCoach, evaluateClaim, providerBadge, recordPrediction, simulate } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -167,5 +167,107 @@ describe('transport failures', () => {
     const controller = new AbortController()
     controller.abort()
     await expect(simulate({ components: [] }, controller.signal)).rejects.toBe(abortErr)
+  })
+})
+
+describe('recordPrediction', () => {
+  const recorded = { session_id: 's1', challenge_id: 'L1T1', choice: 'yes' }
+
+  it('returns the session record unchanged', async () => {
+    stubFetch(() => okResponse(recorded))
+    await expect(recordPrediction('L1T1', 'yes', 'Why not.')).resolves.toEqual(recorded)
+  })
+
+  it('posts prediction fields and an optional session id', async () => {
+    const mock = vi.fn(async () => okResponse(recorded))
+    vi.stubGlobal('fetch', mock)
+    await recordPrediction('L1T1', 'no', 'Hmm.', 's9')
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/coach/predict')
+    expect(JSON.parse(init.body as string)).toEqual({
+      challenge_id: 'L1T1',
+      choice: 'no',
+      why: 'Hmm.',
+      session_id: 's9',
+    })
+  })
+
+  it.each([
+    ['missing session', { challenge_id: 'L1T1', choice: 'yes' }],
+    ['session mistyped', { ...recorded, session_id: 7 }],
+    ['not an object', []],
+  ])('rejects malformed payloads: %s', async (_label, body) => {
+    stubFetch(() => okResponse(body))
+    const failure = await recordPrediction('L1T1', 'yes', '').catch((err: unknown) => err)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('payload')
+  })
+
+  it('maps HTTP failures to http errors', async () => {
+    stubFetch(() => errResponse(400, { error_code: 'MALFORMED_REQUEST', error_message: 'Bad.' }))
+    const failure = (await recordPrediction('L1T1', 'yes', '').catch(
+      (err: unknown) => err,
+    )) as ApiError
+    expect(failure.kind).toBe('http')
+    expect(failure.code).toBe('MALFORMED_REQUEST')
+  })
+})
+
+describe('askCoach', () => {
+  const claim = { type: 'lit', component: 'L1', value: true } as const
+  const granted = {
+    eligible: true,
+    rung: 'R1',
+    text: 'What has to be true?',
+    provider: 'prototype-fake',
+    claim,
+  }
+  const refused = { eligible: false, reason_code: 'NOT_CONTRADICTED', message: 'Consistent.' }
+
+  it('returns granted and refused answers unchanged', async () => {
+    stubFetch(() => okResponse(granted))
+    await expect(askCoach('s1', { components: [] })).resolves.toEqual(granted)
+    stubFetch(() => okResponse(refused))
+    await expect(askCoach('s1', { components: [] })).resolves.toEqual(refused)
+  })
+
+  it('posts session id and netlist together', async () => {
+    const mock = vi.fn(async () => okResponse(refused))
+    vi.stubGlobal('fetch', mock)
+    await askCoach('s1', NETLIST)
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/coach/ask')
+    expect(JSON.parse(init.body as string)).toEqual({ session_id: 's1', netlist: NETLIST })
+  })
+
+  it.each([
+    ['missing eligible', { rung: 'R1' }],
+    ['eligible mistyped', { ...granted, eligible: 'yes' }],
+    ['text mistyped', { ...granted, text: 7 }],
+    ['claim mistyped', { ...granted, claim: { type: 'lit' } }],
+    ['reason mistyped', { ...refused, reason_code: 7 }],
+    ['not an object', []],
+  ])('rejects malformed payloads: %s', async (_label, body) => {
+    stubFetch(() => okResponse(body))
+    const failure = await askCoach('s1', { components: [] }).catch((err: unknown) => err)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('payload')
+  })
+
+  it('maps provider outages to http errors with the server code', async () => {
+    stubFetch(() => errResponse(500, { error_code: 'INTERNAL_ERROR', error_message: 'Oops.' }))
+    const failure = (await askCoach('s1', { components: [] }).catch(
+      (err: unknown) => err,
+    )) as ApiError
+    expect(failure.kind).toBe('http')
+    expect(failure.status).toBe(500)
+    expect(failure.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+describe('providerBadge', () => {
+  it('labels the prototype honestly and claims nothing else', () => {
+    expect(providerBadge('prototype-fake')).toBe('Prototype coach')
+    expect(providerBadge('anything-else')).toBe('Coach')
   })
 })

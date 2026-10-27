@@ -24,6 +24,11 @@ See `docs/` for the architecture, UI spec, and test plan.
   expected 0.6 A / 3.6 W. Fresh prediction on the repaired-but-open
   circuit, independent rebuild on a fresh canvas, verdict from the
   existing evaluator against the learner's own built netlist.
+- Prototype coach (M8, fake templates behind a server interface): after a
+  contradicted Twist verdict the learner can ask for one R1 guiding
+  question. Eligibility is derived server-side from the recorded
+  prediction and a fresh solve; sessions are in-memory only, so a
+  backend restart clears them.
 - Buildable circuit canvas (React Flow): place batteries, bulbs, and
   switches (each switch toggles open/closed), drag between terminals
   to add wires, delete parts, and run the circuit. Results show

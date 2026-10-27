@@ -5,6 +5,7 @@ import HealthStatus from './components/HealthStatus'
 import PredictionScreen from './components/PredictionScreen'
 import SimulatePanel from './components/SimulatePanel'
 import type { SimulateResult } from './api/client'
+import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import type { Prediction } from './lessons/lesson'
@@ -29,6 +30,7 @@ export default function App() {
   const [l1Done, setL1Done] = useState(false)
   const [twistStarted, setTwistStarted] = useState(false)
   const [twistPrediction, setTwistPrediction] = useState<Prediction | null>(null)
+  const [twistSession, setTwistSession] = useState<string | null>(null)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const handleL1Solved = useCallback((result: SimulateResult) => {
@@ -36,6 +38,24 @@ export default function App() {
       setL1Done(true)
     }
   }, [])
+
+  const handleTwistPredicted = (prediction: Prediction) => {
+    setTwistPrediction(prediction)
+    void (async () => {
+      try {
+        const recorded = await recordPrediction(
+          prediction.lessonId,
+          prediction.choice,
+          prediction.why,
+        )
+        setTwistSession(recorded.session_id)
+      } catch {
+        // The twist flow never blocks on coach recording; Ask the coach
+        // explains the missing session if the learner tries it.
+        setTwistSession(null)
+      }
+    })()
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pb-12">
@@ -69,7 +89,7 @@ export default function App() {
           <PredictionScreen
             challenge={L1.twist}
             eyebrow="Twist 1 of 2"
-            onComplete={setTwistPrediction}
+            onComplete={handleTwistPredicted}
           />
         ) : (
           <>
@@ -80,6 +100,7 @@ export default function App() {
               eyebrow="Twist 2 of 2"
               twistChoice={twistPrediction.choice}
               twistClaim={L1.twist.claim}
+              coachSession={twistSession}
             />
           </>
         )}
