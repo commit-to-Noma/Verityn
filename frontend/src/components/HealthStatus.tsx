@@ -22,7 +22,7 @@ export default function HealthStatus() {
         if (typeof body !== 'object' || body === null || (body as { status?: unknown }).status !== 'ok') {
           throw new Error('unexpected response body')
         }
-        setDetail(JSON.stringify(body))
+        setDetail('')
         setStatus('connected')
       } catch (err) {
         if (signal.aborted) {

@@ -13,7 +13,7 @@ export default function App() {
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pb-12">
       <header className="flex h-14 shrink-0 items-center">
         <p className="text-xl font-semibold tracking-tight">Verityn</p>
-        <p className="text-ink-muted ml-3 text-sm">Predict. Build. Prove.</p>
+        <p className="text-ink-muted ml-3 text-sm">Predict. Build. Reality check.</p>
       </header>
       <main className="flex flex-col gap-8">
         <HealthStatus />
