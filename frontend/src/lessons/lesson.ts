@@ -3,7 +3,7 @@
  * This module knows nothing about circuits. All circuit-specific content
  * (netlists, wires, expected outcomes) lives in the lesson packs. */
 
-import type { Netlist } from '../api/client'
+import type { Claim, Netlist, SimulateResult } from '../api/client'
 
 export type Choice = 'yes' | 'no' | 'not_sure'
 
@@ -28,6 +28,49 @@ export function canProceed(choice: Choice | null): boolean {
   return choice !== null
 }
 
+export interface ExpectedFixed {
+  ok: true
+  lit: boolean
+  component: string
+  current: number
+  power: number
+}
+
+/** Tolerances mirror the evaluator's conventions: 1% relative, 1e-9 W floor. */
+const REL_TOLERANCE = 0.01
+const ABS_TOLERANCE = 1e-9
+
+function closeEnough(actual: number, expected: number): boolean {
+  const scale = Math.max(Math.abs(actual), Math.abs(expected))
+  return Math.abs(actual - expected) <= Math.max(REL_TOLERANCE * scale, ABS_TOLERANCE)
+}
+
+/** Completion check: a valid simulation matching the pack's fixed-circuit numbers. */
+export function matchesExpected(result: SimulateResult, expected: ExpectedFixed): boolean {
+  if (!result.ok) {
+    return false
+  }
+  const measurement = result.components[expected.component]
+  if (!measurement) {
+    return false
+  }
+  return (
+    closeEnough(measurement.current, expected.current) &&
+    closeEnough(measurement.power, expected.power)
+  )
+}
+
+/** Maps a recorded choice to a lit claim, or null when there is nothing to judge. */
+export function choiceToClaim(
+  choice: Choice,
+  claim: { type: string; component: string },
+): Claim | null {
+  if (claim.type !== 'lit' || choice === 'not_sure') {
+    return null
+  }
+  return { type: 'lit', component: claim.component, value: choice === 'yes' }
+}
+
 export interface SeedNode {
   id: string
   kind: string
@@ -49,7 +92,7 @@ export interface LessonSeed {
   edges: SeedEdge[]
 }
 
-export interface LessonPack {
+export interface Challenge {
   id: string
   title: string
   question: string
@@ -64,13 +107,11 @@ export interface LessonPack {
     wire: { a: string; b: string }
     hint: string
   }
-  expectedFixed: {
-    ok: true
-    lit: true
-    component: string
-    current: number
-    power: number
-  }
+  expectedFixed: ExpectedFixed
   claim: { type: string; component: string }
   seed: LessonSeed
+}
+
+export interface LessonPack extends Challenge {
+  twist: Challenge
 }

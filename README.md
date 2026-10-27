@@ -20,6 +20,10 @@ See `docs/` for the architecture, UI spec, and test plan.
   or Not sure plus an optional one-line Why, then proceeds to the
   canvas to fix the circuit with one wire. The broken start's outcome
   lives in the pack; the evaluator is never asked to judge it.
+- L1 Twist (open switch): unlocked after the L1 circuit simulates at the
+  expected 0.6 A / 3.6 W. Fresh prediction on the repaired-but-open
+  circuit, independent rebuild on a fresh canvas, verdict from the
+  existing evaluator against the learner's own built netlist.
 - Buildable circuit canvas (React Flow): place batteries, bulbs, and
   switches (each switch toggles open/closed), drag between terminals
   to add wires, delete parts, and run the circuit. Results show

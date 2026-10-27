@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check } from 'lucide-react'
-import type { Choice, LessonPack, Prediction } from '../lessons/lesson'
+import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
 import CircuitPreview from './CircuitPreview'
 
@@ -8,10 +8,12 @@ const CHOICES = Object.entries(CHOICE_LABELS) as [Choice, string][]
 
 /** Think-first gate: the learner predicts before touching the canvas. */
 export default function PredictionScreen({
-  pack,
+  challenge,
+  eyebrow,
   onComplete,
 }: {
-  pack: LessonPack
+  challenge: Challenge
+  eyebrow: string
   onComplete: (prediction: Prediction) => void
 }) {
   const [choice, setChoice] = useState<Choice | null>(null)
@@ -21,13 +23,13 @@ export default function PredictionScreen({
   return (
     <section aria-labelledby="predict-heading" className="flex flex-col gap-4">
       <div>
-        <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">Step 1 of 3</p>
+        <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
         <h2 id="predict-heading" className="text-xl font-semibold">
-          {pack.title}
+          {challenge.title}
         </h2>
       </div>
-      <CircuitPreview seed={pack.seed} label={`${pack.title} starting circuit`} />
-      <p className="text-lg font-semibold">{pack.question}</p>
+      <CircuitPreview seed={challenge.seed} label={`${challenge.title} starting circuit`} />
+      <p className="text-lg font-semibold">{challenge.question}</p>
       <div className="flex gap-2" role="group" aria-label="Your prediction">
         {CHOICES.map(([value, label]) => (
           <button
@@ -65,7 +67,7 @@ export default function PredictionScreen({
           disabled={!ready}
           onClick={() => {
             if (choice) {
-              onComplete(createPrediction(pack.id, choice, why))
+              onComplete(createPrediction(challenge.id, choice, why))
             }
           }}
           className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"

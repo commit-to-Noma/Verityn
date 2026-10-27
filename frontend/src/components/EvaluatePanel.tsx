@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, CircleCheckBig, CircleQuestionMark, CircleX, LoaderCircle } from 'lucide-react'
-import type { Claim, VerdictResult, VerdictStatus } from '../api/client'
+import { Check, CircleX, LoaderCircle } from 'lucide-react'
+import type { Claim, VerdictResult } from '../api/client'
 import { ApiError, evaluateClaim } from '../api/client'
 import type { Preset } from '../data/presets'
 import ReadoutValue from './ReadoutValue'
-
-const VERDICT_LABELS: Record<VerdictStatus, string> = {
-  CONSISTENT: 'Consistent with the model',
-  CONTRADICTED: 'Contradicted by the model',
-  UNASSESSABLE: "Can't assess",
-}
+import { VerdictIcon } from './verdict'
+import { VERDICT_LABELS } from './verdictLabels'
 
 interface JudgedClaim {
   label: string
@@ -33,16 +29,6 @@ function claimText(claim: Claim): string {
   return claim.relation === 'brighter'
     ? `${claim.a} brighter than ${claim.b}`
     : `${claim.a} dimmer than ${claim.b}`
-}
-
-function VerdictIcon({ status }: { status: VerdictStatus }) {
-  if (status === 'CONSISTENT') {
-    return <CircleCheckBig className="text-ok h-6 w-6 shrink-0" aria-hidden="true" />
-  }
-  if (status === 'CONTRADICTED') {
-    return <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
-  }
-  return <CircleQuestionMark className="text-unknown h-6 w-6 shrink-0" aria-hidden="true" />
 }
 
 /** Checks a preset's claims through POST /api/evaluate and lists verdicts. */

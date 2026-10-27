@@ -15,9 +15,14 @@ import {
 import '@xyflow/react/dist/style.css'
 import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import type { SimulateResult } from '../api/client'
-import { ApiError, simulate } from '../api/client'
+import type { Claim, SimulateResult, VerdictResult } from '../api/client'
+import { ApiError, evaluateClaim, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
+import type { Choice } from '../lessons/lesson'
+import { choiceToClaim } from '../lessons/lesson'
+import { VerdictIcon } from './verdict'
+import { VERDICT_LABELS } from './verdictLabels'
+import ReadoutValue from './ReadoutValue'
 import SimulationResultView from './SimulationResultView'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
@@ -36,6 +41,12 @@ type RunState =
   | { phase: 'idle' }
   | { phase: 'loading' }
   | { phase: 'done'; result: SimulateResult }
+  | { phase: 'error'; message: string }
+
+type VerdictState =
+  | { phase: 'idle' }
+  | { phase: 'checking' }
+  | { phase: 'done'; claim: Claim; verdict: VerdictResult }
   | { phase: 'error'; message: string }
 
 function isValidWire(edge: Edge | Connection): boolean {
@@ -112,12 +123,100 @@ function seedCount(seed: LessonSeed | undefined, kind: string): number {
   return seed?.nodes.filter((node) => node.kind === kind).length ?? 0
 }
 
-function CanvasInner({ seed }: { seed?: LessonSeed }) {
+function TwistVerdict({
+  state,
+  choice,
+  onRetry,
+}: {
+  state: VerdictState
+  choice: Choice
+  onRetry: () => void
+}) {
+  if (state.phase === 'idle') {
+    return (
+      <div className="glass-panel p-4" aria-live="polite">
+        <p className="text-ink-muted text-sm">
+          {choice === 'not_sure'
+            ? 'You chose Not sure, so there is no definite prediction to check.'
+            : 'This prediction cannot be checked yet.'}
+        </p>
+      </div>
+    )
+  }
+  if (state.phase === 'checking') {
+    return (
+      <div className="glass-panel flex items-center gap-3 p-4" aria-live="polite">
+        <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+        <p className="text-ink-muted text-sm">Checking your prediction against the model…</p>
+      </div>
+    )
+  }
+  if (state.phase === 'done') {
+    const text =
+      state.claim.type === 'lit'
+        ? state.claim.value
+          ? `${state.claim.component} lights`
+          : `${state.claim.component} stays dark`
+        : 'Prediction checked'
+    return (
+      <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+        <div className="flex items-center gap-3">
+          <VerdictIcon status={state.verdict.status} />
+          <div>
+            <p className="text-base font-medium text-ink">{VERDICT_LABELS[state.verdict.status]}</p>
+            <p className="text-ink-muted text-sm">{text}</p>
+          </div>
+        </div>
+        {Object.entries(state.verdict.evidence).map(([key, power]) => {
+          const [cid] = key.split('.')
+          return (
+            <p key={key} className="text-ink-muted pl-9 text-sm">
+              <span className="font-mono">{cid}</span>
+              {' · '}
+              <ReadoutValue value={power} unit="W" />
+            </p>
+          )
+        })}
+        <p className="text-ink-muted pl-9 text-xs">
+          This tests your prediction against the model, not you.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="glass-panel flex items-center gap-3 p-4" role="alert">
+      <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
+      <p className="min-w-0 flex-1 text-base">{state.message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
+      >
+        Retry
+      </button>
+    </div>
+  )
+}
+
+function CanvasInner({
+  seed,
+  eyebrow = 'Step 2 of 3',
+  twistChoice,
+  twistClaim,
+  onSolved,
+}: {
+  seed?: LessonSeed
+  eyebrow?: string
+  twistChoice?: Choice
+  twistClaim?: { type: string; component: string }
+  onSolved?: (result: SimulateResult) => void
+}) {
   const [nodes, setNodes, onNodesChange] = useNodesState<CircuitNodeType>(seedNodes(seed))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(seedEdges(seed))
   const { screenToFlowPosition } = useReactFlow()
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
+  const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
   const counters = useRef({
@@ -143,6 +242,7 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
       ),
     )
     setEdges((current) => current.map((edge) => ({ ...edge, style: FLOW_EDGE_STYLE })))
+    setVerdictState({ phase: 'idle' })
   }
 
   const toggleSwitch = (id: string) => {
@@ -297,6 +397,29 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
           })),
         )
         setRunState({ phase: 'done', result })
+        if (result.ok) {
+          onSolved?.(result)
+          const verdictClaim =
+            twistChoice && twistClaim ? choiceToClaim(twistChoice, twistClaim) : null
+          if (verdictClaim) {
+            setVerdictState({ phase: 'checking' })
+            try {
+              const judged = await evaluateClaim(verdictClaim, netlist, next.signal)
+              if (requestId.current !== id) {
+                return
+              }
+              setVerdictState({ phase: 'done', claim: verdictClaim, verdict: judged.verdict })
+            } catch (verdictErr) {
+              if (next.signal.aborted || requestId.current !== id) {
+                return
+              }
+              setVerdictState({
+                phase: 'error',
+                message: verdictErr instanceof ApiError ? verdictErr.message : 'Request failed.',
+              })
+            }
+          }
+        }
       } catch (err) {
         if (next.signal.aborted || requestId.current !== id) {
           return
@@ -307,7 +430,7 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
         })
       }
     })()
-  }, [edges, nodes, setEdges, setNodes])
+  }, [edges, nodes, onSolved, setEdges, setNodes, twistChoice, twistClaim])
 
   const loopClosed = isClosedLoop(nodes, edges)
 
@@ -334,7 +457,7 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
     <section aria-labelledby="canvas-heading" className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">Step 2 of 3</p>
+          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
           <h2 id="canvas-heading" className="text-xl font-semibold">
             Build what you predicted
           </h2>
@@ -472,6 +595,9 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
         </div>
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
+      {twistChoice && twistClaim && runState.phase === 'done' && runState.result.ok && (
+        <TwistVerdict state={verdictState} choice={twistChoice} onRetry={run} />
+      )}
       {runState.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">
           <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
@@ -490,10 +616,28 @@ function CanvasInner({ seed }: { seed?: LessonSeed }) {
 }
 
 /** Circuit canvas with provider for pane-click placement. */
-export default function CircuitCanvas({ seed }: { seed?: LessonSeed }) {
+export default function CircuitCanvas({
+  seed,
+  eyebrow,
+  twistChoice,
+  twistClaim,
+  onSolved,
+}: {
+  seed?: LessonSeed
+  eyebrow?: string
+  twistChoice?: Choice
+  twistClaim?: { type: string; component: string }
+  onSolved?: (result: SimulateResult) => void
+}) {
   return (
     <ReactFlowProvider>
-      <CanvasInner seed={seed} />
+      <CanvasInner
+        seed={seed}
+        eyebrow={eyebrow}
+        twistChoice={twistChoice}
+        twistClaim={twistClaim}
+        onSolved={onSolved}
+      />
     </ReactFlowProvider>
   )
 }
