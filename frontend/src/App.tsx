@@ -308,29 +308,42 @@ export default function App() {
       auto={auto}
       tools={
         <>
-          <label className="flex cursor-pointer items-center gap-3 text-sm">
-            <input
-              type="checkbox"
-              checked={auto}
-              onChange={(event) => {
-                if (!event.target.checked) {
-                  cancelAdvance()
-                }
-                setAuto(event.target.checked)
-              }}
-              className="h-5 w-5 accent-flow"
-            />
-            <span>
-              Auto-advance chapters
-              <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
-            </span>
-          </label>
-          <div className="flex flex-col gap-4">
-            <h3 className="text-base font-semibold">Dev / Debug Inspector</h3>
-            <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
-            <EvaluatePanel key={preset.id} preset={preset} />
-          </div>
-          <SnapBuildLab />
+          <section aria-label="Learner tools" className="flex flex-col gap-2">
+            <h3 className="text-base font-semibold">Learner tools</h3>
+            <p className="text-ink-muted text-sm">
+              The guided journey above is the learner path — predict, build, and check against
+              the simulator. Everything in this drawer is optional.
+            </p>
+          </section>
+          <section aria-label="Vision experiment (Reality Lens)" className="flex flex-col gap-4">
+            <h3 className="text-base font-semibold">Vision experiment (Reality Lens)</h3>
+            <SnapBuildLab />
+          </section>
+          <section aria-label="Judge / debug tools" className="flex flex-col gap-4">
+            <h3 className="text-base font-semibold">Judge / debug tools</h3>
+            <label className="flex cursor-pointer items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={auto}
+                onChange={(event) => {
+                  if (!event.target.checked) {
+                    cancelAdvance()
+                  }
+                  setAuto(event.target.checked)
+                }}
+                className="h-5 w-5 accent-flow"
+              />
+              <span>
+                Auto-advance chapters
+                <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
+              </span>
+            </label>
+            <div className="flex flex-col gap-4">
+              <h4 className="text-sm font-semibold">API benches</h4>
+              <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
+              <EvaluatePanel key={preset.id} preset={preset} />
+            </div>
+          </section>
         </>
       }
     >
@@ -356,8 +369,8 @@ export default function App() {
             onEvidence={handleEvidence}
             prediction={l1Prediction}
             challenge={L1}
+            gate={complete?.chapter === 'l1' ? gateNode : null}
           />
-          {complete?.chapter === 'l1' && gateNode}
         </div>
       )}
       {stage === 'twist-predict' && (
@@ -375,7 +388,7 @@ export default function App() {
             key="twist"
             seed={L1.twist.seed}
             eyebrow="Twist · The open switch"
-            instructions="Complete the loop without changing the switch. We will test the circuit as soon as the loop closes."
+            instructions="The loop is fully wired and the switch is open. We will test it right away — don't change the switch."
             choice={twistPrediction.choice}
             claim={L1.twist.claim}
             coachSession={twistSession}
@@ -387,8 +400,8 @@ export default function App() {
             onEvidence={handleEvidence}
             prediction={twistPrediction}
             challenge={L1.twist}
+            gate={complete?.chapter === 'twist' ? gateNode : null}
           />
-          {complete?.chapter === 'twist' && gateNode}
         </div>
       )}
       {stage === 'transfer-predict' && (
@@ -428,11 +441,27 @@ export default function App() {
             prediction={transferPrediction}
             challenge={TRANSFER}
             solo
+            gate={complete?.chapter === 'transfer' ? gateNode : null}
           />
-          {complete?.chapter === 'transfer' && gateNode}
         </div>
       )}
-      {stage === 'finale' && <JourneyFinale chapters={finaleChapters} />}
+      {stage === 'finale' && (
+        <JourneyFinale
+          chapters={finaleChapters}
+          onReturnHub={() => {
+            window.location.href = window.location.pathname
+          }}
+          onExploreLens={() => {
+            const tools = document.querySelector('#lab-tools')
+            if (tools instanceof HTMLDetailsElement) {
+              tools.open = true
+            }
+            document
+              .querySelector('#snap-build-heading')
+              ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+          }}
+        />
+      )}
       {STAGE_CONTENT[stage] /* exhaustiveness: every stage renders above */}
     </JourneyShell>
   )

@@ -237,7 +237,15 @@ describe('askCoach', () => {
     await askCoach('s1', NETLIST)
     const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('/api/coach/ask')
-    expect(JSON.parse(init.body as string)).toEqual({ session_id: 's1', netlist: NETLIST })
+    expect(JSON.parse(init.body as string)).toEqual({ session_id: 's1', netlist: NETLIST, rung: 'R1' })
+  })
+
+  it('sends the requested ladder rung', async () => {
+    const mock = vi.fn(async () => okResponse(refused))
+    vi.stubGlobal('fetch', mock)
+    await askCoach('s1', NETLIST, undefined, 'R2')
+    const [, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(JSON.parse(init.body as string)).toEqual({ session_id: 's1', netlist: NETLIST, rung: 'R2' })
   })
 
   it.each([
@@ -321,5 +329,11 @@ describe('providerBadge', () => {
     expect(providerBadge('prototype-fake')).toBe('Fallback coach')
     expect(providerBadge('meta-spark')).toBe('Meta Muse')
     expect(providerBadge('anything-else')).toBe('Coach')
+  })
+
+  it('labels deterministic ladder rungs without claiming a model call', () => {
+    expect(providerBadge('deterministic', 'R2')).toBe('Evidence pointer')
+    expect(providerBadge('deterministic', 'R4')).toBe('Confirmation check')
+    expect(providerBadge('deterministic')).toBe('Guide')
   })
 })

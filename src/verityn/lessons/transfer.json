@@ -31,10 +31,10 @@
   "claim": {"type": "lit", "component": "L2"},
   "seed": {
     "nodes": [
-      {"id": "B1", "kind": "battery", "x": 40, "y": 140},
-      {"id": "S1", "kind": "switch", "closed": true, "x": 230, "y": 140},
-      {"id": "L1", "kind": "bulb", "x": 420, "y": 140},
-      {"id": "L2", "kind": "bulb", "x": 230, "y": 300}
+      {"id": "B1", "kind": "battery", "x": 230, "y": 30},
+      {"id": "S1", "kind": "switch", "closed": true, "x": 40, "y": 160},
+      {"id": "L1", "kind": "bulb", "x": 230, "y": 290},
+      {"id": "L2", "kind": "bulb", "x": 420, "y": 160}
     ],
     "edges": [
       {"id": "W1", "source": "B1", "sourceTerminal": "a", "target": "S1", "targetTerminal": "a"},

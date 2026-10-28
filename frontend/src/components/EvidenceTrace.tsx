@@ -107,10 +107,33 @@ function StepBody({ body }: { body: TraceBody }) {
       if (body.outcome.phase === 'unavailable') {
         return <p className="text-ink-muted text-sm">{body.outcome.message}</p>
       }
+      const history = body.outcome.history
+      if (history !== undefined && history.length > 0) {
+        return (
+          <div className="flex flex-col gap-3">
+            {history.map((rung) => (
+              <div key={rung.rung} className="flex flex-col gap-1">
+                <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
+                  {providerBadge(rung.provider, rung.rung)}
+                </span>
+                <p className="text-base">{rung.text}</p>
+                {rung.reply !== undefined && rung.reply !== '' && (
+                  <p className="text-ink-muted text-sm">
+                    <span className="font-medium text-ink">You wrote:</span> {rung.reply}
+                  </p>
+                )}
+              </div>
+            ))}
+            <p className="text-ink-muted text-xs">
+              Prompts to reconsider — not a diagnosis of what you think.
+            </p>
+          </div>
+        )
+      }
       return (
         <div className="flex flex-col gap-2">
           <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
-            {providerBadge(body.outcome.provider)}
+            {providerBadge(body.outcome.provider, body.outcome.rung)}
           </span>
           <p className="text-base">{body.outcome.text}</p>
           {body.outcome.learnerReply !== undefined && body.outcome.learnerReply !== '' && (

@@ -202,9 +202,18 @@ export type CoachAskResult =
   | { eligible: false; reason_code: string; message: string }
 
 /** Provider value to honest badge text. Fake output is never Meta. */
-export function providerBadge(provider: string): string {
+export function providerBadge(provider: string, rung?: string): string {
   if (provider === 'meta-spark') {
     return 'Meta Muse'
+  }
+  if (provider === 'deterministic') {
+    if (rung === 'R2') {
+      return 'Evidence pointer'
+    }
+    if (rung === 'R4') {
+      return 'Confirmation check'
+    }
+    return 'Guide'
   }
   return provider === 'prototype-fake' ? 'Fallback coach' : 'Coach'
 }
@@ -288,9 +297,10 @@ export async function askCoach(
   sessionId: string,
   netlist: Netlist,
   signal?: AbortSignal,
+  rung = 'R1',
 ): Promise<CoachAskResult> {
   return guardCoachAskResult(
-    await postJson('/api/coach/ask', { session_id: sessionId, netlist }, signal),
+    await postJson('/api/coach/ask', { session_id: sessionId, netlist, rung }, signal),
   )
 }
 

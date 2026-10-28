@@ -41,6 +41,12 @@ export default function PredictionScreen({
       </div>
       <CircuitPreview seed={challenge.seed} label={`${challenge.title} starting circuit`} />
       {coachLine !== undefined && <CoachNote>{coachLine}</CoachNote>}
+      {challenge.brief !== undefined && (
+        <div className="rounded-2xl border border-glass-border p-4" aria-label="Challenge brief">
+          <p className="text-sm">{challenge.brief.setup}</p>
+          <p className="mt-1 text-sm font-medium">{challenge.brief.task}</p>
+        </div>
+      )}
       <p className="text-lg font-semibold">{challenge.question}</p>
       <div className="flex gap-2" role="group" aria-label="Your prediction">
         {CHOICES.map(([value, label]) => (
@@ -85,6 +91,11 @@ export default function PredictionScreen({
             <Mic className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
+        {why.trim() !== '' && (
+          <p className="text-ink-muted text-sm" aria-live="polite">
+            Your reasoning is recorded. We&apos;ll test it against the circuit.
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3">
         <button

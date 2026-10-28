@@ -201,7 +201,7 @@ def test_ask_refuses_consistent_prediction(spy_client):
 def test_ask_ignores_client_supplied_state(client):
     recorded = record(client, TWIST, "no", "The switch is open.")
     verdict = ask(client, recorded["session_id"], wired(TWIST_START),
-                  verdict="CONTRADICTED", rung="R4",
+                  verdict="CONTRADICTED",
                   claim={"type": "lit", "component": "L1", "value": True})
     assert verdict["eligible"] is False
     assert verdict["reason_code"] == coach.NOT_CONTRADICTED
@@ -376,3 +376,160 @@ def test_routing_picks_relevant_template():
         fake_coach.TEMPLATES["no"]["default"]
     assert fake_coach.TEMPLATES["yes"]["default"] != \
         fake_coach.TEMPLATES["no"]["default"]
+
+
+DARK_R2 = ("Evidence: L1 reads 0.0 A and 0.0 W. S1 is open with "
+           "0.0 A through it — no complete loop, so no current "
+           "reaches L1.")
+DARK_R4 = ("Confirmation check — in your own words, why does L1 "
+           "stay dark? The evidence says S1 is open with 0.0 A.")
+LIT_R2 = ("Evidence: L1 reads 0.6 A and 3.6 W — the loop is "
+          "complete.")
+LIT_R4 = ("Confirmation check — in your own words, why does L1 "
+          "light? The evidence says the loop is complete at 0.6 A.")
+
+
+def climb(client, choice, netlist):
+    """Record then serve R1, returning the session id."""
+    recorded = record(client, TWIST, choice, "Why text.")
+    first = ask(client, recorded["session_id"], netlist)
+    assert first["eligible"] is True
+    assert first["rung"] == "R1"
+    return recorded["session_id"]
+
+
+def test_ladder_climbs_r1_r2_r4_on_dark_twist(client):
+    session_id = climb(client, "yes", wired(TWIST_START))
+    second = ask(client, session_id, wired(TWIST_START), rung="R2")
+    assert second["eligible"] is True
+    assert second["rung"] == "R2"
+    assert second["provider"] == "deterministic"
+    assert second["text"] == DARK_R2
+    assert second["claim"] == {"type": "lit", "component": "L1",
+                               "value": True}
+    third = ask(client, session_id, wired(TWIST_START), rung="R4")
+    assert third["eligible"] is True
+    assert third["rung"] == "R4"
+    assert third["provider"] == "deterministic"
+    assert third["text"] == DARK_R4
+
+
+def test_ladder_states_lit_circuit_honestly(client):
+    session_id = climb(client, "no", lit_twist())
+    second = ask(client, session_id, lit_twist(), rung="R2")
+    assert second["text"] == LIT_R2
+    third = ask(client, session_id, lit_twist(), rung="R4")
+    assert third["text"] == LIT_R4
+
+
+def test_rung_order_enforced_per_session(client):
+    recorded = record(client, TWIST, "yes", "Why text.")
+    early = ask(client, recorded["session_id"], wired(TWIST_START),
+                rung="R2")
+    assert early["eligible"] is False
+    assert early["reason_code"] == coach.RUNG_OUT_OF_ORDER
+    climb_r1 = ask(client, recorded["session_id"], wired(TWIST_START))
+    assert climb_r1["rung"] == "R1"
+    skipped = ask(client, recorded["session_id"], wired(TWIST_START),
+                  rung="R4")
+    assert skipped["eligible"] is False
+    assert skipped["reason_code"] == coach.RUNG_OUT_OF_ORDER
+
+
+def test_rung_rerequest_is_idempotent(client):
+    session_id = climb(client, "yes", wired(TWIST_START))
+    again = ask(client, session_id, wired(TWIST_START))
+    assert again["eligible"] is True
+    assert again["rung"] == "R1"
+    second = ask(client, session_id, wired(TWIST_START), rung="R2")
+    assert second["rung"] == "R2"
+
+
+def test_every_rung_rejudges_the_circuit(client):
+    session_id = climb(client, "yes", wired(TWIST_START))
+    changed = ask(client, session_id, lit_twist(), rung="R2")
+    assert changed["eligible"] is False
+    assert changed["reason_code"] == coach.NOT_CONTRADICTED
+    broken = ask(client, session_id, TWIST_START, rung="R2")
+    assert broken["eligible"] is False
+    assert broken["reason_code"] == coach.NOT_SOLVED
+
+
+def test_r2_r4_never_touch_the_provider(spy_client):
+    client, spy = spy_client
+    session_id = climb(client, "yes", wired(TWIST_START))
+    assert len(spy.calls) == 1
+    ask(client, session_id, wired(TWIST_START), rung="R2")
+    ask(client, session_id, wired(TWIST_START), rung="R4")
+    assert len(spy.calls) == 1
+
+
+def test_rung_refusals_skip_the_provider(spy_client):
+    client, spy = spy_client
+    recorded = record(client, TWIST, "yes", "Why text.")
+    ask(client, recorded["session_id"], wired(TWIST_START), rung="R2")
+    assert spy.calls == []
+
+
+def test_unknown_rung_is_malformed(client):
+    recorded = record(client, TWIST, "yes", "Why text.")
+    res = client.post("/api/coach/ask",
+                      json={"session_id": recorded["session_id"],
+                            "netlist": wired(TWIST_START), "rung": "R9"})
+    assert res.status_code == 400
+    assert res.get_json()["error_code"] == "MALFORMED_REQUEST"
+
+
+def test_derive_rejects_invalid_rung_directly():
+    store = coach.SessionStore()
+    with pytest.raises(coach.CoachValidationError):
+        coach.derive_eligibility(store, "s", {}, None, rung="R9")
+
+
+DARK_FACTS = {"L1.power_W": 0.0, "L1.current_A": 0.0,
+              "S1.current_A": 0.0}
+OPEN_NET = {"components": [
+    {"id": "S1", "type": "switch", "closed": False, "a": "p", "b": "m"}]}
+
+
+def test_r2_pointer_unit_shapes():
+    assert coach.r2_pointer(claim_component="L1", facts=DARK_FACTS,
+                            netlist={"components": [
+                                {"id": "B1", "type": "battery",
+                                 "a": "p", "b": "0"}]}) == \
+        "Evidence: L1 reads 0.0 A and 0.0 W."
+    two = {"components": [
+        {"id": "S1", "type": "switch", "closed": False, "a": "p",
+         "b": "m"},
+        {"id": "S2", "type": "switch", "closed": False, "a": "m",
+         "b": "n"}]}
+    assert coach.r2_pointer(claim_component="L1", facts=DARK_FACTS,
+                            netlist=two) == \
+        ("Evidence: L1 reads 0.0 A and 0.0 W. S1 and S2 are open — "
+         "no complete loop, so no current reaches L1.")
+
+
+@pytest.mark.parametrize("facts,netlist", [
+    (None, OPEN_NET),
+    ({}, OPEN_NET),
+    ({"L1.power_W": True, "L1.current_A": 0.0}, OPEN_NET),
+    ({"L1.power_W": float("nan"), "L1.current_A": 0.0}, OPEN_NET),
+    (DARK_FACTS, None),
+    (DARK_FACTS, {"components": "nope"}),
+    (DARK_FACTS, {"components": [{"id": "S1"}]}),
+])
+def test_r2_pointer_never_crashes(facts, netlist):
+    text = coach.r2_pointer(claim_component="L1", facts=facts,
+                            netlist=netlist)
+    assert isinstance(text, str) and text.startswith("Evidence:")
+
+
+def test_r4_prompt_unit_shapes():
+    assert coach.r4_prompt(claim_component="L1", facts=DARK_FACTS,
+                           netlist={"components": []}) == \
+        ("Confirmation check — in your own words, why does L1 stay "
+         "dark? The evidence says L1 reads 0.0 A and 0.0 W.")
+    assert coach.r4_prompt(claim_component="L1", facts=None,
+                           netlist=OPEN_NET) == \
+        ("Confirmation check: in your own words, why did the "
+         "circuit disagree with your prediction?")

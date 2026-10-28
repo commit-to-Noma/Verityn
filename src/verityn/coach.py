@@ -2,7 +2,10 @@
 
 Trust boundary: the server records predictions itself and re-derives
 every verdict at ask-time with the deterministic solver and evaluator.
-It never accepts a client-provided verdict, claim, or rung.
+It never accepts a client-provided verdict or claim. Rung requests
+(R1/R2/R4) advance only through server-recorded order: R2 needs a
+served R1, R4 needs a served R2, and every rung re-judges the
+submitted circuit itself.
 
 Guarantee, stated precisely: the server verifies the submitted
 circuit's outcome; it does not prove the learner built it in the
@@ -15,6 +18,7 @@ store, so tests stay isolated.
 
 import json
 import logging
+import math
 import re
 import secrets
 from pathlib import Path
@@ -30,11 +34,18 @@ CHOICES = ("yes", "no", "not_sure")
 WHY_MAX_CHARS = 500
 
 UNKNOWN_SESSION = "UNKNOWN_SESSION"
+RUNG_OUT_OF_ORDER = "RUNG_OUT_OF_ORDER"
 NO_TWIST_PREDICTION = "NO_TWIST_PREDICTION"
 NOT_DEFINITE = "NOT_DEFINITE"
 NOT_SOLVED = "NOT_SOLVED"
 NOT_ASSESSABLE = "NOT_ASSESSABLE"
 NOT_CONTRADICTED = "NOT_CONTRADICTED"
+
+#: Ladder rungs served by /api/coach/ask, in required order.
+VALID_RUNGS = ("R1", "R2", "R4")
+#: Provider value for deterministic rungs (built from solver facts,
+#: never model output).
+DETERMINISTIC_PROVIDER = "deterministic"
 
 
 class CoachValidationError(ValueError):
@@ -207,15 +218,115 @@ def solver_facts(result):
     return facts
 
 
+def _is_number(value):
+    return (isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(value))
+
+
+def _bulb_numbers(facts, component):
+    """Validated (amps, watts) for one part, or None when unusable."""
+    if not isinstance(facts, dict) or not isinstance(component, str):
+        return None
+    amps = facts.get(f"{component}.current_A")
+    watts = facts.get(f"{component}.power_W")
+    if not _is_number(amps) or not _is_number(watts):
+        return None
+    return amps, watts
+
+
+def _open_switches(netlist):
+    """Ids of explicitly open switches in a submitted netlist."""
+    if not isinstance(netlist, dict):
+        return []
+    components = netlist.get("components")
+    if not isinstance(components, list):
+        return []
+    found = []
+    for part in components:
+        if (isinstance(part, dict) and part.get("type") == "switch"
+                and part.get("closed") is False
+                and isinstance(part.get("id"), str)):
+            found.append(part["id"])
+    return found
+
+
+def r2_pointer(*, claim_component, facts, netlist):
+    """Deterministic R2 evidence pointer from solver state.
+
+    Names the measured bulb numbers and, when the bulb is dark
+    behind open switches, the break in the loop. Pure template over
+    server facts: no model call, nothing invented.
+    """
+    numbers = _bulb_numbers(facts, claim_component)
+    if numbers is None:
+        return ("Evidence: the submitted circuit contradicts the "
+                "recorded prediction.")
+    amps, watts = numbers
+    if watts > evaluator.ZERO_POWER:
+        return (f"Evidence: {claim_component} reads {amps:.1f} A and "
+                f"{watts:.1f} W — the loop is complete.")
+    switches = _open_switches(netlist)
+    if not switches:
+        return (f"Evidence: {claim_component} reads {amps:.1f} A and "
+                f"{watts:.1f} W.")
+    if len(switches) == 1:
+        through = facts.get(f"{switches[0]}.current_A")
+        if _is_number(through):
+            clause = (f"{switches[0]} is open with {through:.1f} A "
+                      f"through it")
+        else:
+            clause = f"{switches[0]} is open"
+    else:
+        clause = f"{' and '.join(switches)} are open"
+    return (f"Evidence: {claim_component} reads {amps:.1f} A and "
+            f"{watts:.1f} W. {clause} — no complete loop, so no "
+            f"current reaches {claim_component}.")
+
+
+def r4_prompt(*, claim_component, facts, netlist):
+    """Deterministic R4 confirmation check before solo transfer.
+
+    Asks the learner to state the reason in their own words against
+    the same evidence R2 pointed at. The reply is recorded, never
+    graded: articulation is the check, not a score.
+    """
+    numbers = _bulb_numbers(facts, claim_component)
+    if numbers is None:
+        return ("Confirmation check: in your own words, why did the "
+                "circuit disagree with your prediction?")
+    amps, watts = numbers
+    if watts > evaluator.ZERO_POWER:
+        return (f"Confirmation check — in your own words, why does "
+                f"{claim_component} light? The evidence says the loop "
+                f"is complete at {amps:.1f} A.")
+    switches = _open_switches(netlist)
+    if switches:
+        through = facts.get(f"{switches[0]}.current_A")
+        if _is_number(through):
+            evidence = (f"{switches[0]} is open with {through:.1f} A")
+        else:
+            evidence = f"{switches[0]} is open"
+    else:
+        evidence = (f"{claim_component} reads {amps:.1f} A and "
+                    f"{watts:.1f} W")
+    return (f"Confirmation check — in your own words, why does "
+            f"{claim_component} stay dark? The evidence says {evidence}.")
+
+
 def derive_eligibility(store, session_id, netlist, provider, pack=None,
-                       fallback=None):
+                       fallback=None, rung="R1"):
     """Decide coaching eligibility from server-side records and evidence.
 
-    The provider is called only on the eligible path, after a
-    server-computed CONTRADICTED verdict. Every other path refuses
-    without touching the provider. A failing primary falls back to the
-    fallback provider when one is configured, else the error stands.
+    R1 asks the provider (with fallback) after a server-computed
+    CONTRADICTED verdict. R2 and R4 are deterministic templates over
+    the same server facts: the provider is never called for them.
+    Rungs advance only through server-recorded order, and every rung
+    re-judges the submitted circuit itself. Every refusal path leaves
+    the provider untouched.
     """
+    if rung not in VALID_RUNGS:
+        raise CoachValidationError(f"Invalid rung: {rung!r}.")
     pack = load_pack(pack)
     if not isinstance(session_id, str) or session_id not in store.sessions:
         return _refused(UNKNOWN_SESSION, "Unknown coaching session.")
@@ -230,6 +341,13 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
     if claim is None:
         return _refused(NOT_ASSESSABLE,
                         "The Twist claim cannot be judged.")
+    served = store.sessions[session_id].setdefault("rungs", [])
+    if rung == "R2" and "R1" not in served:
+        return _refused(RUNG_OUT_OF_ORDER,
+                        "See the first question (R1) before the evidence.")
+    if rung == "R4" and "R2" not in served:
+        return _refused(RUNG_OUT_OF_ORDER,
+                        "See the evidence pointer (R2) before confirming.")
     result = solver.solve(netlist)
     if result.ok is not True:
         return _refused(NOT_SOLVED,
@@ -242,22 +360,30 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         return _refused(NOT_ASSESSABLE,
                         "The claim cannot be judged against this circuit.")
     facts = solver_facts(result)
-    try:
-        text = provider.r1_question(choice=recorded["choice"],
-                                    why=recorded["why"], facts=facts)
-        serving = provider.name
-    except CoachProviderError as err:
-        log.warning("coach primary failed: stage=%s http_status=%s "
-                    "shape=%s reason=%s",
-                    err.stage, err.http_status, err.shape, err.reason)
-        if fallback is None:
-            raise
-        text = fallback.r1_question(choice=recorded["choice"],
-                                    why=recorded["why"], facts=facts)
-        serving = fallback.name
+    if rung in ("R2", "R4"):
+        builder = r2_pointer if rung == "R2" else r4_prompt
+        text = builder(claim_component=claim["component"], facts=facts,
+                       netlist=netlist)
+        serving = DETERMINISTIC_PROVIDER
+    else:
+        try:
+            text = provider.r1_question(choice=recorded["choice"],
+                                        why=recorded["why"], facts=facts)
+            serving = provider.name
+        except CoachProviderError as err:
+            log.warning("coach primary failed: stage=%s http_status=%s "
+                        "shape=%s reason=%s",
+                        err.stage, err.http_status, err.shape, err.reason)
+            if fallback is None:
+                raise
+            text = fallback.r1_question(choice=recorded["choice"],
+                                        why=recorded["why"], facts=facts)
+            serving = fallback.name
+    if rung not in served:
+        served.append(rung)
     return {
         "eligible": True,
-        "rung": "R1",
+        "rung": rung,
         "text": text,
         "provider": serving,
         "claim": claim,

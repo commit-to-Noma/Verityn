@@ -26,8 +26,22 @@ export interface EvidenceRow {
   watts: number
 }
 
+export interface CoachRungTrace {
+  rung: string
+  text: string
+  provider: string
+  reply?: string
+}
+
 export type CoachTraceOutcome =
-  | { phase: 'done'; text: string; provider: string; learnerReply?: string }
+  | {
+      phase: 'done'
+      text: string
+      provider: string
+      learnerReply?: string
+      rung?: string
+      history?: CoachRungTrace[]
+    }
   | { phase: 'unavailable'; message: string }
 
 export type TraceBody =

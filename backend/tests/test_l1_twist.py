@@ -67,8 +67,8 @@ def test_twist_fix_is_valid_but_dark(twist, pack):
     assert lamp["power"] == pytest.approx(expected["power"])
 
 
-def test_twist_canvas_shape_needs_the_wire(twist):
-    """The exact netlist the twist seed produces, before and after wiring."""
+def test_twist_canvas_seed_is_wired_with_s1_open(twist):
+    """The exact netlist the twist seed produces: fully wired, S1 open."""
     seed_netlist = {
         "components": [
             {"id": "B1", "type": "battery", "volts": 6,
@@ -78,19 +78,10 @@ def test_twist_canvas_shape_needs_the_wire(twist):
             {"id": "L1", "type": "bulb", "a": "L1.a", "b": "L1.b"},
             {"id": "W1", "type": "wire", "a": "B1.a", "b": "S1.a"},
             {"id": "W2", "type": "wire", "a": "S1.b", "b": "L1.a"},
+            {"id": "W3", "type": "wire", "a": "B1.b", "b": "L1.b"},
         ]
     }
-    broken = solve(seed_netlist)
-    assert broken.ok is False
-    assert broken.error_code == DANGLING_TERMINAL
-    assert broken.component_ids == ["B1", "L1"]
-    wired = {
-        "components": (
-            seed_netlist["components"]
-            + [{"id": "W3", "type": "wire", "a": "L1.b", "b": "B1.b"}]
-        )
-    }
-    result = solve(wired)
+    result = solve(seed_netlist)
     assert result.ok is True
     assert result.components["L1"]["power"] == pytest.approx(0.0)
     assert twist["expectedFixed"]["power"] == 0

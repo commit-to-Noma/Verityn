@@ -16,7 +16,14 @@ describe('L1 lesson pack', () => {
   it('identifies the lesson and question', () => {
     expect(L1.id).toBe('L1')
     expect(L1.title).toBe('Light the bulb')
-    expect(L1.question).toBe('Will the bulb light?')
+    expect(L1.question).toBe('The circuit has an open gap. Will current flow and light the bulb?')
+  })
+
+  it('briefs the original setup and the repair task', () => {
+    expect(L1.brief).toEqual({
+      setup: 'Original setup: open circuit → bulb stays dark.',
+      task: 'Your task: repair the circuit and test your prediction.',
+    })
   })
 
   it('starts from the agreed broken netlist', () => {
@@ -141,10 +148,10 @@ function rejected(): SimulateResult {
 }
 
 describe('L1 twist', () => {
-  it('asks about the repaired circuit with the switch open', () => {
+  it('asks about the wired circuit with the switch open', () => {
     expect(L1.twist.id).toBe('L1T1')
     expect(L1.twist.question).toBe(
-      'You connect the missing wire but leave the switch open. Will the bulb light?',
+      'The circuit is complete, but the switch is open. Will current flow?',
     )
     expect(L1.twist.claim).toEqual({ type: 'lit', component: 'L1' })
   })
@@ -176,23 +183,28 @@ describe('L1 twist', () => {
     })
   })
 
-  it('seeds the canvas with the open switch and two wires', () => {
+  it('seeds the canvas fully wired with only the switch open', () => {
     expect(L1.twist.seed.nodes.find((node) => node.id === 'S1')).toMatchObject({
       kind: 'switch',
       closed: false,
     })
-    expect(L1.twist.seed.edges.map((edge) => edge.id)).toEqual(['W1', 'W2'])
+    expect(L1.twist.seed.edges.map((edge) => edge.id)).toEqual(['W1', 'W2', 'W3'])
   })
 
-  it('converts the twist seed with B1.b and L1.b loose', () => {
+  it('converts the twist seed to the closed loop with S1 open', () => {
     const netlist = toNetlist({ nodes: L1.twist.seed.nodes, edges: L1.twist.seed.edges })
     expect(netlist.components.find((component) => component.id === 'S1')).toMatchObject({
       type: 'switch',
       closed: false,
     })
+    expect(netlist.components.find((component) => component.id === 'W3')).toMatchObject({
+      type: 'wire',
+      a: 'B1.b',
+      b: 'L1.b',
+    })
     const junctions = netlist.components.flatMap((component) => [component.a, component.b])
-    expect(junctions.filter((junction) => junction === 'B1.b')).toHaveLength(1)
-    expect(junctions.filter((junction) => junction === 'L1.b')).toHaveLength(1)
+    expect(junctions.filter((junction) => junction === 'B1.b')).toHaveLength(2)
+    expect(junctions.filter((junction) => junction === 'L1.b')).toHaveLength(2)
   })
 })
 

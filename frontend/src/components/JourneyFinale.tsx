@@ -3,7 +3,15 @@ import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
 
 /** Finale: what the learner accomplished, grounded in saved simulation evidence. */
-export default function JourneyFinale({ chapters }: { chapters: ChapterRecap[] }) {
+export default function JourneyFinale({
+  chapters,
+  onReturnHub,
+  onExploreLens,
+}: {
+  chapters: ChapterRecap[]
+  onReturnHub: () => void
+  onExploreLens: () => void
+}) {
   return (
     <section aria-labelledby="finale-heading" className="flex flex-col gap-6">
       <div>
@@ -19,13 +27,27 @@ export default function JourneyFinale({ chapters }: { chapters: ChapterRecap[] }
         </p>
       </div>
       <JourneyStory chapters={chapters} />
-      <div>
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => window.location.reload()}
           className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
         >
           Replay journey
+        </button>
+        <button
+          type="button"
+          onClick={onReturnHub}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Return to Verityn Hub
+        </button>
+        <button
+          type="button"
+          onClick={onExploreLens}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Explore Reality Lens
         </button>
       </div>
       {chapters.map((chapter) => (

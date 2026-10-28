@@ -111,6 +111,8 @@ export interface Challenge {
   id: string
   title: string
   question: string
+  /** Pack-owned setup/task framing, shown above the question when present. */
+  brief?: { setup: string; task: string }
   start: Netlist
   expectedStart: {
     ok: false

@@ -221,6 +221,34 @@ body {
 
 .component-invalid {
   filter: drop-shadow(0 0 6px var(--color-bad));
+  outline: 2px solid var(--color-bad);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+/* An open switch visibly breaks the loop: distinct red dashed outline. */
+.component-open {
+  outline: 2px dashed var(--color-bad);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+/* Coach demonstration spotlight: pulsing outline, visual only. */
+@keyframes demo-pulse {
+  0%,
+  100% {
+    outline-color: var(--color-flow);
+  }
+  50% {
+    outline-color: transparent;
+  }
+}
+
+.component-demo {
+  outline: 3px solid var(--color-flow);
+  outline-offset: 6px;
+  border-radius: 12px;
+  animation: demo-pulse 1.2s ease-in-out infinite;
 }
 
 .component-readout {

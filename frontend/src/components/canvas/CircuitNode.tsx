@@ -17,6 +17,8 @@ export type CircuitNodeData = {
   closed: boolean
   /** Read-only display: the switch state shows as text with no toggle button. */
   readOnly?: boolean
+  /** Coach demonstration spotlight; cleared on the next canvas edit. */
+  demonstrated?: boolean
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
@@ -44,6 +46,8 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
       aria-label={`${KIND_NAME[data.kind]} ${data.label}`}
       className={`relative flex min-w-32 flex-col items-center ${
         data.invalid ? 'component-invalid' : ''
+      } ${data.kind === 'switch' && !data.closed ? 'component-open' : ''} ${
+        data.demonstrated === true ? 'component-demo' : ''
       }`}
     >
       <Handle id="a" type="source" position={Position.Left} className="terminal-handle" aria-label="Terminal a" />

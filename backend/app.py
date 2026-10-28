@@ -131,12 +131,16 @@ def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
             return _malformed_request("Request body must be a JSON object.")
         session_id = body.get("session_id")
         netlist = body.get("netlist")
+        rung = body.get("rung", "R1")
         if not isinstance(session_id, str) or not isinstance(netlist, dict):
             return _malformed_request(
                 "Request needs a session id string and a netlist object.")
+        if rung not in coach.VALID_RUNGS:
+            return _malformed_request(
+                "Rung must be one of R1, R2, R4.")
         return jsonify(coach.derive_eligibility(
             store, session_id, netlist, active_provider,
-            fallback=active_fallback))
+            fallback=active_fallback, rung=rung))
 
     @app.post("/api/vision/propose")
     def vision_propose():

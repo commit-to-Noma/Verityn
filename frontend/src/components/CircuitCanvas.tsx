@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -20,6 +20,8 @@ import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
+import type { Demonstration } from '../coach/actions'
+import { describeDemonstration } from '../coach/actions'
 import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
 import { flowForCurrent, glowIntensity } from '../canvas/visuals'
@@ -58,13 +60,6 @@ type VerdictState =
   | { phase: 'idle' }
   | { phase: 'checking' }
   | { phase: 'done'; claim: Claim; verdict: VerdictResult; netlist: Netlist }
-  | { phase: 'error'; message: string }
-
-type CoachState =
-  | { phase: 'idle' }
-  | { phase: 'asking' }
-  | { phase: 'done'; text: string; provider: string; ms: number }
-  | { phase: 'refused'; message: string }
   | { phase: 'error'; message: string }
 
 function formatLatency(ms: number): string {
@@ -133,6 +128,7 @@ function seedEdges(seed: LessonSeed | undefined): Edge[] {
   }
   return seed.edges.map((edge) => ({
     id: edge.id,
+    type: 'smoothstep',
     source: edge.source,
     sourceHandle: edge.sourceTerminal,
     target: edge.target,
@@ -141,180 +137,325 @@ function seedEdges(seed: LessonSeed | undefined): Edge[] {
   }))
 }
 
+interface LadderRung {
+  rung: string
+  text: string
+  provider: string
+  ms: number
+  reply: string | null
+}
+
+type LadderStatus =
+  | { phase: 'idle' }
+  | { phase: 'asking'; rung: string }
+  | { phase: 'refused'; rung: string; message: string }
+  | { phase: 'error'; rung: string; message: string }
+
+const RUNGS = ['R1', 'R2', 'R4'] as const
+const RUNG_ORDER: Record<string, number> = { R1: 0, R2: 1, R4: 2 }
+
+const NEXT_LABEL: Record<string, string> = {
+  R1: 'Ask the coach',
+  R2: 'Show me the evidence (R2)',
+  R4: 'Confirm before solo (R4)',
+}
+
+function rungCaption(provider: string): string | null {
+  if (provider === 'prototype-fake') {
+    return 'Deterministic prototype — no model call.'
+  }
+  if (provider === 'meta-spark') {
+    return 'Live Meta Muse response.'
+  }
+  if (provider === 'deterministic') {
+    return 'Built from solver measurements — no model call.'
+  }
+  return null
+}
+
 function CoachAsk({
   session,
   netlist,
   onResult,
   onInteract,
+  demonstration,
+  onDemonstrate,
 }: {
   session: string | null
   netlist: Netlist
   onResult?: (outcome: CoachTraceOutcome) => void
   /** Fired when the learner starts reflecting, so demo mode holds. */
   onInteract?: () => void
+  /** Consented diagram demonstration offered on the R2 card, if any. */
+  demonstration?: Demonstration | null
+  onDemonstrate?: (demo: Demonstration) => void
 }) {
-  const [coachState, setCoachState] = useState<CoachState>({ phase: 'idle' })
-  const [reply, setReply] = useState('')
-  const [savedReply, setSavedReply] = useState<string | null>(null)
+  const [rungs, setRungs] = useState<LadderRung[]>([])
+  const [status, setStatus] = useState<LadderStatus>({ phase: 'idle' })
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [demoDismissed, setDemoDismissed] = useState(false)
+  const [demoDone, setDemoDone] = useState(false)
   const coachController = useRef<AbortController | null>(null)
+  const rungsRef = useRef<LadderRung[]>([])
 
   useEffect(() => () => coachController.current?.abort(), [])
+  useEffect(() => {
+    rungsRef.current = rungs
+  }, [rungs])
 
-  const ask = () => {
+  const publish = (cards: LadderRung[]) => {
+    const latest = cards[cards.length - 1]
+    if (latest === undefined) {
+      return
+    }
+    const r1 = cards.find((card) => card.rung === 'R1')
+    onResult?.({
+      phase: 'done',
+      text: latest.text,
+      provider: latest.provider,
+      rung: latest.rung,
+      learnerReply: r1?.reply ?? undefined,
+      history: cards.map((card) => ({
+        rung: card.rung,
+        text: card.text,
+        provider: card.provider,
+        ...(card.reply === null ? {} : { reply: card.reply }),
+      })),
+    })
+  }
+
+  const ask = (rung: string) => {
     if (session === null) {
       const message = 'The prediction was not recorded, so no coaching was served.'
-      setCoachState({ phase: 'error', message })
+      setStatus({ phase: 'error', rung, message })
       onResult?.({ phase: 'unavailable', message })
       return
     }
     coachController.current?.abort()
     const next = new AbortController()
     coachController.current = next
-    setCoachState({ phase: 'asking' })
+    setStatus({ phase: 'asking', rung })
     const started = performance.now()
     void (async () => {
       try {
-        const answer = await askCoach(session, netlist, next.signal)
+        const answer = await askCoach(session, netlist, next.signal, rung)
         if (next.signal.aborted) {
           return
         }
         if (answer.eligible) {
           const ms = performance.now() - started
-          setCoachState({ phase: 'done', text: answer.text, provider: answer.provider, ms })
-          onResult?.({ phase: 'done', text: answer.text, provider: answer.provider })
+          const served = answer.rung ?? rung
+          const card: LadderRung = {
+            rung: served,
+            text: answer.text,
+            provider: answer.provider,
+            ms,
+            reply: null,
+          }
+          const cards = [...rungsRef.current.filter((entry) => entry.rung !== served), card].sort(
+            (a, b) => (RUNG_ORDER[a.rung] ?? 99) - (RUNG_ORDER[b.rung] ?? 99),
+          )
+          rungsRef.current = cards
+          setRungs(cards)
+          setStatus({ phase: 'idle' })
+          publish(cards)
         } else {
-          setCoachState({ phase: 'refused', message: answer.message })
-          onResult?.({ phase: 'unavailable', message: answer.message })
+          setStatus({ phase: 'refused', rung, message: answer.message })
+          if (rungsRef.current.length === 0) {
+            onResult?.({ phase: 'unavailable', message: answer.message })
+          }
         }
       } catch (err) {
         if (next.signal.aborted) {
           return
         }
         const message = err instanceof ApiError ? err.message : 'Request failed.'
-        setCoachState({ phase: 'error', message })
-        onResult?.({ phase: 'unavailable', message })
+        setStatus({ phase: 'error', rung, message })
+        if (rungsRef.current.length === 0) {
+          onResult?.({ phase: 'unavailable', message })
+        }
       }
     })()
   }
 
-  if (coachState.phase === 'done') {
-    const caption =
-      coachState.provider === 'prototype-fake'
-        ? 'Deterministic prototype — no model call.'
-        : coachState.provider === 'meta-spark'
-          ? 'Live Meta Muse response.'
-          : null
-    const saveReply = () => {
-      const thought = reply.trim()
-      if (thought === '') {
-        return
-      }
-      setSavedReply(thought)
-      onResult?.({
-        phase: 'done',
-        text: coachState.text,
-        provider: coachState.provider,
-        learnerReply: thought,
-      })
+  const saveReply = (rung: string) => {
+    const thought = (drafts[rung] ?? '').trim()
+    if (thought === '') {
+      return
     }
-    return (
-      <div className="glass-panel flex flex-col gap-2 p-4" aria-live="polite">
-        <div className="flex items-center gap-2">
-          <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
-            {providerBadge(coachState.provider)}
-          </span>
-          <span className="text-ink-muted text-xs">
-            answered in {formatLatency(coachState.ms)}
-          </span>
-        </div>
-        <p className="text-base">{coachState.text}</p>
-        {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
-        {savedReply === null ? (
-          <form
-            className="flex flex-col gap-2"
-            onSubmit={(event) => {
-              event.preventDefault()
-              saveReply()
-            }}
-          >
-            <label htmlFor="coach-reply" className="text-sm font-medium">
-              Complete the thought: <span className="text-ink-muted font-normal">An open switch…</span>
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="coach-reply"
-                type="text"
-                value={reply}
-                maxLength={140}
-                autoComplete="off"
-                placeholder="One line is enough"
-                onFocus={() => onInteract?.()}
-                onChange={(event) => {
-                  onInteract?.()
-                  setReply(event.target.value)
-                }}
-                className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 text-base"
-              />
-              <button
-                type="submit"
-                disabled={reply.trim() === ''}
-                className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Save
-              </button>
+    const cards = rungsRef.current.map((card) =>
+      card.rung === rung ? { ...card, reply: thought } : card,
+    )
+    rungsRef.current = cards
+    setRungs(cards)
+    publish(cards)
+  }
+
+  const served = new Set(rungs.map((card) => card.rung))
+  const nextRung: string | null = RUNGS.find((rung) => !served.has(rung)) ?? null
+
+  return (
+    <div className="flex flex-col gap-3" aria-live="polite">
+      {rungs.map((card) => {
+        const caption = rungCaption(card.provider)
+        const draft = drafts[card.rung] ?? ''
+        const reflective = card.rung === 'R1' || card.rung === 'R4'
+        return (
+          <div key={card.rung} className="glass-panel flex flex-col gap-2 p-4">
+            <div className="flex items-center gap-2">
+              <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
+                {providerBadge(card.provider, card.rung)}
+              </span>
+              <span className="text-ink-muted text-xs">
+                answered in {formatLatency(card.ms)}
+              </span>
             </div>
-          </form>
-        ) : (
-          <p className="text-ink-muted text-sm">
-            <span className="font-medium text-ink">Your thought:</span> {savedReply}
-          </p>
-        )}
-      </div>
-    )
-  }
-  if (coachState.phase === 'asking') {
-    return (
-      <div className="glass-panel flex items-center gap-3 p-4" aria-live="polite">
-        <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
-        <p className="text-ink-muted text-sm">Asking the coach…</p>
-      </div>
-    )
-  }
-  if (coachState.phase === 'refused') {
-    return (
-      <div className="glass-panel p-4" aria-live="polite">
-        <p className="text-ink-muted text-sm">{coachState.message}</p>
-      </div>
-    )
-  }
-  // Genuine provider failure with no usable fallback response: labeled
-  // honestly, never disguised as coaching. Retryable via Try again.
-  if (coachState.phase === 'error') {
-    return (
-      <div className="glass-panel flex flex-col gap-2 p-4" role="alert">
-        <p className="text-base font-medium text-ink">Coach unavailable</p>
-        <p className="text-ink-muted text-sm">{coachState.message}</p>
-        <div>
+            <p className="text-base">{card.text}</p>
+            {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
+            {card.rung === 'R2' &&
+              demonstration !== null &&
+              demonstration !== undefined &&
+              !demoDismissed &&
+              !demoDone && (
+                <div className="border-glass-border flex flex-col gap-2 rounded-[10px] border p-3">
+                  <p className="text-sm">{describeDemonstration(demonstration)}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onInteract?.()
+                        setDemoDone(true)
+                        onDemonstrate?.(demonstration)
+                      }}
+                      className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+                    >
+                      Show me
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDemoDismissed(true)}
+                      className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+                    >
+                      Keep circuit unchanged
+                    </button>
+                  </div>
+                </div>
+              )}
+            {card.rung === 'R2' && demoDone && (
+              <p className="text-ink-muted text-xs">
+                Demonstrated on your canvas — the simulator judges the result.
+              </p>
+            )}
+            {reflective &&
+              (card.reply === null ? (
+                <form
+                  className="flex flex-col gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    saveReply(card.rung)
+                  }}
+                >
+                  <label
+                    htmlFor={card.rung === 'R1' ? 'coach-reply' : 'coach-r4-reply'}
+                    className="text-sm font-medium"
+                  >
+                    {card.rung === 'R1' ? (
+                      <>
+                        Complete the thought:{' '}
+                        <span className="text-ink-muted font-normal">An open switch…</span>
+                      </>
+                    ) : (
+                      'In your own words, why?'
+                    )}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id={card.rung === 'R1' ? 'coach-reply' : 'coach-r4-reply'}
+                      type="text"
+                      value={draft}
+                      maxLength={140}
+                      autoComplete="off"
+                      placeholder="One line is enough"
+                      onFocus={() => onInteract?.()}
+                      onChange={(event) => {
+                        onInteract?.()
+                        setDrafts((prev) => ({ ...prev, [card.rung]: event.target.value }))
+                      }}
+                      className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 text-base"
+                    />
+                    <button
+                      type="submit"
+                      disabled={draft.trim() === ''}
+                      className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <p className="text-ink-muted text-sm">
+                  <span className="font-medium text-ink">
+                    {card.rung === 'R1' ? 'Your thought:' : 'Your confirmation:'}
+                  </span>{' '}
+                  {card.reply}
+                </p>
+              ))}
+          </div>
+        )
+      })}
+      {status.phase === 'asking' && (
+        <div className="glass-panel flex items-center gap-3 p-4">
+          <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+          <p className="text-ink-muted text-sm">Asking the coach…</p>
+        </div>
+      )}
+      {status.phase === 'refused' && (
+        <div className="glass-panel flex flex-col gap-2 p-4">
+          <p className="text-ink-muted text-sm">{status.message}</p>
+          <div>
+            <button
+              type="button"
+              onClick={() => ask(status.rung)}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Retry {status.rung}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Genuine provider failure with no usable fallback response: labeled
+          honestly, never disguised as coaching. Retryable via Try again. */}
+      {status.phase === 'error' && (
+        <div className="glass-panel flex flex-col gap-2 p-4" role="alert">
+          <p className="text-base font-medium text-ink">Coach unavailable</p>
+          <p className="text-ink-muted text-sm">{status.message}</p>
+          <div>
+            <button
+              type="button"
+              onClick={() => ask(status.rung)}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )}
+      {nextRung !== null && status.phase === 'idle' && (
+        <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={ask}
+            onClick={() => ask(nextRung)}
             className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
           >
-            Try again
+            {NEXT_LABEL[nextRung] ?? 'Ask the coach'}
           </button>
         </div>
-      </div>
-    )
-  }
-  return (
-    <div className="flex items-center gap-3">
-      <button
-        type="button"
-        onClick={ask}
-        className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-      >
-        Ask the coach
-      </button>
+      )}
+      {nextRung === null && status.phase === 'idle' && (
+        <p className="text-ink-muted text-xs">
+          Ladder complete — the solo stage runs with the coach off.
+        </p>
+      )}
     </div>
   )
 }
@@ -346,6 +487,9 @@ function StartVerdict({
     : `${component} stays dark`
   return (
     <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+      <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
+        Original setup evidence
+      </p>
       <div className="flex items-center gap-3">
         <VerdictIcon status={status} />
         <div>
@@ -377,6 +521,8 @@ function ClaimVerdict({
   onCoached,
   onCoachInteract,
   coachEnabled,
+  demonstration,
+  onDemonstrate,
 }: {
   state: VerdictState
   choice: Choice
@@ -387,6 +533,8 @@ function ClaimVerdict({
   onCoached?: (outcome: CoachTraceOutcome) => void
   onCoachInteract?: () => void
   coachEnabled: boolean
+  demonstration?: Demonstration | null
+  onDemonstrate?: (demo: Demonstration) => void
 }) {
   if (state.phase === 'idle') {
     return (
@@ -426,6 +574,9 @@ function ClaimVerdict({
     return (
       <>
         <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
+            Repaired setup evidence
+          </p>
           <div className="flex items-center gap-3">
             <VerdictIcon status={state.verdict.status} />
             <div>
@@ -466,6 +617,8 @@ function ClaimVerdict({
             netlist={state.netlist}
             onResult={onCoached}
             onInteract={onCoachInteract}
+            demonstration={demonstration}
+            onDemonstrate={onDemonstrate}
           />
         )}
       </>
@@ -506,6 +659,7 @@ function CanvasInner({
   challenge,
   solo = false,
   importRequest,
+  gate,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -528,6 +682,8 @@ function CanvasInner({
   challenge?: Challenge
   solo?: boolean
   importRequest?: CanvasImportRequest | null
+  /** Chapter gate, rendered below the result and above the evidence trace. */
+  gate?: ReactNode
 }) {
   const initialSeed = importRequest?.seed ?? seed
   const initialUncertain = importRequest?.uncertainIds ?? []
@@ -569,13 +725,24 @@ function CanvasInner({
     requestId.current += 1
     setRunState({ phase: 'idle' })
     setNodes((current) =>
-      current.map((node) =>
-        node.data.glow > 0 || node.data.invalid
-          ? { ...node, data: { ...node.data, glow: 0, invalid: false, measurement: undefined } }
-          : node.data.measurement
-            ? { ...node, data: { ...node.data, measurement: undefined } }
-          : node,
-      ),
+      current.map((node) => {
+        if (node.data.glow > 0 || node.data.invalid || node.data.demonstrated === true) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              glow: 0,
+              invalid: false,
+              measurement: undefined,
+              demonstrated: false,
+            },
+          }
+        }
+        if (node.data.measurement) {
+          return { ...node, data: { ...node.data, measurement: undefined } }
+        }
+        return node
+      }),
     )
     setEdges((current) =>
       current.map((edge) => ({
@@ -687,7 +854,9 @@ function CanvasInner({
   const onConnect = (connection: Connection) => {
     counters.current.wire += 1
     const id = `W${counters.current.wire}`
-    setEdges((current) => addEdge({ ...connection, id, style: FLOW_EDGE_STYLE }, current))
+    setEdges((current) =>
+      addEdge({ ...connection, id, type: 'smoothstep', style: FLOW_EDGE_STYLE }, current),
+    )
     invalidate()
   }
 
@@ -840,6 +1009,39 @@ function CanvasInner({
     setTool((current) => (current === next ? null : next))
   }
 
+  /** Consented demonstration for the R2 card, derived from live canvas state. */
+  const demonstration: Demonstration | null = (() => {
+    const sw = nodes.find((node) => node.data.kind === 'switch')
+    if (sw !== undefined) {
+      return { action: sw.data.closed ? 'open_switch' : 'close_switch', target: sw.id }
+    }
+    if (claim !== undefined) {
+      return { action: 'highlight_path', target: claim.component }
+    }
+    return null
+  })()
+
+  const handleDemonstrate = (demo: Demonstration) => {
+    if (demo.action === 'highlight_path') {
+      setNodes((current) =>
+        current.map((node) =>
+          node.id === demo.target ? { ...node, data: { ...node.data, demonstrated: true } } : node,
+        ),
+      )
+      return
+    }
+    const sw = nodes.find((node) => node.id === demo.target && node.data.kind === 'switch')
+    if (sw === undefined) {
+      return
+    }
+    // Switch actions reuse the manual toggle path: the solver re-judges.
+    if (demo.action === 'open_switch' && sw.data.closed) {
+      toggleSwitch(sw.id)
+    } else if (demo.action === 'close_switch' && !sw.data.closed) {
+      toggleSwitch(sw.id)
+    }
+  }
+
   const tools = [
     { id: 'battery', label: 'Battery', Icon: Zap },
     { id: 'bulb', label: 'Bulb', Icon: Lightbulb },
@@ -941,7 +1143,7 @@ function CanvasInner({
             isValidConnection={isValidWire}
             nodeTypes={circuitNodeTypes}
             connectionMode={ConnectionMode.Loose}
-            defaultEdgeOptions={{ style: FLOW_EDGE_STYLE }}
+            defaultEdgeOptions={{ type: 'smoothstep', style: FLOW_EDGE_STYLE }}
             snapToGrid
             snapGrid={[20, 20]}
             colorMode="dark"
@@ -1011,6 +1213,8 @@ function CanvasInner({
             onCoached={handleCoached}
             onCoachInteract={onCoachInteract}
             coachEnabled={!solo}
+            demonstration={demonstration}
+            onDemonstrate={handleDemonstrate}
           />
         </div>
       )}
@@ -1032,6 +1236,7 @@ function CanvasInner({
           </button>
         </div>
       )}
+      {gate}
       {runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
           <EvidenceTrace
@@ -1075,6 +1280,7 @@ export default function CircuitCanvas({
   challenge,
   solo,
   importRequest,
+  gate,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -1092,6 +1298,7 @@ export default function CircuitCanvas({
   challenge?: Challenge
   solo?: boolean
   importRequest?: CanvasImportRequest | null
+  gate?: ReactNode
 }) {
   return (
     <ReactFlowProvider>
@@ -1112,6 +1319,7 @@ export default function CircuitCanvas({
         challenge={challenge}
         solo={solo}
         importRequest={importRequest}
+        gate={gate}
       />
     </ReactFlowProvider>
   )

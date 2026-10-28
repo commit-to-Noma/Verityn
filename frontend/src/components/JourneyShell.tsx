@@ -34,11 +34,11 @@ export default function JourneyShell({
         {children}
       </main>
       <footer>
-        <details className="glass-panel p-4">
+        <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">
-            Lab tools
+            Tools
             <span className="ml-2 font-normal text-ink-muted">
-              Raw API benches and the experimental vision lab — outside the learning flow.
+              Optional extras — outside the learning flow.
             </span>
           </summary>
           <div className="mt-4 flex flex-col gap-8">{tools}</div>

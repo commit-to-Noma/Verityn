@@ -1,7 +1,11 @@
 {
   "id": "L1",
   "title": "Light the bulb",
-  "question": "Will the bulb light?",
+  "question": "The circuit has an open gap. Will current flow and light the bulb?",
+  "brief": {
+    "setup": "Original setup: open circuit → bulb stays dark.",
+    "task": "Your task: repair the circuit and test your prediction."
+  },
   "start": {
     "components": [
       {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
@@ -29,9 +33,9 @@
   "claim": {"type": "lit", "component": "L1"},
   "seed": {
     "nodes": [
-      {"id": "B1", "kind": "battery", "x": 40, "y": 140},
-      {"id": "S1", "kind": "switch", "closed": true, "x": 230, "y": 140},
-      {"id": "L1", "kind": "bulb", "x": 420, "y": 140}
+      {"id": "B1", "kind": "battery", "x": 230, "y": 30},
+      {"id": "S1", "kind": "switch", "closed": true, "x": 40, "y": 160},
+      {"id": "L1", "kind": "bulb", "x": 230, "y": 290}
     ],
     "edges": [
       {"id": "W1", "source": "B1", "sourceTerminal": "a", "target": "S1", "targetTerminal": "a"},
@@ -41,7 +45,7 @@
   "twist": {
     "id": "L1T1",
     "title": "Twist: the open switch",
-    "question": "You connect the missing wire but leave the switch open. Will the bulb light?",
+    "question": "The circuit is complete, but the switch is open. Will current flow?",
     "start": {
       "components": [
         {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
@@ -57,7 +61,7 @@
     },
     "fix": {
       "wire": {"a": "n1", "b": "0"},
-      "hint": "Connect the two open ends with one wire."
+      "hint": "Run the wired loop as-is — the only break is the open switch."
     },
     "expectedFixed": {
       "ok": true,
@@ -69,13 +73,14 @@
     "claim": {"type": "lit", "component": "L1"},
     "seed": {
       "nodes": [
-        {"id": "B1", "kind": "battery", "x": 40, "y": 140},
-        {"id": "S1", "kind": "switch", "closed": false, "x": 230, "y": 140},
-        {"id": "L1", "kind": "bulb", "x": 420, "y": 140}
+        {"id": "B1", "kind": "battery", "x": 230, "y": 30},
+        {"id": "S1", "kind": "switch", "closed": false, "x": 40, "y": 160},
+        {"id": "L1", "kind": "bulb", "x": 230, "y": 290}
       ],
       "edges": [
         {"id": "W1", "source": "B1", "sourceTerminal": "a", "target": "S1", "targetTerminal": "a"},
-        {"id": "W2", "source": "S1", "sourceTerminal": "b", "target": "L1", "targetTerminal": "a"}
+        {"id": "W2", "source": "S1", "sourceTerminal": "b", "target": "L1", "targetTerminal": "a"},
+        {"id": "W3", "source": "B1", "sourceTerminal": "b", "target": "L1", "targetTerminal": "b"}
       ]
     }
   }

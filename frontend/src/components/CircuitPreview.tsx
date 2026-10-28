@@ -33,6 +33,7 @@ export default function CircuitPreview({ seed, label }: { seed: LessonSeed; labe
     }))
   const edges: Edge[] = seed.edges.map((edge) => ({
     id: edge.id,
+    type: 'smoothstep',
     source: edge.source,
     sourceHandle: edge.sourceTerminal,
     target: edge.target,
