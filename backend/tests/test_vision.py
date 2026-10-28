@@ -20,16 +20,32 @@ from verityn import coach, meta_coach, solver, vision
 TINY_PNG = "data:image/png;base64,iVBORw0KGgo="
 
 GOOD_PROPOSAL = {
+    "status": "needs_review",
     "components": [
-        {"id": "B1", "type": "battery"},
-        {"id": "S1", "type": "switch", "closed": True},
-        {"id": "L1", "type": "bulb"},
+        {"id": "B1", "type": "battery",
+         "polarity": {"positive": "a", "negative": "b"},
+         "evidence": {"region_id": "r-battery",
+                       "bounds": {"x": 0.1, "y": 0.2,
+                                  "width": 0.12, "height": 0.2},
+                       "rotation": 0}},
+        {"id": "S1", "type": "switch", "closed": True,
+         "evidence": {"region_id": "r-switch",
+                       "bounds": {"x": 0.4, "y": 0.2,
+                                  "width": 0.12, "height": 0.2},
+                       "rotation": 0}},
+        {"id": "L1", "type": "bulb",
+         "evidence": {"region_id": "r-bulb",
+                       "bounds": {"x": 0.7, "y": 0.2,
+                                  "width": 0.12, "height": 0.2},
+                       "rotation": 0}},
     ],
     "connections": [
         {"from": {"node": "B1", "terminal": "a"},
-         "to": {"node": "S1", "terminal": "a"}, "uncertain": False},
+         "to": {"node": "S1", "terminal": "a"}, "uncertain": False,
+         "evidence": {"region_id": "r-wire-1"}},
         {"from": {"node": "S1", "terminal": "b"},
-         "to": {"node": "L1", "terminal": "a"}, "uncertain": True},
+         "to": {"node": "L1", "terminal": "a"}, "uncertain": True,
+         "evidence": {"region_id": "r-wire-2"}},
     ],
 }
 
@@ -254,3 +270,22 @@ def test_network_failure_logs_no_status(monkeypatch, app, caplog):
     assert "stage=transport http_status=None" in caplog.text
     assert "unreachable" not in caplog.text
     assert "iVBORw0KGgo" not in caplog.text
+
+
+def test_validate_proposal_rejects_battery_without_polarity():
+    bad = copy.deepcopy(GOOD_PROPOSAL)
+    del bad["components"][0]["polarity"]
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(bad)
+
+
+def test_validate_proposal_rejects_inconsistent_status():
+    bad = copy.deepcopy(GOOD_PROPOSAL)
+    bad["status"] = "ready"
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(bad)
+
+
+def test_validate_proposal_accepts_unsupported_without_parts():
+    proposal = {"status": "unsupported", "components": [], "connections": []}
+    assert vision.validate_proposal(proposal) == proposal

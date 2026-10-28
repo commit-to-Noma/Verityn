@@ -1,8 +1,9 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { CircleCheckBig, CircleQuestionMark, CircleX, LoaderCircle } from 'lucide-react'
 import type { VisionProposeResult } from '../api/client'
 import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, providerBadge } from '../api/client'
 import { layoutProposal } from '../canvas/layout'
+import { canLoadProposal, polarityText, regionStyle, reviewBanner } from '../vision/review'
 import type { LessonSeed } from '../lessons/lesson'
 import type { LensSample } from '../lens/samples'
 import { LENS_SAMPLES } from '../lens/samples'
@@ -111,10 +112,17 @@ export default function SnapBuildLab() {
     setState({ phase: 'idle' })
   }
 
-  const uncertainCount =
+  const proposed =
     state.phase === 'proposed'
-      ? state.result.proposal.connections.filter((connection) => connection.uncertain).length
-      : 0
+      ? {
+          banner: reviewBanner(
+            state.result.proposal.status,
+            state.result.proposal.connections.filter((connection) => connection.uncertain).length,
+            state.result.proposal.connections.length,
+          ),
+          loadable: canLoadProposal(state.result.proposal),
+        }
+      : null
 
   return (
     <section aria-labelledby="snap-build-heading" className="flex flex-col gap-4">
@@ -195,7 +203,27 @@ export default function SnapBuildLab() {
       )}
       {(state.phase === 'selected' || state.phase === 'working' || state.phase === 'proposed') && (
         <div className="glass-panel flex flex-col gap-3 p-4">
-          <img src={state.image} alt="Uploaded schematic" className="max-h-64 self-start rounded-[10px]" />
+          {state.phase === 'proposed' ? (
+            <div className="relative self-start">
+              <img src={state.image} alt="Uploaded schematic" className="max-h-64 rounded-[10px]" />
+              <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+                {state.result.proposal.components.map((component) => (
+                  <span
+                    key={component.id}
+                    title={`${component.id} · ${component.evidence.region_id}`}
+                    className="border-flow absolute rounded-[4px] border-2"
+                    style={regionStyle(component.evidence.bounds)}
+                  >
+                    <span className="bg-flow text-on-accent absolute -top-5 left-0 rounded px-1 font-mono text-[10px] font-medium whitespace-nowrap">
+                      {component.id}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <img src={state.image} alt="Uploaded schematic" className="max-h-64 self-start rounded-[10px]" />
+          )}
           {state.phase === 'selected' && (
             <div className="flex items-center gap-3">
               <button
@@ -220,59 +248,80 @@ export default function SnapBuildLab() {
               <p className="text-ink-muted text-sm">Reading the schematic…</p>
             </div>
           )}
-          {state.phase === 'proposed' && (
+          {state.phase === 'proposed' && proposed !== null && (
             <div className="flex flex-col gap-3" aria-live="polite">
               <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
                 {providerBadge(state.result.provider)}
               </span>
-              {uncertainCount > 0 && (
-                <p className="text-ink-muted text-sm" role="note">
-                  {uncertainCount} of {state.result.proposal.connections.length} connections are
-                  uncertain guesses — dashed grey on the canvas. Verify them before testing.
-                </p>
+              <div className="flex items-start gap-2" role={proposed.banner.tone === 'blocked' ? 'alert' : 'note'}>
+                {proposed.banner.tone === 'ok' && (
+                  <CircleCheckBig className="text-ok mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                )}
+                {proposed.banner.tone === 'warn' && (
+                  <CircleQuestionMark className="text-flow mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                )}
+                {proposed.banner.tone === 'blocked' && (
+                  <CircleX className="text-bad mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                )}
+                <p className="text-sm">{proposed.banner.text}</p>
+              </div>
+              {proposed.loadable && (
+                <ul className="flex flex-col gap-1">
+                  {state.result.proposal.components.map((component) => (
+                    <li key={component.id} className="flex items-baseline gap-2 text-sm">
+                      <span className="font-mono font-medium">{component.id}</span>
+                      <span className="text-ink-muted capitalize">{component.type}</span>
+                      {component.type === 'battery' && component.polarity !== undefined && (
+                        <span className="font-mono text-xs" title="Detected polarity">
+                          {polarityText(component.polarity)}
+                        </span>
+                      )}
+                      {component.type === 'switch' && (
+                        <span className="text-ink-muted">{component.closed ? 'closed' : 'open'}</span>
+                      )}
+                      <span className="text-ink-muted ml-auto font-mono text-xs">
+                        {component.evidence.region_id}
+                      </span>
+                    </li>
+                  ))}
+                  {state.result.proposal.connections.map((connection, index) => (
+                    <li key={`V${index + 1}`} className="flex items-baseline gap-2 text-sm">
+                      <span className="font-mono font-medium">V{index + 1}</span>
+                      <span className="text-ink-muted">
+                        {connection.from.node}.{connection.from.terminal} ↔ {connection.to.node}.
+                        {connection.to.terminal}
+                      </span>
+                      {connection.uncertain && (
+                        <span className="text-ink-muted text-xs">uncertain</span>
+                      )}
+                      <span className="text-ink-muted ml-auto font-mono text-xs">
+                        {connection.evidence.region_id}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               )}
-              <ul className="flex flex-col gap-1">
-                {state.result.proposal.components.map((component) => (
-                  <li key={component.id} className="flex items-baseline gap-2 text-sm">
-                    <span className="font-mono font-medium">{component.id}</span>
-                    <span className="text-ink-muted capitalize">{component.type}</span>
-                    {component.type === 'switch' && (
-                      <span className="text-ink-muted ml-auto">{component.closed ? 'closed' : 'open'}</span>
-                    )}
-                  </li>
-                ))}
-                {state.result.proposal.connections.map((connection, index) => (
-                  <li key={`V${index + 1}`} className="flex items-baseline gap-2 text-sm">
-                    <span className="font-mono font-medium">V{index + 1}</span>
-                    <span className="text-ink-muted">
-                      {connection.from.node}.{connection.from.terminal} ↔ {connection.to.node}.
-                      {connection.to.terminal}
-                    </span>
-                    {connection.uncertain && (
-                      <span className="text-ink-muted ml-auto text-xs">uncertain</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
               {state.result.assumptions.map((assumption) => (
                 <p key={assumption} className="text-ink-muted text-xs">
                   Assumed: {assumption}
                 </p>
               ))}
               <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => confirm(state.result)}
-                  className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-                >
-                  Load to canvas
-                </button>
+                {proposed.loadable && (
+                  <button
+                    type="button"
+                    onClick={() => confirm(state.result)}
+                    className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+                  >
+                    Load to canvas
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={reset}
                   className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
                 >
-                  Discard
+                  {proposed.loadable ? 'Discard' : 'Try another image'}
                 </button>
               </div>
             </div>

@@ -275,12 +275,16 @@ describe('askCoach', () => {
 
 describe('proposeCircuit', () => {
   const proposal = {
+    status: 'needs_review',
     components: [
-      { id: 'B1', type: 'battery' },
-      { id: 'L1', type: 'bulb' },
+      { id: 'B1', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+        evidence: { region_id: 'r-b', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.2 }, rotation: 0 } },
+      { id: 'L1', type: 'bulb',
+        evidence: { region_id: 'r-l', bounds: { x: 0.7, y: 0.2, width: 0.1, height: 0.2 }, rotation: 0 } },
     ],
     connections: [
-      { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: true },
+      { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: true,
+        evidence: { region_id: 'r-w1' } },
     ],
   }
   const good = { proposal, assumptions: ['Battery voltage assumed 6 V.'], provider: 'meta-spark' }

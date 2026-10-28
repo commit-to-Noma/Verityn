@@ -26,6 +26,7 @@ VISION_MAX_COMPLETION_TOKENS = 2048
 
 COMPONENT_TYPES = ("battery", "bulb", "switch")
 TERMINALS = ("a", "b")
+PROPOSAL_STATUSES = ("ready", "needs_review", "unsupported")
 MAX_COMPONENTS = 16
 MAX_CONNECTIONS = 24
 
@@ -42,6 +43,8 @@ _PROPOSAL_JSON_SCHEMA = {
     "schema": {
         "type": "object",
         "properties": {
+            "status": {"type": "string",
+                        "enum": list(PROPOSAL_STATUSES)},
             "components": {
                 "type": "array",
                 "items": {
@@ -51,8 +54,39 @@ _PROPOSAL_JSON_SCHEMA = {
                         "type": {"type": "string",
                                  "enum": list(COMPONENT_TYPES)},
                         "closed": {"type": "boolean"},
+                        "polarity": {
+                            "type": "object",
+                            "properties": {
+                                "positive": {"type": "string",
+                                              "enum": ["a", "b"]},
+                                "negative": {"type": "string",
+                                              "enum": ["a", "b"]},
+                            },
+                            "required": ["positive", "negative"],
+                            "additionalProperties": False,
+                        },
+                        "evidence": {
+                            "type": "object",
+                            "properties": {
+                                "region_id": {"type": "string"},
+                                "bounds": {
+                                    "type": "object",
+                                    "properties": {
+                                        "x": {"type": "number"},
+                                        "y": {"type": "number"},
+                                        "width": {"type": "number"},
+                                        "height": {"type": "number"},
+                                    },
+                                    "required": ["x", "y", "width", "height"],
+                                    "additionalProperties": False,
+                                },
+                                "rotation": {"type": "number"},
+                            },
+                            "required": ["region_id", "bounds", "rotation"],
+                            "additionalProperties": False,
+                        },
                     },
-                    "required": ["id", "type"],
+                    "required": ["id", "type", "evidence"],
                     "additionalProperties": False,
                 },
             },
@@ -82,13 +116,21 @@ _PROPOSAL_JSON_SCHEMA = {
                             "additionalProperties": False,
                         },
                         "uncertain": {"type": "boolean"},
+                        "evidence": {
+                            "type": "object",
+                            "properties": {
+                                "region_id": {"type": "string"},
+                            },
+                            "required": ["region_id"],
+                            "additionalProperties": False,
+                        },
                     },
-                    "required": ["from", "to", "uncertain"],
+                    "required": ["from", "to", "uncertain", "evidence"],
                     "additionalProperties": False,
                 },
             },
         },
-        "required": ["components", "connections"],
+        "required": ["status", "components", "connections"],
         "additionalProperties": False,
     },
 }
@@ -96,12 +138,16 @@ _PROPOSAL_JSON_SCHEMA = {
 _SYSTEM_PROMPT = (
     "You read a hand-drawn or printed circuit schematic and transcribe "
     "its parts and wiring. Reply with exactly one JSON object and no "
-    "other text: components (id, type battery|bulb|switch, closed for "
-    "switches) and connections (from/to node plus terminal a|b, and "
-    "uncertain true when unsure). Label each part's two terminals a "
-    "and b consistently. When a connection is unclear, include your "
-    "best reading with uncertain true rather than omitting it. Never "
-    "invent parts that are not visible."
+    "other text. Include status ready|needs_review|unsupported, "
+    "components, and connections. Each component must include evidence "
+    "with a stable region_id, normalized 0..1 bounds, and rotation. "
+    "Batteries must include polarity identifying positive and negative "
+    "terminals. Each connection must include evidence.region_id. "
+    "Components use type battery|bulb|switch and switches include closed. "
+    "Connections use from/to node plus terminal a|b and uncertain true "
+    "when unsure. Label each part's two terminals a and b consistently. "
+    "When the topology cannot be safely reconstructed, use unsupported "
+    "with empty components and connections. Never invent parts that are not visible."
 )
 
 
@@ -112,6 +158,39 @@ class VisionRequestError(ValueError):
 def _rejected():
     return CoachProviderError("Vision proposal rejected.",
                               stage="validate")
+
+
+def _finite_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _validate_evidence(value, *, connection=False):
+    if not isinstance(value, dict) or not isinstance(value.get("region_id"), str):
+        raise _rejected()
+    if connection:
+        if set(value) != {"region_id"} or not value["region_id"].strip():
+            raise _rejected()
+        return {"region_id": value["region_id"]}
+    if set(value) != {"region_id", "bounds", "rotation"}:
+        raise _rejected()
+    bounds = value.get("bounds")
+    if not isinstance(bounds, dict) or set(bounds) != {"x", "y", "width", "height"}:
+        raise _rejected()
+    if not all(_finite_number(bounds[key]) for key in bounds):
+        raise _rejected()
+    x, y = bounds["x"], bounds["y"]
+    width, height = bounds["width"], bounds["height"]
+    if not (0 <= x <= 1 and 0 <= y <= 1 and 0 < width <= 1 and
+            0 < height <= 1 and x + width <= 1 and y + height <= 1):
+        raise _rejected()
+    rotation = value["rotation"]
+    if not _finite_number(rotation) or not -180 <= rotation <= 180:
+        raise _rejected()
+    return {
+        "region_id": value["region_id"],
+        "bounds": {key: bounds[key] for key in ("x", "y", "width", "height")},
+        "rotation": rotation,
+    }
 
 
 def parse_data_url(image):
@@ -146,10 +225,15 @@ def validate_proposal(output):
         raise _rejected()
     components = output.get("components")
     connections = output.get("connections")
+    status = output.get("status")
+    if status not in PROPOSAL_STATUSES:
+        raise _rejected()
     if not isinstance(components, list) or not isinstance(connections,
                                                           list):
         raise _rejected()
-    if not 1 <= len(components) <= MAX_COMPONENTS:
+    if status == "unsupported" and (components or connections):
+        raise _rejected()
+    if status != "unsupported" and not 1 <= len(components) <= MAX_COMPONENTS:
         raise _rejected()
     if not 0 <= len(connections) <= MAX_CONNECTIONS:
         raise _rejected()
@@ -166,14 +250,28 @@ def validate_proposal(output):
             raise _rejected()
         if cid in seen:
             raise _rejected()
-        if set(comp) - {"id", "type", "closed"}:
+        if set(comp) - {"id", "type", "closed", "polarity", "evidence"}:
             raise _rejected()
-        entry = {"id": cid, "type": ctype}
+        evidence = _validate_evidence(comp.get("evidence"))
+        entry = {"id": cid, "type": ctype, "evidence": evidence}
         if ctype == "switch":
             if not isinstance(comp.get("closed"), bool):
                 raise _rejected()
             entry["closed"] = comp["closed"]
         elif "closed" in comp:
+            raise _rejected()
+        if ctype == "battery":
+            polarity = comp.get("polarity")
+            if (not isinstance(polarity, dict) or set(polarity) != {"positive", "negative"}
+                    or polarity["positive"] not in TERMINALS
+                    or polarity["negative"] not in TERMINALS
+                    or polarity["positive"] == polarity["negative"]):
+                raise _rejected()
+            entry["polarity"] = {
+                "positive": polarity["positive"],
+                "negative": polarity["negative"],
+            }
+        elif "polarity" in comp:
             raise _rejected()
         seen[cid] = ctype
         canon_components.append(entry)
@@ -183,9 +281,13 @@ def validate_proposal(output):
         if not isinstance(conn, dict):
             raise _rejected()
         if set(conn) != {"from", "to", "uncertain"}:
+            if set(conn) != {"from", "to", "uncertain", "evidence"}:
+                raise _rejected()
+        if "evidence" not in conn:
             raise _rejected()
         if not isinstance(conn["uncertain"], bool):
             raise _rejected()
+        evidence = _validate_evidence(conn["evidence"], connection=True)
         ends = []
         for key in ("from", "to"):
             end = conn[key]
@@ -209,8 +311,14 @@ def validate_proposal(output):
             "from": {"node": ends[0][0], "terminal": ends[0][1]},
             "to": {"node": ends[1][0], "terminal": ends[1][1]},
             "uncertain": conn["uncertain"],
+            "evidence": evidence,
         })
-    return {"components": canon_components, "connections": canon_connections}
+    if status == "ready" and any(conn["uncertain"] for conn in canon_connections):
+        raise _rejected()
+    if status == "needs_review" and not any(conn["uncertain"] for conn in canon_connections):
+        raise _rejected()
+    return {"status": status, "components": canon_components,
+            "connections": canon_connections}
 
 
 class MetaVisionProvider:

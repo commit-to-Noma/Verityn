@@ -346,6 +346,14 @@ export interface VisionComponent {
   id: string
   type: 'battery' | 'bulb' | 'switch'
   closed?: boolean
+  polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
+  evidence: VisionComponentEvidence
+}
+
+export interface VisionComponentEvidence {
+  region_id: string
+  bounds: { x: number; y: number; width: number; height: number }
+  rotation: number
 }
 
 export interface VisionEndpoint {
@@ -357,9 +365,11 @@ export interface VisionConnection {
   from: VisionEndpoint
   to: VisionEndpoint
   uncertain: boolean
+  evidence: { region_id: string }
 }
 
 export interface VisionProposal {
+  status: 'ready' | 'needs_review' | 'unsupported'
   components: VisionComponent[]
   connections: VisionConnection[]
 }
@@ -379,7 +389,15 @@ function isVisionEndpoint(value: unknown): value is VisionEndpoint {
 }
 
 function guardVisionProposal(body: unknown): VisionProposal {
-  if (!isRecord(body) || !Array.isArray(body.components) || !Array.isArray(body.connections)) {
+  if (
+    !isRecord(body) ||
+    (body.status !== 'ready' && body.status !== 'needs_review' && body.status !== 'unsupported') ||
+    !Array.isArray(body.components) ||
+    !Array.isArray(body.connections)
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  if (body.status === 'unsupported' && (body.components.length > 0 || body.connections.length > 0)) {
     throw new ApiError('payload', 'Unexpected response from the server.')
   }
   for (const component of body.components) {
@@ -387,8 +405,19 @@ function guardVisionProposal(body: unknown): VisionProposal {
       !isRecord(component) ||
       typeof component.id !== 'string' ||
       (component.type !== 'battery' && component.type !== 'bulb' && component.type !== 'switch') ||
-      (component.closed !== undefined && typeof component.closed !== 'boolean')
+      (component.closed !== undefined && typeof component.closed !== 'boolean') ||
+      !isVisionComponentEvidence(component.evidence)
     ) {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+    if (component.type === 'battery') {
+      if (!isRecord(component.polarity) ||
+        (component.polarity.positive !== 'a' && component.polarity.positive !== 'b') ||
+        (component.polarity.negative !== 'a' && component.polarity.negative !== 'b') ||
+        component.polarity.positive === component.polarity.negative) {
+        throw new ApiError('payload', 'Unexpected response from the server.')
+      }
+    } else if (component.polarity !== undefined) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
   }
@@ -397,12 +426,30 @@ function guardVisionProposal(body: unknown): VisionProposal {
       !isRecord(connection) ||
       !isVisionEndpoint(connection.from) ||
       !isVisionEndpoint(connection.to) ||
-      typeof connection.uncertain !== 'boolean'
+      typeof connection.uncertain !== 'boolean' ||
+      !isRecord(connection.evidence) ||
+      typeof connection.evidence.region_id !== 'string' ||
+      connection.evidence.region_id.trim() === ''
     ) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
   }
   return body as unknown as VisionProposal
+}
+
+function isVisionComponentEvidence(value: unknown): value is VisionComponentEvidence {
+  if (!isRecord(value) || typeof value.region_id !== 'string' || !isRecord(value.bounds)) {
+    return false
+  }
+  const bounds = value.bounds
+  return (
+    typeof bounds.x === 'number' && bounds.x >= 0 && bounds.x <= 1 &&
+    typeof bounds.y === 'number' && bounds.y >= 0 && bounds.y <= 1 &&
+    typeof bounds.width === 'number' && bounds.width > 0 && bounds.width <= 1 &&
+    typeof bounds.height === 'number' && bounds.height > 0 && bounds.height <= 1 &&
+    bounds.x + bounds.width <= 1 && bounds.y + bounds.height <= 1 &&
+    typeof value.rotation === 'number' && value.rotation >= -180 && value.rotation <= 180
+  )
 }
 
 function guardVisionProposeResult(body: unknown): VisionProposeResult {

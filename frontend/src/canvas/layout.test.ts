@@ -3,14 +3,20 @@ import type { VisionProposal } from '../api/client'
 import { counterStarts, layoutProposal } from './layout'
 
 const PROPOSAL: VisionProposal = {
+  status: 'needs_review',
   components: [
-    { id: 'B1', type: 'battery' },
-    { id: 'S1', type: 'switch', closed: false },
-    { id: 'L1', type: 'bulb' },
+    { id: 'B1', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+      evidence: { region_id: 'b', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+    { id: 'S1', type: 'switch', closed: false,
+      evidence: { region_id: 's', bounds: { x: 0.4, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+    { id: 'L1', type: 'bulb',
+      evidence: { region_id: 'l', bounds: { x: 0.7, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
   ],
   connections: [
-    { from: { node: 'B1', terminal: 'a' }, to: { node: 'S1', terminal: 'a' }, uncertain: false },
-    { from: { node: 'S1', terminal: 'b' }, to: { node: 'L1', terminal: 'a' }, uncertain: true },
+    { from: { node: 'B1', terminal: 'a' }, to: { node: 'S1', terminal: 'a' }, uncertain: false,
+      evidence: { region_id: 'w1' } },
+    { from: { node: 'S1', terminal: 'b' }, to: { node: 'L1', terminal: 'a' }, uncertain: true,
+      evidence: { region_id: 'w2' } },
   ],
 }
 
@@ -36,11 +42,16 @@ describe('layoutProposal', () => {
 
   it('wraps to a second row after three parts', () => {
     const wide: VisionProposal = {
+      status: 'ready',
       components: [
-        { id: 'B1', type: 'battery' },
-        { id: 'B2', type: 'battery' },
-        { id: 'B3', type: 'battery' },
-        { id: 'L1', type: 'bulb' },
+        { id: 'B1', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+          evidence: { region_id: 'b1', bounds: { x: 0.1, y: 0.1, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'B2', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+          evidence: { region_id: 'b2', bounds: { x: 0.3, y: 0.1, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'B3', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+          evidence: { region_id: 'b3', bounds: { x: 0.5, y: 0.1, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'L1', type: 'bulb',
+          evidence: { region_id: 'l1', bounds: { x: 0.7, y: 0.1, width: 0.1, height: 0.1 }, rotation: 0 } },
       ],
       connections: [],
     }
