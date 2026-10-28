@@ -156,6 +156,9 @@ cd frontend && npm test         # frontend unit tests (vitest)
 cd frontend && npm run build   # typecheck + production build
 python -m pytest backend/tests -q   # backend tests (venv active)
 python scripts/smoke_live.py   # live judging-path smoke check (venv active)
+
+# With the backend and a frontend dev server running:
+BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journey
 ```
 
 ## Built with Muse Code

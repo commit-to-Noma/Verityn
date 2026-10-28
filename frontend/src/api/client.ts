@@ -163,9 +163,19 @@ async function postJson(path: string, payload: unknown, signal?: AbortSignal): P
       throw err
     }
     // Transport failure: the backend may be gone. Any HTTP response,
-    // even an error status, proves reachability instead.
+    // even an error status, proves reachability instead — except gateway
+    // statuses, which mean a proxy answered but the backend did not.
     reportBackendHealth('down')
     throw new ApiError('network', 'Could not reach the backend. Is it running?')
+  }
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    reportBackendHealth('down')
+    throw new ApiError(
+      'network',
+      'Could not reach the backend. Is it running?',
+      res.status,
+      null,
+    )
   }
   reportBackendHealth('up')
   let body: unknown = null

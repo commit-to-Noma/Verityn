@@ -1,5 +1,5 @@
 import type { ChapterRecap } from '../journey/story'
-import { proofCards } from '../journey/story'
+import { MISSING_CHAPTER, proofCards } from '../journey/story'
 import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
 
@@ -74,7 +74,11 @@ export default function JourneyFinale({
               </span>
             )}
           </div>
-          <EvidenceTrace input={chapter.input} />
+          {chapter.input === null ? (
+            <p className="text-ink-muted text-sm">{MISSING_CHAPTER}</p>
+          ) : (
+            <EvidenceTrace input={chapter.input} />
+          )}
         </article>
       ))}
     </section>

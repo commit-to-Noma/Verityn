@@ -282,16 +282,12 @@ export default function App() {
     })()
   }
 
-  const finaleChapters: ChapterRecap[] = (
-    [
-      { id: L1.id, title: L1.title, solo: false },
-      { id: L1.twist.id, title: L1.twist.title, solo: false },
-      { id: TRANSFER.id, title: TRANSFER.title, solo: true },
-    ] as const
-  ).flatMap((chapter) => {
-    const input = snapshots[chapter.id]
-    return input ? [{ ...chapter, input }] : []
-  })
+  // All three slots, always: skipped chapters render an honest placeholder.
+  const finaleChapters: ChapterRecap[] = [
+    { id: L1.id, title: L1.title, solo: false, input: snapshots[L1.id] ?? null },
+    { id: L1.twist.id, title: L1.twist.title, solo: false, input: snapshots[L1.twist.id] ?? null },
+    { id: TRANSFER.id, title: TRANSFER.title, solo: true, input: snapshots[TRANSFER.id] ?? null },
+  ]
 
   const gateNode =
     complete === null ? null : (
@@ -309,7 +305,7 @@ export default function App() {
       stage={stage}
       auto={auto}
       tools={
-        <Suspense fallback={<p className="text-ink-muted text-sm">Loading tools…</p>}>
+        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing optional lab tools…</p>}>
           <section aria-label="Learner tools" className="flex flex-col gap-2">
             <h3 className="text-base font-semibold">Learner tools</h3>
             <p className="text-ink-muted text-sm">
@@ -347,6 +343,10 @@ export default function App() {
                 <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
               </span>
             </label>
+            <p className="text-ink-muted text-sm">
+              Demo mode lets the presenter rehearse the journey without changing the learner
+              experience.
+            </p>
             <details className="border-glass-border rounded-[10px] border p-4">
               <summary className="cursor-pointer text-sm font-semibold">
                 Developer API benches

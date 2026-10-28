@@ -7,7 +7,8 @@ export interface ChapterRecap {
   id: string
   title: string
   solo: boolean
-  input: TraceInput
+  /** Null when the chapter was skipped or interrupted: no evidence saved. */
+  input: TraceInput | null
 }
 
 export interface StoryNode {
@@ -16,7 +17,7 @@ export interface StoryNode {
 }
 
 function choiceDetail(chapter: ChapterRecap | undefined): string {
-  const prediction = chapter?.input.prediction
+  const prediction = chapter?.input?.prediction
   if (!prediction) {
     return 'Not reached'
   }
@@ -30,7 +31,7 @@ function choiceDetail(chapter: ChapterRecap | undefined): string {
 }
 
 function realityDetail(chapter: ChapterRecap | undefined): string {
-  const verdict = chapter?.input.verdict
+  const verdict = chapter?.input?.verdict
   if (!verdict) {
     return 'No verdict recorded'
   }
@@ -50,7 +51,7 @@ function realityDetail(chapter: ChapterRecap | undefined): string {
 }
 
 function coachDetail(chapter: ChapterRecap | undefined): string {
-  const coach = chapter?.input.coach
+  const coach = chapter?.input?.coach
   if (!coach || coach.phase !== 'done') {
     return 'No coaching'
   }
@@ -73,13 +74,16 @@ function transferDetail(chapter: ChapterRecap | undefined): string {
   return lit === 1 ? 'Verified: 1 bulb lit' : `Verified: ${lit} bulbs lit`
 }
 
+/** Shown on proof cards and traces for chapters without saved evidence. */
+export const MISSING_CHAPTER = 'Complete this chapter to unlock its evidence.'
+
 /** Three-beat proof strip: the claim, the evidence, the solo transfer. */
 export function proofCards(chapters: ChapterRecap[]): StoryNode[] {
   const [l1, reality, transfer] = chapters
   return [
-    { title: 'Prediction', detail: choiceDetail(l1) },
-    { title: 'Simulator evidence', detail: realityDetail(reality) },
-    { title: 'Independent transfer', detail: transferDetail(transfer) },
+    { title: 'Prediction', detail: l1?.input ? choiceDetail(l1) : MISSING_CHAPTER },
+    { title: 'Simulator evidence', detail: reality?.input ? realityDetail(reality) : MISSING_CHAPTER },
+    { title: 'Independent transfer', detail: transfer?.input ? transferDetail(transfer) : MISSING_CHAPTER },
   ]
 }
 

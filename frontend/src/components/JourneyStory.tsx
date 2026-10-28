@@ -4,7 +4,7 @@ import { storyNodes } from '../journey/story'
 /** Horizontal story strip plus honest closing copy for the finale. */
 export default function JourneyStory({ chapters }: { chapters: ChapterRecap[] }) {
   const nodes = storyNodes(chapters)
-  const beganWithMisconception = chapters[0]?.input.prediction?.choice === 'yes'
+  const beganWithMisconception = chapters[0]?.input?.prediction?.choice === 'yes'
   return (
     <div className="flex flex-col gap-3">
       <ol

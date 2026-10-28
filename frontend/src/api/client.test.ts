@@ -353,6 +353,23 @@ describe('subscribeBackendHealth', () => {
     expect(seen).toEqual(['up'])
   })
 
+  it('treats gateway statuses as unreachable', async () => {
+    const seen: string[] = []
+    const off = subscribeBackendHealth((health) => seen.push(health))
+    try {
+      for (const status of [502, 503, 504]) {
+        stubFetch(() => errResponse(status, null))
+        const failure = await simulate({ components: [] }).catch((err: unknown) => err)
+        expect(failure).toBeInstanceOf(ApiError)
+        expect((failure as ApiError).kind).toBe('network')
+        expect((failure as ApiError).message).toBe('Could not reach the backend. Is it running?')
+      }
+    } finally {
+      off()
+    }
+    expect(seen).toEqual(['down', 'down', 'down'])
+  })
+
   it('stays silent after unsubscribe', async () => {
     const seen: string[] = []
     const off = subscribeBackendHealth((health) => seen.push(health))

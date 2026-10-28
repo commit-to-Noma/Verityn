@@ -119,8 +119,19 @@ describe('proofCards', () => {
   it('degrades gracefully when chapters are missing', () => {
     const cards = proofCards([])
     expect(cards).toHaveLength(3)
-    expect(cards[0].detail).toBe('Not reached')
-    expect(cards[1].detail).toBe('No verdict recorded')
-    expect(cards[2].detail).toBe('No verdict recorded')
+    for (const card of cards) {
+      expect(card.detail).toBe('Complete this chapter to unlock its evidence.')
+    }
+  })
+
+  it('placeholds only the skipped chapter', () => {
+    const cards = proofCards([
+      chapter('L1', L1_INPUT),
+      { id: 'L1T1', title: 'L1T1', solo: false, input: null },
+      chapter('L1T2', TRANSFER_INPUT),
+    ])
+    expect(cards[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
+    expect(cards[1].detail).toBe('Complete this chapter to unlock its evidence.')
+    expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
   })
 })
