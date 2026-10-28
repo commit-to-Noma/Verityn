@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import ChapterComplete from './components/ChapterComplete'
 import CircuitCanvas from './components/CircuitCanvas'
 import EvaluatePanel from './components/EvaluatePanel'
-import JourneyFinale, { type ChapterRecap } from './components/JourneyFinale'
+import JourneyFinale from './components/JourneyFinale'
+import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import LabIntro from './components/LabIntro'
 import PredictionScreen from './components/PredictionScreen'
@@ -17,12 +19,21 @@ import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
 import type { TraceInput } from './lessons/trace'
 import { stageFor, type Stage } from './journey/stages'
 
-/** Beat before auto-advance, so the learner sees the solved circuit first. */
+/** Demo-mode auto-advance delays; manual mode shows the gate with no timer. */
 const ADVANCE_BEAT_MS = 4000
-/** Shorter beat once the coach has been heard. */
 const COACHED_BEAT_MS = 2000
 
-type Beat = { kind: 'advance'; text: string } | { kind: 'paused'; text: string }
+type Chapter = 'l1' | 'twist' | 'transfer'
+
+interface ChapterGate {
+  chapter: Chapter
+  title: string
+  detail: string
+  nextLabel: string
+  advance: () => void
+  /** Twist only: the model disagreed, so the coach is invited in. */
+  coach?: 'invited' | 'heard'
+}
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -63,37 +74,63 @@ export default function App() {
   const [transferPrediction, setTransferPrediction] = useState<Prediction | null>(null)
   const [transferDone, setTransferDone] = useState(false)
   const [snapshots, setSnapshots] = useState<Record<string, TraceInput>>({})
-  const [beat, setBeat] = useState<Beat | null>(null)
+  const [complete, setComplete] = useState<ChapterGate | null>(null)
+  const [auto, setAuto] = useState(() => new URLSearchParams(window.location.search).has('auto'))
+  const [autoPending, setAutoPending] = useState(false)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const advanceTimer = useRef<number | null>(null)
-  const paused = useRef(false)
+  const autoRef = useRef(auto)
+  useEffect(() => {
+    autoRef.current = auto
+  })
 
   const cancelAdvance = useCallback(() => {
     if (advanceTimer.current !== null) {
       window.clearTimeout(advanceTimer.current)
       advanceTimer.current = null
     }
+    setAutoPending(false)
   }, [])
 
-  useEffect(() => () => cancelAdvance(), [cancelAdvance])
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) {
+        window.clearTimeout(advanceTimer.current)
+        advanceTimer.current = null
+      }
+    },
+    [],
+  )
 
-  const scheduleAdvance = useCallback(
-    (text: string, delay: number, advance: () => void) => {
+  const showGate = useCallback(
+    (gate: ChapterGate, delay: number) => {
       cancelAdvance()
-      paused.current = false
-      setBeat({ kind: 'advance', text })
+      setComplete(gate)
       document
         .querySelector('[aria-label="Evidence trace"]')
         ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
-      advanceTimer.current = window.setTimeout(() => {
-        advanceTimer.current = null
-        setBeat(null)
-        advance()
-      }, delay)
+      if (autoRef.current) {
+        setAutoPending(true)
+        advanceTimer.current = window.setTimeout(() => {
+          advanceTimer.current = null
+          setAutoPending(false)
+          setComplete(null)
+          gate.advance()
+        }, delay)
+      }
     },
     [cancelAdvance],
   )
+
+  const handleContinue = useCallback(() => {
+    if (complete === null) {
+      return
+    }
+    cancelAdvance()
+    setComplete(null)
+    complete.advance()
+  }, [cancelAdvance, complete])
 
   const handleEvidence = useCallback((chapterId: string, input: TraceInput) => {
     setSnapshots((current) => ({ ...current, [chapterId]: input }))
@@ -102,72 +139,108 @@ export default function App() {
   const handleL1Solved = useCallback(
     (result: SimulateResult) => {
       if (matchesExpected(result, L1.expectedFixed)) {
-        scheduleAdvance('Reality check passed — the Twist is next…', ADVANCE_BEAT_MS, () =>
-          setTwistStarted(true),
+        showGate(
+          {
+            chapter: 'l1',
+            title: 'Reality check passed',
+            detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
+            nextLabel: 'Continue to Twist →',
+            advance: () => setTwistStarted(true),
+          },
+          ADVANCE_BEAT_MS,
         )
       }
     },
-    [scheduleAdvance],
+    [showGate],
   )
 
   const handleTwistSolved = useCallback(
     (result: SimulateResult) => {
       if (matchesExpected(result, L1.twist.expectedFixed)) {
-        scheduleAdvance('Twist solved — going solo…', ADVANCE_BEAT_MS, () =>
-          setTransferStarted(true),
+        showGate(
+          {
+            chapter: 'twist',
+            title: 'Twist solved',
+            detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
+            nextLabel: 'Continue to solo →',
+            advance: () => setTransferStarted(true),
+          },
+          ADVANCE_BEAT_MS,
         )
       }
     },
-    [scheduleAdvance],
+    [showGate],
   )
 
   const handleTransferSolved = useCallback(
     (result: SimulateResult) => {
       if (matchesExpected(result, TRANSFER.expectedFixed)) {
-        scheduleAdvance('Solo complete — revealing your journey…', ADVANCE_BEAT_MS, () =>
-          setTransferDone(true),
+        showGate(
+          {
+            chapter: 'transfer',
+            title: 'Solo complete',
+            detail: 'You solved it with the coach off. Review the evidence, then see your journey.',
+            nextLabel: 'See your journey →',
+            advance: () => setTransferDone(true),
+          },
+          ADVANCE_BEAT_MS,
         )
       }
     },
-    [scheduleAdvance],
+    [showGate],
   )
 
-  /** A contradicted twist pauses the advance so the coach can step in. */
+  /** A contradicted twist invites the coach in; the gate stays passable. */
   const handleTwistVerdict = useCallback(
     (status: VerdictStatus) => {
-      if (status === 'CONTRADICTED' && advanceTimer.current !== null) {
-        cancelAdvance()
-        paused.current = true
-        setBeat({
-          kind: 'paused',
-          text: 'The model disagrees — ask the coach, or continue solo.',
-        })
+      if (status !== 'CONTRADICTED') {
+        return
       }
+      cancelAdvance()
+      setComplete((gate) =>
+        gate?.chapter === 'twist'
+          ? {
+              ...gate,
+              title: 'The model disagrees',
+              detail: 'Ask the coach above, then continue when ready.',
+              coach: 'invited',
+            }
+          : gate,
+      )
     },
     [cancelAdvance],
   )
 
-  const continueToSolo = useCallback(() => {
-    cancelAdvance()
-    paused.current = false
-    setBeat(null)
-    setTransferStarted(true)
-  }, [cancelAdvance])
-
   const handleTwistCoached = useCallback(() => {
-    if (paused.current) {
-      scheduleAdvance('Coach heard — going solo…', COACHED_BEAT_MS, () =>
-        setTransferStarted(true),
-      )
+    if (complete?.chapter !== 'twist' || complete.coach !== 'invited') {
+      return
     }
-  }, [scheduleAdvance])
+    setComplete({
+      ...complete,
+      title: 'Coach heard',
+      detail: 'Continue when ready.',
+      coach: 'heard',
+    })
+    if (autoRef.current) {
+      cancelAdvance()
+      setAutoPending(true)
+      advanceTimer.current = window.setTimeout(() => {
+        advanceTimer.current = null
+        setAutoPending(false)
+        setComplete(null)
+        complete.advance()
+      }, COACHED_BEAT_MS)
+    }
+  }, [cancelAdvance, complete])
 
-  /** Edits during the beat cancel the advance; re-solving restarts it. */
+  /** Edits cancel a pending demo timer; the latched gate stays passable. */
   const handleDirty = useCallback(() => {
     cancelAdvance()
-    if (!paused.current) {
-      setBeat(null)
-    }
+  }, [cancelAdvance])
+
+  /** Reflection typing cancels a pending demo timer, like any edit. */
+  const handleInteract = useCallback(() => {
+    cancelAdvance()
   }, [cancelAdvance])
 
   const stage = stageFor({
@@ -218,29 +291,40 @@ export default function App() {
     return input ? [{ ...chapter, input }] : []
   })
 
-  const beatNode =
-    beat === null ? null : (
-      <div className="beat-pill" role="status" aria-live="polite">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-flow" aria-hidden="true" />
-        <span className="overflow-hidden text-ellipsis">{beat.text}</span>
-        {beat.kind === 'paused' && (
-          <button
-            type="button"
-            onClick={continueToSolo}
-            className="border-glass-border ml-1 min-h-[32px] shrink-0 rounded-full border px-3 text-xs font-medium"
-          >
-            Continue to solo
-          </button>
-        )}
-      </div>
+  const gateNode =
+    complete === null ? null : (
+      <ChapterComplete
+        title={complete.title}
+        detail={complete.detail}
+        nextLabel={complete.nextLabel}
+        auto={autoPending}
+        onContinue={handleContinue}
+      />
     )
 
   return (
     <JourneyShell
       stage={stage}
-      beat={beatNode}
+      auto={auto}
       tools={
         <>
+          <label className="flex cursor-pointer items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={(event) => {
+                if (!event.target.checked) {
+                  cancelAdvance()
+                }
+                setAuto(event.target.checked)
+              }}
+              className="h-5 w-5 accent-flow"
+            />
+            <span>
+              Auto-advance chapters
+              <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
+            </span>
+          </label>
           <div className="flex flex-col gap-4">
             <h3 className="text-base font-semibold">Dev / Debug Inspector</h3>
             <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
@@ -266,12 +350,14 @@ export default function App() {
             key="l1"
             seed={L1.seed}
             eyebrow="Build · Light the bulb"
+            instructions="Connect the two glowing terminal dots to complete the loop."
             onSolved={handleL1Solved}
             onDirty={handleDirty}
             onEvidence={handleEvidence}
             prediction={l1Prediction}
             challenge={L1}
           />
+          {complete?.chapter === 'l1' && gateNode}
         </div>
       )}
       {stage === 'twist-predict' && (
@@ -289,6 +375,7 @@ export default function App() {
             key="twist"
             seed={L1.twist.seed}
             eyebrow="Twist · The open switch"
+            instructions="Complete the loop without changing the switch. We will test the circuit as soon as the loop closes."
             choice={twistPrediction.choice}
             claim={L1.twist.claim}
             coachSession={twistSession}
@@ -296,10 +383,12 @@ export default function App() {
             onDirty={handleDirty}
             onVerdict={handleTwistVerdict}
             onCoachDone={handleTwistCoached}
+            onCoachInteract={handleInteract}
             onEvidence={handleEvidence}
             prediction={twistPrediction}
             challenge={L1.twist}
           />
+          {complete?.chapter === 'twist' && gateNode}
         </div>
       )}
       {stage === 'transfer-predict' && (
@@ -330,6 +419,7 @@ export default function App() {
             key="transfer"
             seed={TRANSFER.seed}
             eyebrow="Solo · The second bulb"
+            instructions="Connect the second bulb across L1's two terminals. We will test the circuit as soon as the loop closes."
             choice={transferPrediction.choice}
             claim={TRANSFER.claim}
             onSolved={handleTransferSolved}
@@ -339,6 +429,7 @@ export default function App() {
             challenge={TRANSFER}
             solo
           />
+          {complete?.chapter === 'transfer' && gateNode}
         </div>
       )}
       {stage === 'finale' && <JourneyFinale chapters={finaleChapters} />}

@@ -204,9 +204,9 @@ export type CoachAskResult =
 /** Provider value to honest badge text. Fake output is never Meta. */
 export function providerBadge(provider: string): string {
   if (provider === 'meta-spark') {
-    return 'Meta Spark'
+    return 'Meta Muse'
   }
-  return provider === 'prototype-fake' ? 'Prototype coach' : 'Coach'
+  return provider === 'prototype-fake' ? 'Fallback coach' : 'Coach'
 }
 
 function guardClaim(body: unknown): Claim {

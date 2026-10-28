@@ -1,12 +1,6 @@
-import type { TraceInput } from '../lessons/trace'
+import type { ChapterRecap } from '../journey/story'
 import EvidenceTrace from './EvidenceTrace'
-
-export interface ChapterRecap {
-  id: string
-  title: string
-  solo: boolean
-  input: TraceInput
-}
+import JourneyStory from './JourneyStory'
 
 /** Finale: what the learner accomplished, grounded in saved simulation evidence. */
 export default function JourneyFinale({ chapters }: { chapters: ChapterRecap[] }) {
@@ -23,6 +17,16 @@ export default function JourneyFinale({ chapters }: { chapters: ChapterRecap[] }
           Every step below is observed simulation evidence — your predictions against the model,
           not a grade.
         </p>
+      </div>
+      <JourneyStory chapters={chapters} />
+      <div>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Replay journey
+        </button>
       </div>
       {chapters.map((chapter) => (
         <article key={chapter.id} className="flex flex-col gap-3">

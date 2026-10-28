@@ -137,7 +137,7 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
 - Solver output (measurements, verdicts, offender IDs) and AI output
   (guiding questions) must be visually distinguishable: verdicts use
   verdict icon + word; coach content always carries its provider badge
-  (`Meta Spark`, `Prototype coach`, never one for the other).
+  (`Meta Muse`, `Fallback coach`, never one for the other).
 - Solo/transfer stages show a persistent restrained note that the AI
   coach is off; no coaching controls render there at all.
 - Evidence Trace steps are titled Prediction, Circuit built,

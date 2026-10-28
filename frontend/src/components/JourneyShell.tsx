@@ -7,12 +7,12 @@ import JourneyProgress from './JourneyProgress'
 /** Guided-journey frame: header progress, one stage at a time, tools tucked away. */
 export default function JourneyShell({
   stage,
-  beat,
+  auto,
   children,
   tools,
 }: {
   stage: Stage
-  beat: ReactNode
+  auto: boolean
   children: ReactNode
   tools: ReactNode
 }) {
@@ -21,6 +21,11 @@ export default function JourneyShell({
       <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 py-2">
         <p className="text-xl font-semibold tracking-tight">Verityn</p>
         {stage !== 'intro' && <JourneyProgress active={progressIndex(stage)} />}
+        {auto && (
+          <span className="rounded-full border border-flow/60 px-2.5 py-1 text-[11px] font-medium text-flow">
+            Auto-demo
+          </span>
+        )}
         <div className="ml-auto">
           <HealthStatus compact />
         </div>
@@ -28,7 +33,6 @@ export default function JourneyShell({
       <main key={stage} className="stage-enter flex flex-col">
         {children}
       </main>
-      {beat}
       <footer>
         <details className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">

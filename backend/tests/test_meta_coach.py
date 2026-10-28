@@ -26,6 +26,10 @@ TWIST_WIRED = {"components": [
 FACTS = {"L1.power_W": 0.0, "L1.current_A": 0.0, "L1.voltage_V": 0.0,
          "B1.power_W": 0.0, "B1.current_A": 0.0, "B1.voltage_V": 6.0}
 
+DARK_TWIST_QUESTION = (
+    "The battery still holds 6.0 V, yet L1 reads 0.0 A and 0.0 W. "
+    "Which component prevents charge from making a complete loop?")
+
 GOOD_ID = "open_switch_conducts"
 GOOD_Q = "What does the open switch change about the loop?"
 
@@ -227,7 +231,7 @@ def test_fallback_serves_template_when_primary_fails():
         "session_id": session_id, "netlist": TWIST_WIRED}).get_json()
     assert ans["eligible"] is True
     assert ans["provider"] == "prototype-fake"
-    assert ans["text"] == fake_coach.TEMPLATES["yes"]["switch"]
+    assert ans["text"] == DARK_TWIST_QUESTION
 
 
 def test_rejected_model_output_falls_back(monkeypatch):
@@ -246,7 +250,7 @@ def test_rejected_model_output_falls_back(monkeypatch):
         "netlist": TWIST_WIRED}).get_json()
     assert ans["eligible"] is True
     assert ans["provider"] == "prototype-fake"
-    assert ans["text"] == fake_coach.TEMPLATES["yes"]["gap"]
+    assert ans["text"] == DARK_TWIST_QUESTION
 
 
 def test_real_provider_round_trip_mocked(monkeypatch):
@@ -291,7 +295,7 @@ def test_every_transport_failure_falls_back(monkeypatch):
         ans = ask_twist_yes(app.test_client()).get_json()
         assert ans["eligible"] is True, failure
         assert ans["provider"] == "prototype-fake", failure
-        assert ans["text"] == fake_coach.TEMPLATES["yes"]["switch"], failure
+        assert ans["text"] == DARK_TWIST_QUESTION, failure
         assert ans["claim"] == {"type": "lit", "component": "L1",
                                 "value": True}, failure
 
@@ -346,7 +350,7 @@ def test_rejected_output_falls_back(monkeypatch, content):
     ans = ask_twist_yes(app.test_client()).get_json()
     assert ans["eligible"] is True
     assert ans["provider"] == "prototype-fake"
-    assert ans["text"] == fake_coach.TEMPLATES["yes"]["switch"]
+    assert ans["text"] == DARK_TWIST_QUESTION
 
 
 def test_split_question_passes_validation():

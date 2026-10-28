@@ -207,6 +207,11 @@ def test_ask_ignores_client_supplied_state(client):
     assert verdict["reason_code"] == coach.NOT_CONTRADICTED
 
 
+DARK_TWIST_QUESTION = (
+    "The battery still holds 6.0 V, yet L1 reads 0.0 A and 0.0 W. "
+    "Which component prevents charge from making a complete loop?")
+
+
 def test_ask_grants_r1_for_contradicted_yes(client):
     recorded = record(client, TWIST, "yes", "The switch is open but wired.")
     verdict = ask(client, recorded["session_id"], wired(TWIST_START))
@@ -215,7 +220,7 @@ def test_ask_grants_r1_for_contradicted_yes(client):
     assert verdict["provider"] == "prototype-fake"
     assert verdict["claim"] == {"type": "lit", "component": "L1",
                                 "value": True}
-    assert verdict["text"] == fake_coach.TEMPLATES["yes"]["switch"]
+    assert verdict["text"] == DARK_TWIST_QUESTION
 
 
 def test_ask_judges_submitted_circuit_not_pack(client):
@@ -231,7 +236,7 @@ def test_ask_is_deterministic(client):
     first = ask(client, recorded["session_id"], wired(TWIST_START))
     second = ask(client, recorded["session_id"], wired(TWIST_START))
     assert first["text"] == second["text"]
-    assert first["text"] == fake_coach.TEMPLATES["yes"]["gap"]
+    assert first["text"] == DARK_TWIST_QUESTION
 
 
 @pytest.mark.parametrize("body", [
@@ -280,6 +285,51 @@ def test_templates_are_questions_without_leaks():
         assert text.endswith("?")
         assert not any(char.isdigit() for char in text)
         assert coach.find_leak(text) is None, text
+
+
+def test_grounded_question_cites_dark_bulb_facts():
+    facts = {"B1.voltage_V": 9.0, "L1.current_A": 0.1,
+             "L1.power_W": 0.0}
+    assert fake_coach.grounded_question(facts) == (
+        "The battery still holds 9.0 V, yet L1 reads 0.1 A and "
+        "0.0 W. Which component prevents charge from making a "
+        "complete loop?")
+
+
+def test_grounded_question_is_safe_question():
+    facts = {"B1.voltage_V": 6.0, "L1.current_A": 0.0,
+             "L1.power_W": 0.0}
+    text = fake_coach.grounded_question(facts)
+    assert text.endswith("?")
+    assert coach.find_leak(text) is None
+    assert "switch" not in text.lower()
+
+
+@pytest.mark.parametrize("facts", [
+    None,
+    "not a dict",
+    {},
+    {"B1.voltage_V": 6.0},
+    {"B1.voltage_V": 6.0, "L1.current_A": 0.0,
+     "L1.power_W": "zero"},
+    {"B1.voltage_V": float("nan"), "L1.current_A": 0.0,
+     "L1.power_W": 0.0},
+    {"B1.voltage_V": 6.0, "L1.current_A": 0.0,
+     "L1.power_W": float("inf")},
+    {"B1.voltage_V": 6.0, "L1.current_A": 0.6,
+     "L1.power_W": 3.6},
+])
+def test_grounded_question_falls_back_without_dark_facts(facts):
+    assert fake_coach.grounded_question(facts) is None
+
+
+def test_r1_falls_back_to_routed_template_without_facts():
+    provider = fake_coach.FakeCoachProvider()
+    assert provider.r1_question(choice="yes", why="no clue",
+                                facts=None) == \
+        fake_coach.TEMPLATES["yes"]["default"]
+    assert provider.r1_question(choice="yes", why="no clue") == \
+        fake_coach.TEMPLATES["yes"]["default"]
 
 
 @pytest.mark.parametrize("text,expected", [

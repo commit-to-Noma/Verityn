@@ -34,6 +34,6 @@ def test_no_model_claims_in_shipped_code():
     assert hits == []
 
 
-def test_prototype_badge_is_pinned():
+def test_fallback_badge_is_pinned():
     client = (ROOT / "frontend" / "src" / "api" / "client.ts").read_text()
-    assert "Prototype coach" in client
+    assert "provider === 'prototype-fake' ? 'Fallback coach'" in client

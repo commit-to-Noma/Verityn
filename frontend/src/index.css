@@ -305,44 +305,19 @@ body {
   animation: reveal-rise 0.5s ease both;
 }
 
-/* Auto-advance beat: a fixed pill announcing the next chapter. */
-@keyframes beat-shimmer {
-  from {
-    transform: translateX(-100%);
+/* Demo mode: shimmering auto-advance note on the chapter card. */
+@keyframes auto-shimmer {
+  0%,
+  100% {
+    opacity: 0.65;
   }
-  to {
-    transform: translateX(240%);
+  50% {
+    opacity: 1;
   }
 }
 
-.beat-pill {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: min(92vw, 480px);
-  padding: 12px 18px;
-  overflow: hidden;
-  border: 1px solid var(--color-glass-border-strong);
-  border-radius: 9999px;
-  background: var(--color-canvas-2);
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
-  font-size: 0.875rem;
-  white-space: nowrap;
-}
-
-.beat-pill::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 40%;
-  background: linear-gradient(100deg, transparent, rgb(56 214 233 / 0.16), transparent);
-  animation: beat-shimmer 1.6s ease-in-out infinite;
+.auto-note {
+  animation: auto-shimmer 1.6s ease-in-out infinite;
 }
 
 /* Cinematic opening: ambient lab glow behind the intro card. */

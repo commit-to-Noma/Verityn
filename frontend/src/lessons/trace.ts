@@ -27,7 +27,7 @@ export interface EvidenceRow {
 }
 
 export type CoachTraceOutcome =
-  | { phase: 'done'; text: string; provider: string }
+  | { phase: 'done'; text: string; provider: string; learnerReply?: string }
   | { phase: 'unavailable'; message: string }
 
 export type TraceBody =

@@ -113,6 +113,11 @@ function StepBody({ body }: { body: TraceBody }) {
             {providerBadge(body.outcome.provider)}
           </span>
           <p className="text-base">{body.outcome.text}</p>
+          {body.outcome.learnerReply !== undefined && body.outcome.learnerReply !== '' && (
+            <p className="text-ink-muted text-sm">
+              <span className="font-medium text-ink">Your thought:</span> {body.outcome.learnerReply}
+            </p>
+          )}
           <p className="text-ink-muted text-xs">
             A prompt to reconsider — not a diagnosis of what you think.
           </p>

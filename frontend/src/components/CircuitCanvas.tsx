@@ -24,13 +24,14 @@ import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
 import { flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
-import { choiceToClaim } from '../lessons/lesson'
+import { LIT_POWER_W, choiceToClaim, compareWithExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from '../lessons/trace'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
 import EvidenceTrace from './EvidenceTrace'
 import ReadoutValue from './ReadoutValue'
+import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
@@ -62,9 +63,13 @@ type VerdictState =
 type CoachState =
   | { phase: 'idle' }
   | { phase: 'asking' }
-  | { phase: 'done'; text: string; provider: string }
+  | { phase: 'done'; text: string; provider: string; ms: number }
   | { phase: 'refused'; message: string }
   | { phase: 'error'; message: string }
+
+function formatLatency(ms: number): string {
+  return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`
+}
 
 function isValidWire(edge: Edge | Connection): boolean {
   if (!edge.source || !edge.target || !edge.sourceHandle || !edge.targetHandle) {
@@ -140,19 +145,24 @@ function CoachAsk({
   session,
   netlist,
   onResult,
+  onInteract,
 }: {
   session: string | null
   netlist: Netlist
   onResult?: (outcome: CoachTraceOutcome) => void
+  /** Fired when the learner starts reflecting, so demo mode holds. */
+  onInteract?: () => void
 }) {
   const [coachState, setCoachState] = useState<CoachState>({ phase: 'idle' })
+  const [reply, setReply] = useState('')
+  const [savedReply, setSavedReply] = useState<string | null>(null)
   const coachController = useRef<AbortController | null>(null)
 
   useEffect(() => () => coachController.current?.abort(), [])
 
   const ask = () => {
     if (session === null) {
-      const message = "Coach unavailable: the prediction wasn't recorded."
+      const message = 'The prediction was not recorded, so no coaching was served.'
       setCoachState({ phase: 'error', message })
       onResult?.({ phase: 'unavailable', message })
       return
@@ -161,6 +171,7 @@ function CoachAsk({
     const next = new AbortController()
     coachController.current = next
     setCoachState({ phase: 'asking' })
+    const started = performance.now()
     void (async () => {
       try {
         const answer = await askCoach(session, netlist, next.signal)
@@ -168,7 +179,8 @@ function CoachAsk({
           return
         }
         if (answer.eligible) {
-          setCoachState({ phase: 'done', text: answer.text, provider: answer.provider })
+          const ms = performance.now() - started
+          setCoachState({ phase: 'done', text: answer.text, provider: answer.provider, ms })
           onResult?.({ phase: 'done', text: answer.text, provider: answer.provider })
         } else {
           setCoachState({ phase: 'refused', message: answer.message })
@@ -186,12 +198,77 @@ function CoachAsk({
   }
 
   if (coachState.phase === 'done') {
+    const caption =
+      coachState.provider === 'prototype-fake'
+        ? 'Deterministic prototype — no model call.'
+        : coachState.provider === 'meta-spark'
+          ? 'Live Meta Muse response.'
+          : null
+    const saveReply = () => {
+      const thought = reply.trim()
+      if (thought === '') {
+        return
+      }
+      setSavedReply(thought)
+      onResult?.({
+        phase: 'done',
+        text: coachState.text,
+        provider: coachState.provider,
+        learnerReply: thought,
+      })
+    }
     return (
       <div className="glass-panel flex flex-col gap-2 p-4" aria-live="polite">
-        <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
-          {providerBadge(coachState.provider)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="border-glass-border w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
+            {providerBadge(coachState.provider)}
+          </span>
+          <span className="text-ink-muted text-xs">
+            answered in {formatLatency(coachState.ms)}
+          </span>
+        </div>
         <p className="text-base">{coachState.text}</p>
+        {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
+        {savedReply === null ? (
+          <form
+            className="flex flex-col gap-2"
+            onSubmit={(event) => {
+              event.preventDefault()
+              saveReply()
+            }}
+          >
+            <label htmlFor="coach-reply" className="text-sm font-medium">
+              Complete the thought: <span className="text-ink-muted font-normal">An open switch…</span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="coach-reply"
+                type="text"
+                value={reply}
+                maxLength={140}
+                autoComplete="off"
+                placeholder="One line is enough"
+                onFocus={() => onInteract?.()}
+                onChange={(event) => {
+                  onInteract?.()
+                  setReply(event.target.value)
+                }}
+                className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 text-base"
+              />
+              <button
+                type="submit"
+                disabled={reply.trim() === ''}
+                className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        ) : (
+          <p className="text-ink-muted text-sm">
+            <span className="font-medium text-ink">Your thought:</span> {savedReply}
+          </p>
+        )}
       </div>
     )
   }
@@ -210,6 +287,25 @@ function CoachAsk({
       </div>
     )
   }
+  // Genuine provider failure with no usable fallback response: labeled
+  // honestly, never disguised as coaching. Retryable via Try again.
+  if (coachState.phase === 'error') {
+    return (
+      <div className="glass-panel flex flex-col gap-2 p-4" role="alert">
+        <p className="text-base font-medium text-ink">Coach unavailable</p>
+        <p className="text-ink-muted text-sm">{coachState.message}</p>
+        <div>
+          <button
+            type="button"
+            onClick={ask}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="flex items-center gap-3">
       <button
@@ -219,11 +315,55 @@ function CoachAsk({
       >
         Ask the coach
       </button>
-      {coachState.phase === 'error' && (
-        <p className="text-ink-muted text-sm" role="alert">
-          {coachState.message}
-        </p>
-      )}
+    </div>
+  )
+}
+
+/** Prediction-vs-observed card for the lesson's starting circuit.
+ *
+ * Used where the evaluator correctly refuses to judge (the broken
+ * start, e.g. L1): the comparison runs against the pack's
+ * solver-verified expected outcome. No measurements are shown because
+ * a rejected circuit produces none — inventing amps or watts here
+ * would fabricate evidence. */
+function StartVerdict({
+  prediction,
+  challenge,
+}: {
+  prediction: Prediction
+  challenge: Challenge
+}) {
+  const status = compareWithExpected(prediction.choice, challenge.expectedStart.lit)
+  const component = challenge.claim.component
+  const predictionText =
+    prediction.choice === 'not_sure'
+      ? 'Not sure — no definite prediction'
+      : prediction.choice === 'yes'
+        ? `${component} lights`
+        : `${component} stays dark`
+  const observedText = challenge.expectedStart.lit
+    ? `${component} lights`
+    : `${component} stays dark`
+  return (
+    <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+      <div className="flex items-center gap-3">
+        <VerdictIcon status={status} />
+        <div>
+          <p className="text-base font-medium text-ink">{VERDICT_LABELS[status]}</p>
+          <p className="text-ink-muted text-sm">
+            <span className="font-medium text-ink">Your prediction:</span> {predictionText}
+          </p>
+          <p className="text-ink-muted text-sm">
+            <span className="font-medium text-ink">Observed:</span> {observedText}
+          </p>
+        </div>
+      </div>
+      <p className="text-ink-muted pl-9 text-xs">
+        Compared with the verified outcome of the starting circuit.
+      </p>
+      <p className="text-ink-muted pl-9 text-xs">
+        This tests your prediction against the model, not you.
+      </p>
     </div>
   )
 }
@@ -232,15 +372,20 @@ function ClaimVerdict({
   state,
   choice,
   session,
+  observed,
   onRetry,
   onCoached,
+  onCoachInteract,
   coachEnabled,
 }: {
   state: VerdictState
   choice: Choice
   session: string | null
+  /** Solver measurement for the claimed component, when the run solved. */
+  observed?: { current: number; power: number }
   onRetry: () => void
   onCoached?: (outcome: CoachTraceOutcome) => void
+  onCoachInteract?: () => void
   coachEnabled: boolean
 }) {
   if (state.phase === 'idle') {
@@ -263,12 +408,21 @@ function ClaimVerdict({
     )
   }
   if (state.phase === 'done') {
-    const text =
+    // Never headline the learner's claim on its own: after a failed
+    // prediction the claim text ("L1 lights") would contradict the
+    // observed evidence shown beside it. Both sides stay explicit.
+    const predictionText =
       state.claim.type === 'lit'
         ? state.claim.value
           ? `${state.claim.component} lights`
           : `${state.claim.component} stays dark`
         : 'Prediction checked'
+    const observedText =
+      observed === undefined || state.claim.type !== 'lit'
+        ? null
+        : observed.power > LIT_POWER_W
+          ? `${state.claim.component} lights`
+          : `${state.claim.component} stays dark`
     return (
       <>
         <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
@@ -278,7 +432,18 @@ function ClaimVerdict({
               <p className="text-base font-medium text-ink">
                 {VERDICT_LABELS[state.verdict.status]}
               </p>
-              <p className="text-ink-muted text-sm">{text}</p>
+              <p className="text-ink-muted text-sm">
+                <span className="font-medium text-ink">Your prediction:</span> {predictionText}
+              </p>
+              {observed !== undefined && observedText !== null && (
+                <p className="text-ink-muted text-sm">
+                  <span className="font-medium text-ink">Observed:</span> {observedText}
+                  {' · '}
+                  <ReadoutValue value={observed.current} unit="A" />
+                  {' · '}
+                  <ReadoutValue value={observed.power} unit="W" />
+                </p>
+              )}
             </div>
           </div>
           {Object.entries(state.verdict.evidence).map(([key, power]) => {
@@ -296,7 +461,12 @@ function ClaimVerdict({
           </p>
         </div>
         {coachEnabled && state.verdict.status === 'CONTRADICTED' && (
-          <CoachAsk session={session} netlist={state.netlist} onResult={onCoached} />
+          <CoachAsk
+            session={session}
+            netlist={state.netlist}
+            onResult={onCoached}
+            onInteract={onCoachInteract}
+          />
         )}
       </>
     )
@@ -316,9 +486,13 @@ function ClaimVerdict({
   )
 }
 
+const DEFAULT_INSTRUCTIONS =
+  'Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.'
+
 function CanvasInner({
   seed,
   eyebrow = 'Build',
+  instructions = DEFAULT_INSTRUCTIONS,
   choice,
   claim,
   coachSession,
@@ -326,6 +500,7 @@ function CanvasInner({
   onDirty,
   onVerdict,
   onCoachDone,
+  onCoachInteract,
   onEvidence,
   prediction,
   challenge,
@@ -334,6 +509,7 @@ function CanvasInner({
 }: {
   seed?: LessonSeed
   eyebrow?: string
+  instructions?: string
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
@@ -344,6 +520,8 @@ function CanvasInner({
   onVerdict?: (status: VerdictStatus) => void
   /** Fired when the coach answers (twist only; never in solo). */
   onCoachDone?: () => void
+  /** Fired when the learner starts a coach reflection. */
+  onCoachInteract?: () => void
   /** Fired with the evidence-trace input for journey recaps. */
   onEvidence?: (chapterId: string, input: TraceInput) => void
   prediction?: Prediction | null
@@ -727,7 +905,7 @@ function CanvasInner({
         ))}
       </div>
       <p className="text-ink-muted text-sm">
-        Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.
+        {nodes.length === 0 ? DEFAULT_INSTRUCTIONS : instructions}
       </p>
       <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border">
         <SwitchToggleContext.Provider value={toggleSwitch}>
@@ -816,6 +994,11 @@ function CanvasInner({
           </span>
         </div>
       )}
+      {runState.phase === 'done' && runState.result.ok && (
+        <div className="evidence-reveal">
+          <ResultBanner result={runState.result} netlist={runState.netlist} />
+        </div>
+      )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
       {choice && claim && runState.phase === 'done' && runState.result.ok && (
         <div key={verdictState.phase} className="evidence-reveal flex flex-col gap-4">
@@ -823,10 +1006,17 @@ function CanvasInner({
             state={verdictState}
             choice={choice}
             session={coachSession ?? null}
+            observed={runState.result.components[claim.component]}
             onRetry={run}
             onCoached={handleCoached}
+            onCoachInteract={onCoachInteract}
             coachEnabled={!solo}
           />
+        </div>
+      )}
+      {choice === undefined && runState.phase === 'done' && prediction && challenge && (
+        <div className="evidence-reveal">
+          <StartVerdict prediction={prediction} challenge={challenge} />
         </div>
       )}
       {runState.phase === 'error' && (
@@ -871,6 +1061,7 @@ function CanvasInner({
 export default function CircuitCanvas({
   seed,
   eyebrow,
+  instructions,
   choice,
   claim,
   coachSession,
@@ -878,6 +1069,7 @@ export default function CircuitCanvas({
   onDirty,
   onVerdict,
   onCoachDone,
+  onCoachInteract,
   onEvidence,
   prediction,
   challenge,
@@ -886,6 +1078,7 @@ export default function CircuitCanvas({
 }: {
   seed?: LessonSeed
   eyebrow?: string
+  instructions?: string
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
@@ -893,6 +1086,7 @@ export default function CircuitCanvas({
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
   onCoachDone?: () => void
+  onCoachInteract?: () => void
   onEvidence?: (chapterId: string, input: TraceInput) => void
   prediction?: Prediction | null
   challenge?: Challenge
@@ -904,6 +1098,7 @@ export default function CircuitCanvas({
       <CanvasInner
         seed={seed}
         eyebrow={eyebrow}
+        instructions={instructions}
         choice={choice}
         claim={claim}
         coachSession={coachSession}
@@ -911,6 +1106,7 @@ export default function CircuitCanvas({
         onDirty={onDirty}
         onVerdict={onVerdict}
         onCoachDone={onCoachDone}
+        onCoachInteract={onCoachInteract}
         onEvidence={onEvidence}
         prediction={prediction}
         challenge={challenge}
