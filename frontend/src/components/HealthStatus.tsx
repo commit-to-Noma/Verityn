@@ -4,7 +4,7 @@ import { CircleCheckBig, CircleX, LoaderCircle } from 'lucide-react'
 type Status = 'loading' | 'connected' | 'error'
 
 /** Calls GET /api/health and reports loading, connected, or error. */
-export default function HealthStatus() {
+export default function HealthStatus({ compact = false }: { compact?: boolean }) {
   const [status, setStatus] = useState<Status>('loading')
   const [detail, setDetail] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -34,6 +34,43 @@ export default function HealthStatus() {
     })()
     return () => controller.abort()
   }, [attempt])
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2" role="status" aria-live="polite">
+        {status === 'loading' && (
+          <>
+            <LoaderCircle className="h-4 w-4 animate-spin text-unknown" aria-hidden="true" />
+            <span className="text-xs text-ink-muted">Checking backend…</span>
+          </>
+        )}
+        {status === 'connected' && (
+          <>
+            <span className="h-2 w-2 rounded-full bg-ok" aria-hidden="true" />
+            <span className="text-xs text-ink-muted">Backend connected</span>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <span className="h-2 w-2 rounded-full bg-bad" aria-hidden="true" />
+            <span className="text-xs text-ink-muted">Backend unreachable</span>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('loading')
+                setDetail('')
+                setAttempt((n) => n + 1)
+              }}
+              title={detail || 'Retry backend health check'}
+              className="min-h-[32px] rounded-[8px] border border-glass-border px-2 text-xs font-medium"
+            >
+              Retry
+            </button>
+          </>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="glass-panel flex items-center gap-3 p-4" role="status" aria-live="polite">

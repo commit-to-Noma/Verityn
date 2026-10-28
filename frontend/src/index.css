@@ -20,6 +20,7 @@
   --color-bad: #fb7185;
   --color-unknown: #94a3b8;
   --color-unsure: #a78bfa;
+  --color-coach: #8b5cf6;
 
   --font-sans: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -270,4 +271,97 @@ body {
 :focus-visible {
   outline: 2px solid #ffffff;
   outline-offset: 2px;
+}
+
+/* Guided journey: one stage enters at a time. The global reduced-motion
+   rule above already collapses these durations. */
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stage-enter {
+  animation: stage-enter 0.45s ease both;
+}
+
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.evidence-reveal {
+  animation: reveal-rise 0.5s ease both;
+}
+
+/* Auto-advance beat: a fixed pill announcing the next chapter. */
+@keyframes beat-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(240%);
+  }
+}
+
+.beat-pill {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(92vw, 480px);
+  padding: 12px 18px;
+  overflow: hidden;
+  border: 1px solid var(--color-glass-border-strong);
+  border-radius: 9999px;
+  background: var(--color-canvas-2);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.5);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.beat-pill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgb(56 214 233 / 0.16), transparent);
+  animation: beat-shimmer 1.6s ease-in-out infinite;
+}
+
+/* Cinematic opening: ambient lab glow behind the intro card. */
+.intro-ambient {
+  background:
+    radial-gradient(420px 280px at 50% 18%, rgb(242 181 68 / 0.14), transparent 70%),
+    radial-gradient(560px 360px at 50% 90%, rgb(56 214 233 / 0.1), transparent 70%);
+}
+
+/* Coach identity: violet marker, newest coach message only per spec. */
+.coach-note {
+  border-left: 2px solid var(--color-coach);
+}
+
+.coach-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--color-coach);
+  box-shadow: 0 0 10px var(--color-coach);
 }

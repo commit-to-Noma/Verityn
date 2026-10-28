@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import type { Claim, Netlist, SimulateResult, VerdictResult } from '../api/client'
+import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
 import type { CanvasImportRequest } from '../canvas/layout'
@@ -25,7 +25,7 @@ import { counterStarts } from '../canvas/layout'
 import { flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { choiceToClaim } from '../lessons/lesson'
-import type { CoachTraceOutcome } from '../lessons/trace'
+import type { CoachTraceOutcome, TraceInput } from '../lessons/trace'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
@@ -318,11 +318,15 @@ function ClaimVerdict({
 
 function CanvasInner({
   seed,
-  eyebrow = 'Step 2 of 3',
+  eyebrow = 'Build',
   choice,
   claim,
   coachSession,
   onSolved,
+  onDirty,
+  onVerdict,
+  onCoachDone,
+  onEvidence,
   prediction,
   challenge,
   solo = false,
@@ -334,6 +338,14 @@ function CanvasInner({
   claim?: { type: string; component: string }
   coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
+  /** Fired whenever the canvas edits invalidate the last result. */
+  onDirty?: () => void
+  /** Fired when the server verdict for the recorded prediction arrives. */
+  onVerdict?: (status: VerdictStatus) => void
+  /** Fired when the coach answers (twist only; never in solo). */
+  onCoachDone?: () => void
+  /** Fired with the evidence-trace input for journey recaps. */
+  onEvidence?: (chapterId: string, input: TraceInput) => void
   prediction?: Prediction | null
   challenge?: Challenge
   solo?: boolean
@@ -359,6 +371,17 @@ function CanvasInner({
   const counters = useRef({
     ...counterStarts(seedNodes(initialSeed)),
     wire: initialSeed?.edges.length ?? 0,
+  })
+  // Callback mirrors: orchestration events must not re-fire on parent renders.
+  const onDirtyRef = useRef(onDirty)
+  const onVerdictRef = useRef(onVerdict)
+  const onCoachDoneRef = useRef(onCoachDone)
+  const onEvidenceRef = useRef(onEvidence)
+  useEffect(() => {
+    onDirtyRef.current = onDirty
+    onVerdictRef.current = onVerdict
+    onCoachDoneRef.current = onCoachDone
+    onEvidenceRef.current = onEvidence
   })
 
   useEffect(() => () => controller.current?.abort(), [])
@@ -386,6 +409,7 @@ function CanvasInner({
     )
     setVerdictState({ phase: 'idle' })
     setCoachOutcome(null)
+    onDirtyRef.current?.()
   }
 
   const toggleSwitch = (id: string) => {
@@ -602,6 +626,38 @@ function CanvasInner({
     return () => window.clearTimeout(timer)
   }, [loopClosed, runState.phase, nodes, edges, run])
 
+  useEffect(() => {
+    if (verdictState.phase === 'done') {
+      onVerdictRef.current?.(verdictState.verdict.status)
+    }
+  }, [verdictState])
+
+  useEffect(() => {
+    if (runState.phase !== 'done' || !prediction || !challenge) {
+      return
+    }
+    onEvidenceRef.current?.(challenge.id, {
+      prediction,
+      question: challenge.question,
+      netlist: runState.netlist,
+      result: runState.result,
+      verdict:
+        verdictState.phase === 'done'
+          ? { status: verdictState.verdict.status, evidence: verdictState.verdict.evidence }
+          : null,
+      expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
+      coach: solo ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE } : coachOutcome,
+      coachAvailable: choice !== undefined || solo,
+    })
+  }, [runState, verdictState, coachOutcome, prediction, challenge, choice, solo])
+
+  const handleCoached = (outcome: CoachTraceOutcome) => {
+    setCoachOutcome(outcome)
+    if (outcome.phase === 'done') {
+      onCoachDoneRef.current?.()
+    }
+  }
+
   const toggleTool = (next: Exclude<Tool, null>) => {
     setTool((current) => (current === next ? null : next))
   }
@@ -762,14 +818,16 @@ function CanvasInner({
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
       {choice && claim && runState.phase === 'done' && runState.result.ok && (
-        <ClaimVerdict
-          state={verdictState}
-          choice={choice}
-          session={coachSession ?? null}
-          onRetry={run}
-          onCoached={setCoachOutcome}
-          coachEnabled={!solo}
-        />
+        <div key={verdictState.phase} className="evidence-reveal flex flex-col gap-4">
+          <ClaimVerdict
+            state={verdictState}
+            choice={choice}
+            session={coachSession ?? null}
+            onRetry={run}
+            onCoached={handleCoached}
+            coachEnabled={!solo}
+          />
+        </div>
       )}
       {runState.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">
@@ -785,23 +843,25 @@ function CanvasInner({
         </div>
       )}
       {runState.phase === 'done' && prediction && challenge && (
-        <EvidenceTrace
-          input={{
-            prediction,
-            question: challenge.question,
-            netlist: runState.netlist,
-            result: runState.result,
-            verdict:
-              verdictState.phase === 'done'
-                ? { status: verdictState.verdict.status, evidence: verdictState.verdict.evidence }
-                : null,
-            expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
-            coach: solo
-              ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE }
-              : coachOutcome,
-            coachAvailable: choice !== undefined || solo,
-          }}
-        />
+        <div className="evidence-reveal">
+          <EvidenceTrace
+            input={{
+              prediction,
+              question: challenge.question,
+              netlist: runState.netlist,
+              result: runState.result,
+              verdict:
+                verdictState.phase === 'done'
+                  ? { status: verdictState.verdict.status, evidence: verdictState.verdict.evidence }
+                  : null,
+              expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
+              coach: solo
+                ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE }
+                : coachOutcome,
+              coachAvailable: choice !== undefined || solo,
+            }}
+          />
+        </div>
       )}
     </section>
   )
@@ -815,6 +875,10 @@ export default function CircuitCanvas({
   claim,
   coachSession,
   onSolved,
+  onDirty,
+  onVerdict,
+  onCoachDone,
+  onEvidence,
   prediction,
   challenge,
   solo,
@@ -826,6 +890,10 @@ export default function CircuitCanvas({
   claim?: { type: string; component: string }
   coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
+  onDirty?: () => void
+  onVerdict?: (status: VerdictStatus) => void
+  onCoachDone?: () => void
+  onEvidence?: (chapterId: string, input: TraceInput) => void
   prediction?: Prediction | null
   challenge?: Challenge
   solo?: boolean
@@ -840,6 +908,10 @@ export default function CircuitCanvas({
         claim={claim}
         coachSession={coachSession}
         onSolved={onSolved}
+        onDirty={onDirty}
+        onVerdict={onVerdict}
+        onCoachDone={onCoachDone}
+        onEvidence={onEvidence}
         prediction={prediction}
         challenge={challenge}
         solo={solo}

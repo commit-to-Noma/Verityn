@@ -1,73 +1,192 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CircuitCanvas from './components/CircuitCanvas'
 import EvaluatePanel from './components/EvaluatePanel'
-import HealthStatus from './components/HealthStatus'
+import JourneyFinale, { type ChapterRecap } from './components/JourneyFinale'
+import JourneyShell from './components/JourneyShell'
+import LabIntro from './components/LabIntro'
 import PredictionScreen from './components/PredictionScreen'
 import SimulatePanel from './components/SimulatePanel'
 import SnapBuildLab from './components/SnapBuildLab'
-import type { SimulateResult } from './api/client'
+import type { SimulateResult, VerdictStatus } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
 import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
+import type { TraceInput } from './lessons/trace'
+import { stageFor, type Stage } from './journey/stages'
+
+/** Beat before auto-advance, so the learner sees the solved circuit first. */
+const ADVANCE_BEAT_MS = 4000
+/** Shorter beat once the coach has been heard. */
+const COACHED_BEAT_MS = 2000
+
+type Beat = { kind: 'advance'; text: string } | { kind: 'paused'; text: string }
+
+function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
 function PredictionSummary({ prediction, hint }: { prediction: Prediction; hint: string }) {
   return (
-    <div className="border-glass-border rounded-2xl border p-4">
+    <div className="rounded-2xl border border-glass-border p-4">
       <p className="text-sm">
         <span className="text-ink-muted">Your prediction: </span>
         {CHOICE_LABELS[prediction.choice]}
         {prediction.why.trim() === '' ? '' : ` — “${prediction.why.trim()}”`}
       </p>
-      <p className="text-ink-muted mt-1 text-sm">{hint}</p>
+      <p className="mt-1 text-sm text-ink-muted">{hint}</p>
     </div>
   )
 }
 
+const STAGE_CONTENT: Record<Stage, null> = {
+  intro: null,
+  'l1-predict': null,
+  'l1-build': null,
+  'twist-predict': null,
+  'twist-build': null,
+  'transfer-predict': null,
+  'transfer-build': null,
+  finale: null,
+}
+
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
+  const [entered, setEntered] = useState(false)
   const [l1Prediction, setL1Prediction] = useState<Prediction | null>(null)
-  const [l1Done, setL1Done] = useState(false)
   const [twistStarted, setTwistStarted] = useState(false)
   const [twistPrediction, setTwistPrediction] = useState<Prediction | null>(null)
   const [twistSession, setTwistSession] = useState<string | null>(null)
-  const [twistDone, setTwistDone] = useState(false)
   const [transferStarted, setTransferStarted] = useState(false)
   const [transferPrediction, setTransferPrediction] = useState<Prediction | null>(null)
+  const [transferDone, setTransferDone] = useState(false)
+  const [snapshots, setSnapshots] = useState<Record<string, TraceInput>>({})
+  const [beat, setBeat] = useState<Beat | null>(null)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
-  const handleL1Solved = useCallback((result: SimulateResult) => {
-    if (matchesExpected(result, L1.expectedFixed)) {
-      setL1Done(true)
+  const advanceTimer = useRef<number | null>(null)
+  const paused = useRef(false)
+
+  const cancelAdvance = useCallback(() => {
+    if (advanceTimer.current !== null) {
+      window.clearTimeout(advanceTimer.current)
+      advanceTimer.current = null
     }
   }, [])
 
-  const handleTwistSolved = useCallback((result: SimulateResult) => {
-    if (matchesExpected(result, L1.twist.expectedFixed)) {
-      setTwistDone(true)
-    }
+  useEffect(() => () => cancelAdvance(), [cancelAdvance])
+
+  const scheduleAdvance = useCallback(
+    (text: string, delay: number, advance: () => void) => {
+      cancelAdvance()
+      paused.current = false
+      setBeat({ kind: 'advance', text })
+      document
+        .querySelector('[aria-label="Evidence trace"]')
+        ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+      advanceTimer.current = window.setTimeout(() => {
+        advanceTimer.current = null
+        setBeat(null)
+        advance()
+      }, delay)
+    },
+    [cancelAdvance],
+  )
+
+  const handleEvidence = useCallback((chapterId: string, input: TraceInput) => {
+    setSnapshots((current) => ({ ...current, [chapterId]: input }))
   }, [])
 
-  const stage = !l1Prediction
-    ? 'l1-predict'
-    : !twistStarted
-      ? 'l1-build'
-      : !twistPrediction
-        ? 'twist-predict'
-        : !transferStarted
-          ? 'twist-build'
-          : !transferPrediction
-            ? 'transfer-predict'
-            : 'transfer-build'
+  const handleL1Solved = useCallback(
+    (result: SimulateResult) => {
+      if (matchesExpected(result, L1.expectedFixed)) {
+        scheduleAdvance('Reality check passed — the Twist is next…', ADVANCE_BEAT_MS, () =>
+          setTwistStarted(true),
+        )
+      }
+    },
+    [scheduleAdvance],
+  )
+
+  const handleTwistSolved = useCallback(
+    (result: SimulateResult) => {
+      if (matchesExpected(result, L1.twist.expectedFixed)) {
+        scheduleAdvance('Twist solved — going solo…', ADVANCE_BEAT_MS, () =>
+          setTransferStarted(true),
+        )
+      }
+    },
+    [scheduleAdvance],
+  )
+
+  const handleTransferSolved = useCallback(
+    (result: SimulateResult) => {
+      if (matchesExpected(result, TRANSFER.expectedFixed)) {
+        scheduleAdvance('Solo complete — revealing your journey…', ADVANCE_BEAT_MS, () =>
+          setTransferDone(true),
+        )
+      }
+    },
+    [scheduleAdvance],
+  )
+
+  /** A contradicted twist pauses the advance so the coach can step in. */
+  const handleTwistVerdict = useCallback(
+    (status: VerdictStatus) => {
+      if (status === 'CONTRADICTED' && advanceTimer.current !== null) {
+        cancelAdvance()
+        paused.current = true
+        setBeat({
+          kind: 'paused',
+          text: 'The model disagrees — ask the coach, or continue solo.',
+        })
+      }
+    },
+    [cancelAdvance],
+  )
+
+  const continueToSolo = useCallback(() => {
+    cancelAdvance()
+    paused.current = false
+    setBeat(null)
+    setTransferStarted(true)
+  }, [cancelAdvance])
+
+  const handleTwistCoached = useCallback(() => {
+    if (paused.current) {
+      scheduleAdvance('Coach heard — going solo…', COACHED_BEAT_MS, () =>
+        setTransferStarted(true),
+      )
+    }
+  }, [scheduleAdvance])
+
+  /** Edits during the beat cancel the advance; re-solving restarts it. */
+  const handleDirty = useCallback(() => {
+    cancelAdvance()
+    if (!paused.current) {
+      setBeat(null)
+    }
+  }, [cancelAdvance])
+
+  const stage = stageFor({
+    entered,
+    l1Prediction: l1Prediction !== null,
+    twistStarted,
+    twistPrediction: twistPrediction !== null,
+    transferStarted,
+    transferPrediction: transferPrediction !== null,
+    transferDone,
+  })
+
   const firstStage = useRef(true)
   useEffect(() => {
     if (firstStage.current) {
       firstStage.current = false
       return
     }
-    document.getElementById('lesson-flow')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
   const handleTwistPredicted = (prediction: Prediction) => {
@@ -88,118 +207,142 @@ export default function App() {
     })()
   }
 
-  return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pb-12">
-      <header className="flex h-14 shrink-0 items-center">
-        <p className="text-xl font-semibold tracking-tight">Verityn</p>
-        <p className="text-ink-muted ml-3 text-sm">Predict. Build. Reality check.</p>
-      </header>
-      <main className="flex flex-col gap-8">
-        <HealthStatus />
-        <div id="lesson-flow" className="flex scroll-mt-4 flex-col gap-8">
-        {l1Prediction === null ? (
-          <PredictionScreen challenge={L1} eyebrow="Step 1 of 3" onComplete={setL1Prediction} />
-        ) : !twistStarted ? (
-          <>
-            <PredictionSummary prediction={l1Prediction} hint={L1.fix.hint} />
-            <CircuitCanvas
-              key="l1"
-              seed={L1.seed}
-              onSolved={handleL1Solved}
-              prediction={l1Prediction}
-              challenge={L1}
-            />
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={!l1Done}
-                onClick={() => setTwistStarted(true)}
-                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Try the Twist
-              </button>
-              {!l1Done && (
-                <p className="text-ink-muted text-sm">Light the bulb first to unlock the Twist.</p>
-              )}
-            </div>
-          </>
-        ) : twistPrediction === null ? (
-          <PredictionScreen
-            challenge={L1.twist}
-            eyebrow="Twist 1 of 2"
-            onComplete={handleTwistPredicted}
-          />
-        ) : !transferStarted ? (
-          <>
-            <PredictionSummary prediction={twistPrediction} hint={L1.twist.fix.hint} />
-            <CircuitCanvas
-              key="twist"
-              seed={L1.twist.seed}
-              eyebrow="Twist 2 of 2"
-              choice={twistPrediction.choice}
-              claim={L1.twist.claim}
-              coachSession={twistSession}
-              onSolved={handleTwistSolved}
-              prediction={twistPrediction}
-              challenge={L1.twist}
-            />
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={!twistDone}
-                onClick={() => setTransferStarted(true)}
-                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Start solo transfer
-              </button>
-              {!twistDone && (
-                <p className="text-ink-muted text-sm">Complete the Twist circuit first.</p>
-              )}
-            </div>
-          </>
-        ) : transferPrediction === null ? (
-          <PredictionScreen
-            challenge={TRANSFER}
-            eyebrow="Solo 1 of 2"
-            continueLabel="Continue to wire it"
-            onComplete={setTransferPrediction}
-          />
-        ) : (
-          <>
-            <PredictionSummary prediction={transferPrediction} hint={TRANSFER.fix.hint} />
-            <div className="glass-panel p-4" role="note">
-              <p className="text-ink-muted text-sm">
-                Solo mode — the AI coach is off for this challenge. Predict, build, and check
-                against the simulator.
-              </p>
-            </div>
-            <CircuitCanvas
-              key="transfer"
-              seed={TRANSFER.seed}
-              eyebrow="Solo 2 of 2"
-              choice={transferPrediction.choice}
-              claim={TRANSFER.claim}
-              prediction={transferPrediction}
-              challenge={TRANSFER}
-              solo
-            />
-          </>
+  const finaleChapters: ChapterRecap[] = (
+    [
+      { id: L1.id, title: L1.title, solo: false },
+      { id: L1.twist.id, title: L1.twist.title, solo: false },
+      { id: TRANSFER.id, title: TRANSFER.title, solo: true },
+    ] as const
+  ).flatMap((chapter) => {
+    const input = snapshots[chapter.id]
+    return input ? [{ ...chapter, input }] : []
+  })
+
+  const beatNode =
+    beat === null ? null : (
+      <div className="beat-pill" role="status" aria-live="polite">
+        <span className="h-2 w-2 shrink-0 rounded-full bg-flow" aria-hidden="true" />
+        <span className="overflow-hidden text-ellipsis">{beat.text}</span>
+        {beat.kind === 'paused' && (
+          <button
+            type="button"
+            onClick={continueToSolo}
+            className="border-glass-border ml-1 min-h-[32px] shrink-0 rounded-full border px-3 text-xs font-medium"
+          >
+            Continue to solo
+          </button>
         )}
-        </div>
-        <details className="glass-panel p-4">
-          <summary className="cursor-pointer text-sm font-semibold">
-            Dev / Debug Inspector
-            <span className="text-ink-muted ml-2 font-normal">
-              Raw API benches — not part of the learning flow.
-            </span>
-          </summary>
-          <div className="mt-4 flex flex-col gap-8">
+      </div>
+    )
+
+  return (
+    <JourneyShell
+      stage={stage}
+      beat={beatNode}
+      tools={
+        <>
+          <div className="flex flex-col gap-4">
+            <h3 className="text-base font-semibold">Dev / Debug Inspector</h3>
             <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
             <EvaluatePanel key={preset.id} preset={preset} />
           </div>
-        </details>
-        <SnapBuildLab />
-      </main>
-    </div>
+          <SnapBuildLab />
+        </>
+      }
+    >
+      {stage === 'intro' && <LabIntro onEnter={() => setEntered(true)} />}
+      {stage === 'l1-predict' && (
+        <PredictionScreen
+          challenge={L1}
+          eyebrow="Predict · Light the bulb"
+          coachLine="I'm your coach. Commit to a prediction first — I stay quiet until you've tested it."
+          onComplete={setL1Prediction}
+        />
+      )}
+      {stage === 'l1-build' && l1Prediction !== null && (
+        <div className="flex flex-col gap-4">
+          <PredictionSummary prediction={l1Prediction} hint={L1.fix.hint} />
+          <CircuitCanvas
+            key="l1"
+            seed={L1.seed}
+            eyebrow="Build · Light the bulb"
+            onSolved={handleL1Solved}
+            onDirty={handleDirty}
+            onEvidence={handleEvidence}
+            prediction={l1Prediction}
+            challenge={L1}
+          />
+        </div>
+      )}
+      {stage === 'twist-predict' && (
+        <PredictionScreen
+          challenge={L1.twist}
+          eyebrow="Twist · The open switch"
+          coachLine="New circuit, same rule: predict first. If the model disagrees, I'll have one question for you."
+          onComplete={handleTwistPredicted}
+        />
+      )}
+      {stage === 'twist-build' && twistPrediction !== null && (
+        <div className="flex flex-col gap-4">
+          <PredictionSummary prediction={twistPrediction} hint={L1.twist.fix.hint} />
+          <CircuitCanvas
+            key="twist"
+            seed={L1.twist.seed}
+            eyebrow="Twist · The open switch"
+            choice={twistPrediction.choice}
+            claim={L1.twist.claim}
+            coachSession={twistSession}
+            onSolved={handleTwistSolved}
+            onDirty={handleDirty}
+            onVerdict={handleTwistVerdict}
+            onCoachDone={handleTwistCoached}
+            onEvidence={handleEvidence}
+            prediction={twistPrediction}
+            challenge={L1.twist}
+          />
+        </div>
+      )}
+      {stage === 'transfer-predict' && (
+        <div className="flex flex-col gap-4">
+          <div className="glass-panel p-4" role="note">
+            <p className="text-sm text-ink-muted">
+              Solo mode — the AI coach is off for this challenge. Trust your reasoning.
+            </p>
+          </div>
+          <PredictionScreen
+            challenge={TRANSFER}
+            eyebrow="Solo · The second bulb"
+            continueLabel="Continue to wire it"
+            onComplete={setTransferPrediction}
+          />
+        </div>
+      )}
+      {stage === 'transfer-build' && transferPrediction !== null && (
+        <div className="flex flex-col gap-4">
+          <PredictionSummary prediction={transferPrediction} hint={TRANSFER.fix.hint} />
+          <div className="glass-panel p-4" role="note">
+            <p className="text-sm text-ink-muted">
+              Solo mode — the AI coach is off for this challenge. Predict, build, and check
+              against the simulator.
+            </p>
+          </div>
+          <CircuitCanvas
+            key="transfer"
+            seed={TRANSFER.seed}
+            eyebrow="Solo · The second bulb"
+            choice={transferPrediction.choice}
+            claim={TRANSFER.claim}
+            onSolved={handleTransferSolved}
+            onDirty={handleDirty}
+            onEvidence={handleEvidence}
+            prediction={transferPrediction}
+            challenge={TRANSFER}
+            solo
+          />
+        </div>
+      )}
+      {stage === 'finale' && <JourneyFinale chapters={finaleChapters} />}
+      {STAGE_CONTENT[stage] /* exhaustiveness: every stage renders above */}
+    </JourneyShell>
   )
 }

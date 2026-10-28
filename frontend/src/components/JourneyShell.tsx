@@ -1,0 +1,45 @@
+import type { ReactNode } from 'react'
+import type { Stage } from '../journey/stages'
+import { progressIndex } from '../journey/stages'
+import HealthStatus from './HealthStatus'
+import JourneyProgress from './JourneyProgress'
+
+/** Guided-journey frame: header progress, one stage at a time, tools tucked away. */
+export default function JourneyShell({
+  stage,
+  beat,
+  children,
+  tools,
+}: {
+  stage: Stage
+  beat: ReactNode
+  children: ReactNode
+  tools: ReactNode
+}) {
+  return (
+    <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pb-12">
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-x-4 gap-y-2 py-2">
+        <p className="text-xl font-semibold tracking-tight">Verityn</p>
+        {stage !== 'intro' && <JourneyProgress active={progressIndex(stage)} />}
+        <div className="ml-auto">
+          <HealthStatus compact />
+        </div>
+      </header>
+      <main key={stage} className="stage-enter flex flex-col">
+        {children}
+      </main>
+      {beat}
+      <footer>
+        <details className="glass-panel p-4">
+          <summary className="cursor-pointer text-sm font-semibold">
+            Lab tools
+            <span className="ml-2 font-normal text-ink-muted">
+              Raw API benches and the experimental vision lab — outside the learning flow.
+            </span>
+          </summary>
+          <div className="mt-4 flex flex-col gap-8">{tools}</div>
+        </details>
+      </footer>
+    </div>
+  )
+}

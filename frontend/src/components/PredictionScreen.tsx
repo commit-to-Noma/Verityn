@@ -3,6 +3,7 @@ import { Check, Mic } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
 import CircuitPreview from './CircuitPreview'
+import CoachNote from './CoachNote'
 
 const CHOICES = Object.entries(CHOICE_LABELS) as [Choice, string][]
 
@@ -16,11 +17,13 @@ const CHOICE_ACTIVE: Record<Choice, { box: string; icon: string }> = {
 export default function PredictionScreen({
   challenge,
   eyebrow,
+  coachLine,
   onComplete,
   continueLabel = 'Continue to fix it',
 }: {
   challenge: Challenge
   eyebrow: string
+  coachLine?: string
   onComplete: (prediction: Prediction) => void
   continueLabel?: string
 }) {
@@ -37,6 +40,7 @@ export default function PredictionScreen({
         </h2>
       </div>
       <CircuitPreview seed={challenge.seed} label={`${challenge.title} starting circuit`} />
+      {coachLine !== undefined && <CoachNote>{coachLine}</CoachNote>}
       <p className="text-lg font-semibold">{challenge.question}</p>
       <div className="flex gap-2" role="group" aria-label="Your prediction">
         {CHOICES.map(([value, label]) => (
