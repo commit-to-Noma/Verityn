@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { CircleCheckBig, CircleQuestionMark, CircleX, LoaderCircle } from 'lucide-react'
 import type { VisionProposeResult } from '../api/client'
-import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, providerBadge } from '../api/client'
+import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, visionProviderBadge } from '../api/client'
 import type { ImageGeometry } from '../canvas/layout'
 import { layoutProposalFromGeometry } from '../canvas/layout'
 import type { LessonSeed } from '../lessons/lesson'
@@ -160,7 +160,7 @@ function ReviewPanels({
           </button>
         ))}
         <span className="border-glass-border ml-auto w-fit rounded-full border px-3 py-1 text-xs font-medium text-ink">
-          {providerBadge(result.provider)}
+          {visionProviderBadge(result.provider)}
         </span>
       </div>
       <div
@@ -308,6 +308,10 @@ function ReviewPanels({
                 )
               })}
             </ul>
+            <p className="text-ink-muted text-xs">
+              Terminal relationships are model-proposed; contact geometry is not traced from
+              the image. Verify each wire on the replica before confirming.
+            </p>
           </div>
         )}
         {showModel && (

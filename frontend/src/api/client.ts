@@ -271,6 +271,14 @@ export function providerBadge(provider: string, rung?: string): string {
   return provider === 'prototype-fake' ? 'Fallback coach' : 'Coach'
 }
 
+/** Vision provider badge: Meta only when the backend confirms it, else raw. */
+export function visionProviderBadge(provider: string): string {
+  if (provider === 'meta-spark') {
+    return 'Meta Muse'
+  }
+  return provider
+}
+
 function guardClaim(body: unknown): Claim {
   if (
     isRecord(body) &&

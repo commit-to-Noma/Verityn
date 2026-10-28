@@ -505,3 +505,50 @@ def test_validate_proposal_rejects_mistyped_presence():
                                           "negative": "b"}
     with pytest.raises(coach.CoachProviderError):
         vision.validate_proposal(polar)
+
+
+def _live_fixture():
+    from pathlib import Path
+    path = (Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+            / "vision_live" / "05_textbook_simple.proposal.json")
+    return json.loads(path.read_text())
+
+
+def test_live_proposal_fixture_validates():
+    doc = _live_fixture()
+    assert doc["source"] == "live"
+    assert doc["model"] == "muse-spark-1.3"
+    assert doc["source_image"] == ("tests/fixtures/sam_spike/"
+                                   "05_textbook_simple..png")
+    out = vision.validate_proposal(doc["proposal"])
+    assert out["status"] == "ready"
+    assert [(c["id"], c["type"]) for c in out["components"]] == [
+        ("battery_1", "battery"), ("bulb_1", "bulb")]
+    assert out["components"][0]["polarity"] == {"positive": "a",
+                                                "negative": "b"}
+    assert out["components"][0]["closed"] is None
+    assert out["components"][1]["closed"] is None
+    assert out["components"][1]["polarity"] is None
+    assert len(out["connections"]) == 2
+    assert all(c["uncertain"] is False for c in out["connections"])
+
+
+def test_live_proposal_topology_is_single_loop():
+    out = vision.validate_proposal(_live_fixture()["proposal"])
+    assert all(c["type"] in ("battery", "bulb")
+               for c in out["components"])
+    endpoints = []
+    for conn in out["connections"]:
+        endpoints.append((conn["from"]["node"],
+                          conn["from"]["terminal"]))
+        endpoints.append((conn["to"]["node"], conn["to"]["terminal"]))
+    assert sorted(endpoints) == [("battery_1", "a"), ("battery_1", "b"),
+                                 ("bulb_1", "a"), ("bulb_1", "b")]
+    assert len({node for node, _ in endpoints}) == 2
+
+
+def test_validate_proposal_rejects_unsupported_with_parts():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["status"] = "unsupported"
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(proposal)

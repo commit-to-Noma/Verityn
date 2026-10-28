@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth } from './client'
+import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -274,6 +274,13 @@ describe('askCoach', () => {
     expect(failure.kind).toBe('http')
     expect(failure.status).toBe(500)
     expect(failure.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+describe('visionProviderBadge', () => {
+  it('names Meta only for confirmed live responses', () => {
+    expect(visionProviderBadge('meta-spark')).toBe('Meta Muse')
+    expect(visionProviderBadge('stub-captured-live-proposal')).toBe('stub-captured-live-proposal')
   })
 })
 
