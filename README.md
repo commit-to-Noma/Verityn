@@ -146,7 +146,7 @@ npm run dev
 ```
 
 Open the printed local URL (usually http://localhost:5173) in a browser.
-The status card reads “Backend connected” when both servers run; stop the
+The status badge reads “Simulator ready” when both servers run; stop the
 backend and it shows the error state with a retry button.
 
 ## Checks
@@ -155,6 +155,7 @@ backend and it shows the error state with a retry button.
 cd frontend && npm test         # frontend unit tests (vitest)
 cd frontend && npm run build   # typecheck + production build
 python -m pytest backend/tests -q   # backend tests (venv active)
+python scripts/smoke_live.py   # live judging-path smoke check (venv active)
 ```
 
 ## Built with Muse Code

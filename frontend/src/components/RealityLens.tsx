@@ -247,7 +247,7 @@ export default function RealityLens({
       </div>
       <DiagramOverlay sample={sample} result={result} culprit={culprit} />
       <p className="text-ink-muted text-xs">
-        Boxes: SAM 3.1 spike run, {sample.source}. Physics: deterministic solver.
+        Verified segmentation preview · deterministic physics.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
@@ -330,7 +330,7 @@ export default function RealityLens({
           </span>
           <p className="text-base">{sample.guide}</p>
           <p className="text-ink-muted text-xs">
-            Written for this diagram — the live coach serves the Twist.
+            Written for this diagram — the live coach serves the Reality Check.
           </p>
         </div>
       )}

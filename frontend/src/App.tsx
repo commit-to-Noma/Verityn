@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import ChapterComplete from './components/ChapterComplete'
 import CircuitCanvas from './components/CircuitCanvas'
-import EvaluatePanel from './components/EvaluatePanel'
 import JourneyFinale from './components/JourneyFinale'
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import LabIntro from './components/LabIntro'
 import PredictionScreen from './components/PredictionScreen'
-import SimulatePanel from './components/SimulatePanel'
-import SnapBuildLab from './components/SnapBuildLab'
+
+/** Drawer-only weight: split out so the first paint stays lean. */
+const SimulatePanel = lazy(() => import('./components/SimulatePanel'))
+const EvaluatePanel = lazy(() => import('./components/EvaluatePanel'))
+const SnapBuildLab = lazy(() => import('./components/SnapBuildLab'))
 import type { SimulateResult, VerdictStatus } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
@@ -23,7 +25,7 @@ import { stageFor, type Stage } from './journey/stages'
 const ADVANCE_BEAT_MS = 4000
 const COACHED_BEAT_MS = 2000
 
-type Chapter = 'l1' | 'twist' | 'transfer'
+type Chapter = 'l1' | 'reality' | 'transfer'
 
 interface ChapterGate {
   chapter: Chapter
@@ -31,7 +33,7 @@ interface ChapterGate {
   detail: string
   nextLabel: string
   advance: () => void
-  /** Twist only: the model disagreed, so the coach is invited in. */
+  /** Reality-check only: the model disagreed, so the coach is invited in. */
   coach?: 'invited' | 'heard'
 }
 
@@ -56,8 +58,8 @@ const STAGE_CONTENT: Record<Stage, null> = {
   intro: null,
   'l1-predict': null,
   'l1-build': null,
-  'twist-predict': null,
-  'twist-build': null,
+  'reality-predict': null,
+  'reality-build': null,
   'transfer-predict': null,
   'transfer-build': null,
   finale: null,
@@ -67,9 +69,9 @@ export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
   const [entered, setEntered] = useState(false)
   const [l1Prediction, setL1Prediction] = useState<Prediction | null>(null)
-  const [twistStarted, setTwistStarted] = useState(false)
-  const [twistPrediction, setTwistPrediction] = useState<Prediction | null>(null)
-  const [twistSession, setTwistSession] = useState<string | null>(null)
+  const [realityStarted, setRealityStarted] = useState(false)
+  const [realityPrediction, setRealityPrediction] = useState<Prediction | null>(null)
+  const [realitySession, setRealitySession] = useState<string | null>(null)
   const [transferStarted, setTransferStarted] = useState(false)
   const [transferPrediction, setTransferPrediction] = useState<Prediction | null>(null)
   const [transferDone, setTransferDone] = useState(false)
@@ -144,8 +146,8 @@ export default function App() {
             chapter: 'l1',
             title: 'Reality check passed',
             detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
-            nextLabel: 'Continue to Twist →',
-            advance: () => setTwistStarted(true),
+            nextLabel: 'Continue to Reality Check →',
+            advance: () => setRealityStarted(true),
           },
           ADVANCE_BEAT_MS,
         )
@@ -154,13 +156,13 @@ export default function App() {
     [showGate],
   )
 
-  const handleTwistSolved = useCallback(
+  const handleRealitySolved = useCallback(
     (result: SimulateResult) => {
       if (matchesExpected(result, L1.twist.expectedFixed)) {
         showGate(
           {
-            chapter: 'twist',
-            title: 'Twist solved',
+            chapter: 'reality',
+            title: 'Reality check complete',
             detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
             nextLabel: 'Continue to solo →',
             advance: () => setTransferStarted(true),
@@ -190,15 +192,15 @@ export default function App() {
     [showGate],
   )
 
-  /** A contradicted twist invites the coach in; the gate stays passable. */
-  const handleTwistVerdict = useCallback(
+  /** A contradicted reality check invites the coach in; the gate stays passable. */
+  const handleRealityVerdict = useCallback(
     (status: VerdictStatus) => {
       if (status !== 'CONTRADICTED') {
         return
       }
       cancelAdvance()
       setComplete((gate) =>
-        gate?.chapter === 'twist'
+        gate?.chapter === 'reality'
           ? {
               ...gate,
               title: 'The model disagrees',
@@ -211,8 +213,8 @@ export default function App() {
     [cancelAdvance],
   )
 
-  const handleTwistCoached = useCallback(() => {
-    if (complete?.chapter !== 'twist' || complete.coach !== 'invited') {
+  const handleRealityCoached = useCallback(() => {
+    if (complete?.chapter !== 'reality' || complete.coach !== 'invited') {
       return
     }
     setComplete({
@@ -246,8 +248,8 @@ export default function App() {
   const stage = stageFor({
     entered,
     l1Prediction: l1Prediction !== null,
-    twistStarted,
-    twistPrediction: twistPrediction !== null,
+    realityStarted,
+    realityPrediction: realityPrediction !== null,
     transferStarted,
     transferPrediction: transferPrediction !== null,
     transferDone,
@@ -262,8 +264,8 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
-  const handleTwistPredicted = (prediction: Prediction) => {
-    setTwistPrediction(prediction)
+  const handleRealityPredicted = (prediction: Prediction) => {
+    setRealityPrediction(prediction)
     void (async () => {
       try {
         const recorded = await recordPrediction(
@@ -271,11 +273,11 @@ export default function App() {
           prediction.choice,
           prediction.why,
         )
-        setTwistSession(recorded.session_id)
+        setRealitySession(recorded.session_id)
       } catch {
-        // The twist flow never blocks on coach recording; Ask the coach
+        // The reality-check flow never blocks on coach recording; Ask the coach
         // explains the missing session if the learner tries it.
-        setTwistSession(null)
+        setRealitySession(null)
       }
     })()
   }
@@ -307,7 +309,7 @@ export default function App() {
       stage={stage}
       auto={auto}
       tools={
-        <>
+        <Suspense fallback={<p className="text-ink-muted text-sm">Loading tools…</p>}>
           <section aria-label="Learner tools" className="flex flex-col gap-2">
             <h3 className="text-base font-semibold">Learner tools</h3>
             <p className="text-ink-muted text-sm">
@@ -315,12 +317,19 @@ export default function App() {
               the simulator. Everything in this drawer is optional.
             </p>
           </section>
-          <section aria-label="Vision experiment (Reality Lens)" className="flex flex-col gap-4">
-            <h3 className="text-base font-semibold">Vision experiment (Reality Lens)</h3>
+          <section aria-label="Reality Lens (Experimental)" className="flex flex-col gap-4">
+            <h3 className="text-base font-semibold">Reality Lens (Experimental)</h3>
+            <p className="text-ink-muted text-sm">Optional exploration after the core journey.</p>
             <SnapBuildLab />
           </section>
-          <section aria-label="Judge / debug tools" className="flex flex-col gap-4">
-            <h3 className="text-base font-semibold">Judge / debug tools</h3>
+          <details className="glass-panel p-4">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Demo controls
+              <span className="ml-2 font-normal text-ink-muted">
+                Auto-advance and developer extras.
+              </span>
+            </summary>
+            <div className="mt-4 flex flex-col gap-4">
             <label className="flex cursor-pointer items-center gap-3 text-sm">
               <input
                 type="checkbox"
@@ -338,13 +347,18 @@ export default function App() {
                 <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
               </span>
             </label>
-            <div className="flex flex-col gap-4">
-              <h4 className="text-sm font-semibold">API benches</h4>
-              <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
-              <EvaluatePanel key={preset.id} preset={preset} />
+            <details className="border-glass-border rounded-[10px] border p-4">
+              <summary className="cursor-pointer text-sm font-semibold">
+                Developer API benches
+              </summary>
+              <div className="mt-4 flex flex-col gap-4">
+                <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
+                <EvaluatePanel key={preset.id} preset={preset} />
+              </div>
+            </details>
             </div>
-          </section>
-        </>
+          </details>
+        </Suspense>
       }
     >
       {stage === 'intro' && <LabIntro onEnter={() => setEntered(true)} />}
@@ -373,34 +387,34 @@ export default function App() {
           />
         </div>
       )}
-      {stage === 'twist-predict' && (
+      {stage === 'reality-predict' && (
         <PredictionScreen
           challenge={L1.twist}
-          eyebrow="Twist · The open switch"
+          eyebrow="Reality Check · The open switch"
           coachLine="New circuit, same rule: predict first. If the model disagrees, I'll have one question for you."
-          onComplete={handleTwistPredicted}
+          onComplete={handleRealityPredicted}
         />
       )}
-      {stage === 'twist-build' && twistPrediction !== null && (
+      {stage === 'reality-build' && realityPrediction !== null && (
         <div className="flex flex-col gap-4">
-          <PredictionSummary prediction={twistPrediction} hint={L1.twist.fix.hint} />
+          <PredictionSummary prediction={realityPrediction} hint={L1.twist.fix.hint} />
           <CircuitCanvas
-            key="twist"
+            key="reality"
             seed={L1.twist.seed}
-            eyebrow="Twist · The open switch"
+            eyebrow="Reality Check · The open switch"
             instructions="The loop is fully wired and the switch is open. We will test it right away — don't change the switch."
-            choice={twistPrediction.choice}
+            choice={realityPrediction.choice}
             claim={L1.twist.claim}
-            coachSession={twistSession}
-            onSolved={handleTwistSolved}
+            coachSession={realitySession}
+            onSolved={handleRealitySolved}
             onDirty={handleDirty}
-            onVerdict={handleTwistVerdict}
-            onCoachDone={handleTwistCoached}
+            onVerdict={handleRealityVerdict}
+            onCoachDone={handleRealityCoached}
             onCoachInteract={handleInteract}
             onEvidence={handleEvidence}
-            prediction={twistPrediction}
+            prediction={realityPrediction}
             challenge={L1.twist}
-            gate={complete?.chapter === 'twist' ? gateNode : null}
+            gate={complete?.chapter === 'reality' ? gateNode : null}
           />
         </div>
       )}

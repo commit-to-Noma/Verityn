@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate } from './client'
+import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -321,6 +321,45 @@ describe('proposeCircuit', () => {
     expect(failure.kind).toBe('http')
     expect(failure.status).toBe(500)
     expect(failure.message).toBe('Vision unavailable.')
+  })
+})
+
+describe('subscribeBackendHealth', () => {
+  it('reports down on transport failure and up on the next success', async () => {
+    const seen: string[] = []
+    const off = subscribeBackendHealth((health) => seen.push(health))
+    try {
+      stubFetch(() => {
+        throw new TypeError('boom')
+      })
+      await expect(simulate({ components: [] })).rejects.toBeInstanceOf(ApiError)
+      stubFetch(() => okResponse(SOLVED))
+      await expect(simulate({ components: [] })).resolves.toEqual(SOLVED)
+    } finally {
+      off()
+    }
+    expect(seen).toEqual(['down', 'up'])
+  })
+
+  it('treats HTTP error statuses as reachable', async () => {
+    const seen: string[] = []
+    const off = subscribeBackendHealth((health) => seen.push(health))
+    try {
+      stubFetch(() => errResponse(500, { error_code: 'INTERNAL_ERROR', error_message: 'Oops.' }))
+      await expect(simulate({ components: [] })).rejects.toBeInstanceOf(ApiError)
+    } finally {
+      off()
+    }
+    expect(seen).toEqual(['up'])
+  })
+
+  it('stays silent after unsubscribe', async () => {
+    const seen: string[] = []
+    const off = subscribeBackendHealth((health) => seen.push(health))
+    off()
+    stubFetch(() => okResponse(SOLVED))
+    await simulate({ components: [] })
+    expect(seen).toEqual([])
   })
 })
 

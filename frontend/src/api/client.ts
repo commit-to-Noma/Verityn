@@ -129,6 +129,26 @@ function guardEvaluateResult(body: unknown): EvaluateResult {
   return { result: guardSimulateResult(body.result), verdict: guardVerdict(body.verdict) }
 }
 
+export type BackendHealth = 'up' | 'down'
+
+type HealthListener = (health: BackendHealth) => void
+
+const healthListeners = new Set<HealthListener>()
+
+/** Subscribe to backend reachability; returns an unsubscribe function. */
+export function subscribeBackendHealth(listener: HealthListener): () => void {
+  healthListeners.add(listener)
+  return () => {
+    healthListeners.delete(listener)
+  }
+}
+
+function reportBackendHealth(health: BackendHealth): void {
+  for (const listener of healthListeners) {
+    listener(health)
+  }
+}
+
 async function postJson(path: string, payload: unknown, signal?: AbortSignal): Promise<unknown> {
   let res: Response
   try {
@@ -142,8 +162,12 @@ async function postJson(path: string, payload: unknown, signal?: AbortSignal): P
     if (signal?.aborted) {
       throw err
     }
+    // Transport failure: the backend may be gone. Any HTTP response,
+    // even an error status, proves reachability instead.
+    reportBackendHealth('down')
     throw new ApiError('network', 'Could not reach the backend. Is it running?')
   }
+  reportBackendHealth('up')
   let body: unknown = null
   try {
     body = await res.json()

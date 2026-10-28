@@ -11,8 +11,8 @@ export default function LabIntro({ onEnter }: { onEnter: () => void }) {
         Verityn: The Evidence-Grounded Learning Lab for STEM.
       </h2>
       <p className="max-w-md text-base text-ink-muted">
-        Predict first, build with your own hands, and let the simulator — not the AI — judge
-        your reasoning. Then prove it alone.
+        Make a claim. Build it. Let the simulator reveal what happened. Then prove what you
+        learned without the AI.
       </p>
       <div className="grid w-full max-w-2xl gap-3 text-left sm:grid-cols-2">
         <div className="glass-panel flex flex-col gap-3 p-4">
@@ -24,14 +24,14 @@ export default function LabIntro({ onEnter }: { onEnter: () => void }) {
             </span>
           </div>
           <p className="text-sm text-ink-muted">
-            One broken circuit. Predict what it will do, fix it, and survive the twist.
+            One broken circuit. Predict what it will do, fix it, and survive the reality check.
           </p>
           <ol className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-muted" aria-label="The journey">
             <li className="rounded-full border border-glass-border px-3 py-1">Predict</li>
             <li aria-hidden="true">→</li>
             <li className="rounded-full border border-glass-border px-3 py-1">Build</li>
             <li aria-hidden="true">→</li>
-            <li className="rounded-full border border-glass-border px-3 py-1">Twist</li>
+            <li className="rounded-full border border-glass-border px-3 py-1">Reality Check</li>
             <li aria-hidden="true">→</li>
             <li className="rounded-full border border-glass-border px-3 py-1">Solo</li>
           </ol>
@@ -71,8 +71,7 @@ export default function LabIntro({ onEnter }: { onEnter: () => void }) {
         </div>
       </div>
       <p className="max-w-sm text-xs text-ink-muted">
-        The AI coach stays quiet until you commit to a prediction — and switches off entirely
-        for the final challenge.
+        The AI asks the question. The simulator supplies the evidence. You make the meaning.
       </p>
     </section>
   )

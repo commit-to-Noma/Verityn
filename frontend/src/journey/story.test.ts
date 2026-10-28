@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SimulateResult } from '../api/client'
 import type { TraceInput } from '../lessons/trace'
 import type { ChapterRecap } from './story'
-import { storyNodes } from './story'
+import { proofCards, storyNodes } from './story'
 
 function solved(power: Record<string, number>): SimulateResult {
   const components: SimulateResult['components'] = {}
@@ -64,7 +64,7 @@ describe('storyNodes', () => {
     ])
     expect(nodes.map((node) => node.title)).toEqual([
       'First belief',
-      'Twist evidence',
+      'Reality check evidence',
       'Coach question',
       'Solo prediction',
       'Verified transfer',
@@ -76,7 +76,7 @@ describe('storyNodes', () => {
     expect(nodes[4].detail).toBe('Verified: 2 bulbs lit')
   })
 
-  it('handles a consistent twist with no coaching', () => {
+  it('handles a consistent reality check with no coaching', () => {
     const nodes = storyNodes([
       chapter('L1', L1_INPUT),
       chapter('L1T1', {
@@ -96,5 +96,31 @@ describe('storyNodes', () => {
     expect(nodes[0].detail).toBe('Not reached')
     expect(nodes[1].detail).toBe('No verdict recorded')
     expect(nodes[4].detail).toBe('No verdict recorded')
+  })
+})
+
+describe('proofCards', () => {
+  it('summarizes claim, evidence, and solo transfer', () => {
+    const cards = proofCards([
+      chapter('L1', L1_INPUT),
+      chapter('L1T1', TWIST_INPUT),
+      chapter('L1T2', TRANSFER_INPUT),
+    ])
+    expect(cards.map((card) => card.title)).toEqual([
+      'Prediction',
+      'Simulator evidence',
+      'Independent transfer',
+    ])
+    expect(cards[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
+    expect(cards[1].detail).toBe('Model disagreed: L1 dark at 0 W')
+    expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
+  })
+
+  it('degrades gracefully when chapters are missing', () => {
+    const cards = proofCards([])
+    expect(cards).toHaveLength(3)
+    expect(cards[0].detail).toBe('Not reached')
+    expect(cards[1].detail).toBe('No verdict recorded')
+    expect(cards[2].detail).toBe('No verdict recorded')
   })
 })

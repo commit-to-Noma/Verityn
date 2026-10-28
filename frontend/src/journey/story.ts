@@ -29,7 +29,7 @@ function choiceDetail(chapter: ChapterRecap | undefined): string {
   return `Predicted “${label}” — “${short}”`
 }
 
-function twistDetail(chapter: ChapterRecap | undefined): string {
+function realityDetail(chapter: ChapterRecap | undefined): string {
   const verdict = chapter?.input.verdict
   if (!verdict) {
     return 'No verdict recorded'
@@ -73,13 +73,23 @@ function transferDetail(chapter: ChapterRecap | undefined): string {
   return lit === 1 ? 'Verified: 1 bulb lit' : `Verified: ${lit} bulbs lit`
 }
 
+/** Three-beat proof strip: the claim, the evidence, the solo transfer. */
+export function proofCards(chapters: ChapterRecap[]): StoryNode[] {
+  const [l1, reality, transfer] = chapters
+  return [
+    { title: 'Prediction', detail: choiceDetail(l1) },
+    { title: 'Simulator evidence', detail: realityDetail(reality) },
+    { title: 'Independent transfer', detail: transferDetail(transfer) },
+  ]
+}
+
 /** Five-beat story of the journey, derived from saved chapter evidence. */
 export function storyNodes(chapters: ChapterRecap[]): StoryNode[] {
-  const [l1, twist, transfer] = chapters
+  const [l1, reality, transfer] = chapters
   return [
     { title: 'First belief', detail: choiceDetail(l1) },
-    { title: 'Twist evidence', detail: twistDetail(twist) },
-    { title: 'Coach question', detail: coachDetail(twist) },
+    { title: 'Reality check evidence', detail: realityDetail(reality) },
+    { title: 'Coach question', detail: coachDetail(reality) },
     { title: 'Solo prediction', detail: choiceDetail(transfer) },
     { title: 'Verified transfer', detail: transferDetail(transfer) },
   ]

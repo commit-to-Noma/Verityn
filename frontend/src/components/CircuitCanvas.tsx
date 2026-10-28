@@ -26,7 +26,7 @@ import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
 import { flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
-import { LIT_POWER_W, choiceToClaim, compareWithExpected } from '../lessons/lesson'
+import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from '../lessons/trace'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
@@ -464,44 +464,64 @@ function CoachAsk({
  *
  * Used where the evaluator correctly refuses to judge (the broken
  * start, e.g. L1): the comparison runs against the pack's
- * solver-verified expected outcome. No measurements are shown because
- * a rejected circuit produces none — inventing amps or watts here
- * would fabricate evidence. */
+ * solver-verified expected outcome. Repair measurements come only
+ * from a solved result — a rejected circuit shows no repair block,
+ * since inventing amps or watts would fabricate evidence. */
 function StartVerdict({
   prediction,
   challenge,
+  result,
 }: {
   prediction: Prediction
   challenge: Challenge
+  result: SimulateResult
 }) {
   const status = compareWithExpected(prediction.choice, challenge.expectedStart.lit)
   const component = challenge.claim.component
-  const predictionText =
-    prediction.choice === 'not_sure'
-      ? 'Not sure — no definite prediction'
-      : prediction.choice === 'yes'
-        ? `${component} lights`
-        : `${component} stays dark`
+  const would =
+    prediction.choice === 'not_sure' ? null : prediction.choice === 'yes' ? 'light' : 'stay dark'
   const observedText = challenge.expectedStart.lit
     ? `${component} lights`
     : `${component} stays dark`
+  const measured = result.ok ? result.components[component] : undefined
+  const verified = measured !== undefined && matchesExpected(result, challenge.expectedFixed)
   return (
     <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
       <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
         Original setup evidence
       </p>
+      <p className="text-base font-medium text-ink">Your original prediction</p>
       <div className="flex items-center gap-3">
         <VerdictIcon status={status} />
         <div>
           <p className="text-base font-medium text-ink">{VERDICT_LABELS[status]}</p>
           <p className="text-ink-muted text-sm">
-            <span className="font-medium text-ink">Your prediction:</span> {predictionText}
-          </p>
-          <p className="text-ink-muted text-sm">
-            <span className="font-medium text-ink">Observed:</span> {observedText}
+            {would === null ? (
+              'You made no definite prediction about the open circuit.'
+            ) : (
+              <>
+                Your initial prediction was that the open circuit would {would}.
+              </>
+            )}
           </p>
         </div>
       </div>
+      <p className="text-base font-medium text-ink">What the simulator observed</p>
+      <p className="text-ink-muted pl-9 text-sm">{observedText} in the starting circuit.</p>
+      {measured !== undefined && (
+        <>
+          <p className="text-base font-medium text-ink">
+            {verified ? 'Repair verified' : 'Tested circuit'}
+          </p>
+          <p className="text-ink-muted pl-9 text-sm">
+            {verified ? 'Your completed circuit produces ' : 'Your circuit as built produces '}
+            <ReadoutValue value={measured.current} unit="A" />
+            {' and '}
+            <ReadoutValue value={measured.power} unit="W" />
+            .
+          </p>
+        </>
+      )}
       <p className="text-ink-muted pl-9 text-xs">
         Compared with the verified outcome of the starting circuit.
       </p>
@@ -672,7 +692,7 @@ function CanvasInner({
   onDirty?: () => void
   /** Fired when the server verdict for the recorded prediction arrives. */
   onVerdict?: (status: VerdictStatus) => void
-  /** Fired when the coach answers (twist only; never in solo). */
+  /** Fired when the coach answers (reality check only; never in solo). */
   onCoachDone?: () => void
   /** Fired when the learner starts a coach reflection. */
   onCoachInteract?: () => void
@@ -1220,7 +1240,7 @@ function CanvasInner({
       )}
       {choice === undefined && runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
-          <StartVerdict prediction={prediction} challenge={challenge} />
+          <StartVerdict prediction={prediction} challenge={challenge} result={runState.result} />
         </div>
       )}
       {runState.phase === 'error' && (

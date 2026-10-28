@@ -44,7 +44,7 @@
   },
   "twist": {
     "id": "L1T1",
-    "title": "Twist: the open switch",
+    "title": "Reality Check: the open switch",
     "question": "The circuit is complete, but the switch is open. Will current flow?",
     "start": {
       "components": [

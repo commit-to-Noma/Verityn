@@ -11,8 +11,8 @@ export type Stage =
   | 'intro'
   | 'l1-predict'
   | 'l1-build'
-  | 'twist-predict'
-  | 'twist-build'
+  | 'reality-predict'
+  | 'reality-build'
   | 'transfer-predict'
   | 'transfer-build'
   | 'finale'
@@ -20,8 +20,8 @@ export type Stage =
 export interface JourneyState {
   entered: boolean
   l1Prediction: boolean
-  twistStarted: boolean
-  twistPrediction: boolean
+  realityStarted: boolean
+  realityPrediction: boolean
   transferStarted: boolean
   transferPrediction: boolean
   transferDone: boolean
@@ -34,14 +34,14 @@ export function stageFor(state: JourneyState): Stage {
   if (!state.l1Prediction) {
     return 'l1-predict'
   }
-  if (!state.twistStarted) {
+  if (!state.realityStarted) {
     return 'l1-build'
   }
-  if (!state.twistPrediction) {
-    return 'twist-predict'
+  if (!state.realityPrediction) {
+    return 'reality-predict'
   }
   if (!state.transferStarted) {
-    return 'twist-build'
+    return 'reality-build'
   }
   if (!state.transferPrediction) {
     return 'transfer-predict'
@@ -53,7 +53,7 @@ export function stageFor(state: JourneyState): Stage {
 }
 
 /** Header progress: one step per chapter of the guided journey. */
-export const PROGRESS_STEPS = ['Predict', 'Build', 'Twist', 'Solo'] as const
+export const PROGRESS_STEPS = ['Predict', 'Build', 'Reality Check', 'Solo'] as const
 
 /** Index into PROGRESS_STEPS, or -1 before entering / length when complete. */
 export function progressIndex(stage: Stage): number {
@@ -64,8 +64,8 @@ export function progressIndex(stage: Stage): number {
       return 0
     case 'l1-build':
       return 1
-    case 'twist-predict':
-    case 'twist-build':
+    case 'reality-predict':
+    case 'reality-build':
       return 2
     case 'transfer-predict':
     case 'transfer-build':

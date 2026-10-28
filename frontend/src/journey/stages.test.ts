@@ -5,8 +5,8 @@ import { PROGRESS_STEPS, progressIndex, stageFor } from './stages'
 const BASE: JourneyState = {
   entered: false,
   l1Prediction: false,
-  twistStarted: false,
-  twistPrediction: false,
+  realityStarted: false,
+  realityPrediction: false,
   transferStarted: false,
   transferPrediction: false,
   transferDone: false,
@@ -21,24 +21,24 @@ describe('stageFor', () => {
     expect(stageFor({ ...BASE, entered: true })).toBe('l1-predict')
     expect(stageFor({ ...BASE, entered: true, l1Prediction: true })).toBe('l1-build')
     expect(
-      stageFor({ ...BASE, entered: true, l1Prediction: true, twistStarted: true }),
-    ).toBe('twist-predict')
+      stageFor({ ...BASE, entered: true, l1Prediction: true, realityStarted: true }),
+    ).toBe('reality-predict')
     expect(
       stageFor({
         ...BASE,
         entered: true,
         l1Prediction: true,
-        twistStarted: true,
-        twistPrediction: true,
+        realityStarted: true,
+        realityPrediction: true,
       }),
-    ).toBe('twist-build')
+    ).toBe('reality-build')
     expect(
       stageFor({
         ...BASE,
         entered: true,
         l1Prediction: true,
-        twistStarted: true,
-        twistPrediction: true,
+        realityStarted: true,
+        realityPrediction: true,
         transferStarted: true,
       }),
     ).toBe('transfer-predict')
@@ -47,8 +47,8 @@ describe('stageFor', () => {
         ...BASE,
         entered: true,
         l1Prediction: true,
-        twistStarted: true,
-        twistPrediction: true,
+        realityStarted: true,
+        realityPrediction: true,
         transferStarted: true,
         transferPrediction: true,
       }),
@@ -58,8 +58,8 @@ describe('stageFor', () => {
         ...BASE,
         entered: true,
         l1Prediction: true,
-        twistStarted: true,
-        twistPrediction: true,
+        realityStarted: true,
+        realityPrediction: true,
         transferStarted: true,
         transferPrediction: true,
         transferDone: true,
@@ -69,7 +69,7 @@ describe('stageFor', () => {
 
   it('never skips ahead of the think-first gate', () => {
     // A later flag without its prediction still shows the earliest open stage.
-    expect(stageFor({ ...BASE, entered: true, twistStarted: true })).toBe('l1-predict')
+    expect(stageFor({ ...BASE, entered: true, realityStarted: true })).toBe('l1-predict')
     expect(stageFor({ ...BASE, entered: true, transferStarted: true })).toBe('l1-predict')
     expect(
       stageFor({ ...BASE, entered: true, l1Prediction: true, transferStarted: true }),
@@ -79,12 +79,12 @@ describe('stageFor', () => {
 
 describe('progressIndex', () => {
   it('maps every stage onto the four chapter steps', () => {
-    expect(PROGRESS_STEPS).toEqual(['Predict', 'Build', 'Twist', 'Solo'])
+    expect(PROGRESS_STEPS).toEqual(['Predict', 'Build', 'Reality Check', 'Solo'])
     expect(progressIndex('intro')).toBe(-1)
     expect(progressIndex('l1-predict')).toBe(0)
     expect(progressIndex('l1-build')).toBe(1)
-    expect(progressIndex('twist-predict')).toBe(2)
-    expect(progressIndex('twist-build')).toBe(2)
+    expect(progressIndex('reality-predict')).toBe(2)
+    expect(progressIndex('reality-build')).toBe(2)
     expect(progressIndex('transfer-predict')).toBe(3)
     expect(progressIndex('transfer-build')).toBe(3)
     expect(progressIndex('finale')).toBe(PROGRESS_STEPS.length)

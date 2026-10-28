@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import type { VisionProposeResult } from '../api/client'
 import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, providerBadge } from '../api/client'
@@ -7,7 +7,9 @@ import type { LessonSeed } from '../lessons/lesson'
 import type { LensSample } from '../lens/samples'
 import { LENS_SAMPLES } from '../lens/samples'
 import CircuitCanvas from './CircuitCanvas'
-import RealityLens from './RealityLens'
+
+/** Lens overlay splits out: only loaded when a sample opens. */
+const RealityLens = lazy(() => import('./RealityLens'))
 
 type LabState =
   | { phase: 'idle' }
@@ -130,6 +132,10 @@ export default function SnapBuildLab() {
           Photograph a schematic, inspect what the vision model proposes, and load it to the
           canvas only when you confirm. Nothing proposed is simulated until you test it.
         </p>
+        <p className="mt-1 text-sm font-medium">
+          Upload diagram <span aria-hidden="true">→</span> Review detected circuit{' '}
+          <span aria-hidden="true">→</span> Confirm and simulate
+        </p>
       </div>
       <div className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
@@ -157,11 +163,20 @@ export default function SnapBuildLab() {
             ))}
           </div>
         ) : (
-          <RealityLens
-            key={lensSample.id}
-            sample={lensSample}
-            onBack={() => setLensSample(null)}
-          />
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-3 p-4" aria-live="polite">
+                <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+                <p className="text-ink-muted text-sm">Loading Reality Lens…</p>
+              </div>
+            }
+          >
+            <RealityLens
+              key={lensSample.id}
+              sample={lensSample}
+              onBack={() => setLensSample(null)}
+            />
+          </Suspense>
         )}
       </div>
       {state.phase === 'idle' && (

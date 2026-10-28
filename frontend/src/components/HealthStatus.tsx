@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CircleCheckBig, CircleX, LoaderCircle } from 'lucide-react'
+import { subscribeBackendHealth } from '../api/client'
 
 type Status = 'loading' | 'connected' | 'error'
 
@@ -8,6 +9,22 @@ export default function HealthStatus({ compact = false }: { compact?: boolean })
   const [status, setStatus] = useState<Status>('loading')
   const [detail, setDetail] = useState('')
   const [attempt, setAttempt] = useState(0)
+
+  // Any failed API request immediately invalidates the badge; any
+  // successful response revalidates it. The retry button re-checks.
+  useEffect(
+    () =>
+      subscribeBackendHealth((health) => {
+        if (health === 'down') {
+          setDetail('A request failed — the backend may be unreachable.')
+          setStatus('error')
+        } else {
+          setDetail('')
+          setStatus('connected')
+        }
+      }),
+    [],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
@@ -47,7 +64,7 @@ export default function HealthStatus({ compact = false }: { compact?: boolean })
         {status === 'connected' && (
           <>
             <span className="h-2 w-2 rounded-full bg-ok" aria-hidden="true" />
-            <span className="text-xs text-ink-muted">Backend connected</span>
+            <span className="text-xs text-ink-muted">Simulator ready</span>
           </>
         )}
         {status === 'error' && (
@@ -84,7 +101,7 @@ export default function HealthStatus({ compact = false }: { compact?: boolean })
         <>
           <CircleCheckBig className="h-6 w-6 text-ok" aria-hidden="true" />
           <div>
-            <p className="text-base font-medium">Backend connected</p>
+            <p className="text-base font-medium">Simulator ready</p>
             <p className="font-mono text-sm text-ink-muted">{detail}</p>
           </div>
         </>
