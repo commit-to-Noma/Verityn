@@ -4,7 +4,10 @@ import type { VisionProposeResult } from '../api/client'
 import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, providerBadge } from '../api/client'
 import { layoutProposal } from '../canvas/layout'
 import type { LessonSeed } from '../lessons/lesson'
+import type { LensSample } from '../lens/samples'
+import { LENS_SAMPLES } from '../lens/samples'
 import CircuitCanvas from './CircuitCanvas'
+import RealityLens from './RealityLens'
 
 type LabState =
   | { phase: 'idle' }
@@ -20,6 +23,7 @@ function formatBytes(bytes: number): string {
 
 /** Standalone vision lab: upload, inspect, confirm, then build normally. */
 export default function SnapBuildLab() {
+  const [lensSample, setLensSample] = useState<LensSample | null>(null)
   const [state, setState] = useState<LabState>({ phase: 'idle' })
   const [importRequest, setImportRequest] = useState<{
     seed: LessonSeed
@@ -126,6 +130,39 @@ export default function SnapBuildLab() {
           Photograph a schematic, inspect what the vision model proposes, and load it to the
           canvas only when you confirm. Nothing proposed is simulated until you test it.
         </p>
+      </div>
+      <div className="flex flex-col gap-3">
+        <h3 className="text-base font-semibold">Verified samples</h3>
+        <p className="text-ink-muted text-sm">
+          SAM 3.1-segmented diagrams with solver-backed physics. Detection verified in the
+          spike run; every number comes from the deterministic simulator.
+        </p>
+        {lensSample === null ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {LENS_SAMPLES.map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                onClick={() => setLensSample(sample)}
+                className="glass-panel group flex flex-col gap-2 p-3 text-left"
+              >
+                <img
+                  src={sample.image}
+                  alt=""
+                  className="h-28 w-full rounded-[10px] object-cover"
+                />
+                <span className="text-sm font-medium">{sample.title}</span>
+                <span className="text-ink-muted text-xs">Open Reality Lens →</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <RealityLens
+            key={lensSample.id}
+            sample={lensSample}
+            onBack={() => setLensSample(null)}
+          />
+        )}
       </div>
       {state.phase === 'idle' && (
         <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">

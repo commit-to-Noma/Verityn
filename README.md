@@ -163,8 +163,7 @@ The deterministic solver, prediction evaluator, validation guards, Flask
 API, lesson packs, and the backend/frontend test suites were built with
 Muse Code (agentic CLI, Meta Muse Spark) under human direction: the human
 set every milestone scope, reviewed each diff, ran the live API
-diagnostics, and made all product decisions. No application code was
-copied from outside the project.
+diagnostics, and made all product decisions.
 
 ## Notes
 

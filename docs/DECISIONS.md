@@ -24,7 +24,11 @@ deterministic simulation is the source of truth. Claim extraction
 and tool calling are DEFERRED past the demo: the shipped path is
 choice chips plus the validated fallback coach, which is the
 resilient version. Voice is optional. Extra models are out of
-scope: the SAM 3.1 spike is HALTED (scaffold kept, never run).
+scope: the SAM 3.1 spike ran 2026-10-28 and failed its gate
+(2 of 10), so Path 1 was adopted instead — a Reality Lens overlay
+restricted to the two spike-verified sample diagrams, with all
+physics from the deterministic solver. No open-ended vision
+parsing.
 
 ## Language
 

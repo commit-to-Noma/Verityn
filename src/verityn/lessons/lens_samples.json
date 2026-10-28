@@ -1,0 +1,61 @@
+{
+  "samples": [
+    {
+      "id": "textbook-loop",
+      "title": "Textbook loop",
+      "image": "/lens/textbook-loop.png",
+      "width": 687,
+      "height": 291,
+      "source": "tests/fixtures/sam_spike/05_textbook_simple..png",
+      "modelNote": "Battery modeled as 6 V; the diagram states no voltage.",
+      "boxes": {
+        "battery": {"left": 174, "top": 81, "right": 209, "bottom": 207, "confidence": 0.914},
+        "bulb": {"left": 419, "top": 123, "right": 505, "bottom": 173, "confidence": 0.949}
+      },
+      "paths": [
+        [[183, 88], [160, 88], [160, 58], [408, 58], [408, 140], [404, 176], [404, 222], [160, 222], [160, 196]]
+      ],
+      "switch": null,
+      "netlist": {
+        "components": [
+          {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+          {"id": "L1", "type": "bulb", "a": "p", "b": "0"}
+        ]
+      },
+      "expected": {"ok": true, "lit": true, "component": "L1", "current": 0.6, "power": 3.6},
+      "expectedOpen": null,
+      "question": "This textbook loop is complete. Will the bulb light?",
+      "claim": {"type": "lit", "component": "L1"},
+      "guide": "Trace the loop with your finger: can charge leave the battery and return to it?"
+    },
+    {
+      "id": "workbench-switch",
+      "title": "Workbench switch loop",
+      "image": "/lens/workbench-switch.png",
+      "width": 1489,
+      "height": 857,
+      "source": "tests/fixtures/sam_spike/08_digital_verityn.png",
+      "modelNote": "Workbench capture; battery modeled as the labeled 6 V.",
+      "boxes": {
+        "battery": {"left": 737, "top": 259, "right": 820, "bottom": 289, "confidence": 0.508},
+        "bulb": {"left": 211, "top": 243, "right": 260, "bottom": 306, "confidence": 0.71}
+      },
+      "paths": [
+        [[900, 300], [915, 345], [928, 390], [905, 432], [855, 470], [765, 508], [690, 540], [660, 556], [627, 565], [525, 562], [422, 565], [350, 552], [280, 525], [235, 495], [195, 460], [160, 420], [105, 378], [85, 335], [105, 300], [150, 290], [200, 280], [235, 275], [280, 282], [330, 295], [450, 300], [600, 300], [715, 300]]
+      ],
+      "switch": {"id": "S1", "left": 470, "top": 505, "right": 580, "bottom": 575},
+      "netlist": {
+        "components": [
+          {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+          {"id": "S1", "type": "switch", "closed": true, "a": "p", "b": "m"},
+          {"id": "L1", "type": "bulb", "a": "m", "b": "0"}
+        ]
+      },
+      "expected": {"ok": true, "lit": true, "component": "L1", "current": 0.6, "power": 3.6},
+      "expectedOpen": {"ok": true, "lit": false, "component": "L1", "current": 0, "power": 0},
+      "question": "The switch is closed. Will the bulb light?",
+      "claim": {"type": "lit", "component": "L1"},
+      "guide": "The battery still holds 6 V, yet the bulb reads 0 A. Which component prevents charge from completing the loop?"
+    }
+  ]
+}

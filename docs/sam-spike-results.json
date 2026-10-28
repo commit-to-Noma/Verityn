@@ -1,0 +1,406 @@
+{
+  "model": "sam-3.1",
+  "prompts": [
+    "battery",
+    "light bulb",
+    "switch"
+  ],
+  "images": [
+    {
+      "id": "01_hand_simple",
+      "file": "tests/fixtures/sam_spike/01_hand_simple.jpeg",
+      "category": "uncategorized",
+      "bytes": 22625,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "02_hand_open_switch",
+      "file": "tests/fixtures/sam_spike/02_hand_open_switch.jpeg",
+      "category": "uncategorized",
+      "bytes": 22862,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "03_hand_two_bulbs",
+      "file": "tests/fixtures/sam_spike/03_hand_two_bulbs.jpeg",
+      "category": "uncategorized",
+      "bytes": 31054,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "04_hand_crude_pictorial",
+      "file": "tests/fixtures/sam_spike/04_hand_crude_pictorial.jpeg",
+      "category": "uncategorized",
+      "bytes": 31399,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 955,
+                "top": 301,
+                "right": 1138,
+                "bottom": 506,
+                "width": 1280,
+                "height": 815,
+                "confidence": 0.5241636037826538
+              },
+              "confidence": 0.5241636037826538
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "05_textbook_simple.",
+      "file": "tests/fixtures/sam_spike/05_textbook_simple..png",
+      "category": "uncategorized",
+      "bytes": 8548,
+      "prompts": {
+        "battery": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 174,
+                "top": 81,
+                "right": 209,
+                "bottom": 207,
+                "width": 687,
+                "height": 291,
+                "confidence": 0.9139785170555115
+              },
+              "confidence": 0.9139785170555115
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 419,
+                "top": 123,
+                "right": 505,
+                "bottom": 173,
+                "width": 687,
+                "height": 291,
+                "confidence": 0.949367105960846
+              },
+              "confidence": 0.949367105960846
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": true
+    },
+    {
+      "id": "06_textbook_switch",
+      "file": "tests/fixtures/sam_spike/06_textbook_switch.jpeg",
+      "category": "uncategorized",
+      "bytes": 7540,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "07_textbook_parallel",
+      "file": "tests/fixtures/sam_spike/07_textbook_parallel.jpeg",
+      "category": "uncategorized",
+      "bytes": 11948,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "08_digital_verityn",
+      "file": "tests/fixtures/sam_spike/08_digital_verityn.png",
+      "category": "uncategorized",
+      "bytes": 140897,
+      "prompts": {
+        "battery": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 737,
+                "top": 259,
+                "right": 820,
+                "bottom": 289,
+                "width": 1489,
+                "height": 857,
+                "confidence": 0.507692277431488
+              },
+              "confidence": 0.507692277431488
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 211,
+                "top": 243,
+                "right": 260,
+                "bottom": 306,
+                "width": 1489,
+                "height": 857,
+                "confidence": 0.7104072570800781
+              },
+              "confidence": 0.7104072570800781
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": true
+    },
+    {
+      "id": "09_digital_phet",
+      "file": "tests/fixtures/sam_spike/09_digital_phet.png",
+      "category": "uncategorized",
+      "bytes": 223713,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": true,
+          "records": 1,
+          "boxes": [
+            {
+              "id": "0",
+              "box": {
+                "left": 759,
+                "top": 276,
+                "right": 903,
+                "bottom": 512,
+                "width": 1202,
+                "height": 920,
+                "confidence": 0.6683937907218933
+              },
+              "confidence": 0.6683937907218933
+            }
+          ],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    },
+    {
+      "id": "10_digital_schematic_cad",
+      "file": "tests/fixtures/sam_spike/10_digital_schematic_cad.jpeg",
+      "category": "uncategorized",
+      "bytes": 76142,
+      "prompts": {
+        "battery": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "light bulb": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        },
+        "switch": {
+          "found": false,
+          "records": 0,
+          "boxes": [],
+          "warnings": [],
+          "error": null
+        }
+      },
+      "battery_and_bulb": false
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "battery_and_bulb": 2,
+    "by_category": {
+      "uncategorized": {
+        "total": 10,
+        "battery_and_bulb": 2
+      }
+    },
+    "threshold": "7 of 10",
+    "verdict": "FAIL"
+  }
+}

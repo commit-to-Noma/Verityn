@@ -1,8 +1,12 @@
 # SAM 3.1 spike: "Snap the Real Thing" (World-As-Lab)
 
-2-hour isolated technical spike. Status: **HALTED BY DIRECTION**
-(extra models out of scope; scaffold kept, never run). No live SAM
-request has been made.
+2-hour isolated technical spike. Status: **RUN 2026-10-28 — GATE
+FAILED (2 of 10)**. Ran once with explicit authorization: 30 live
+requests (10 images × 3 prompts), no retries, no errors. Per the
+spike contract the open-ended overlay is halted and Snap & Build stays
+intact. Follow-up (Path 1): the two passing diagrams shipped as
+curated Reality Lens samples (`src/verityn/lessons/lens_samples.json`,
+images under `frontend/public/lens/`).
 
 ## Official contract (no guessing)
 
@@ -57,8 +61,26 @@ rejected, halt, keep this log, and leave Snap & Build intact.
 
 ## Results
 
+Raw cells in `docs/sam-spike-results.json` (boxes + confidences,
+no image bytes or mask payloads). Fixtures were flat, so categories
+below follow the filename prefixes.
+
 | Image | Category | Battery | Bulb | Switch | Notes |
 | ----- | -------- | ------- | ---- | ------ | ----- |
-| _not run_ | | | | | |
+| 01_hand_simple | hand | no | no | no | all zero-match |
+| 02_hand_open_switch | hand | no | no | no | all zero-match |
+| 03_hand_two_bulbs | hand | no | no | no | all zero-match |
+| 04_hand_crude_pictorial | hand | no | yes (0.52) | no | bulb only |
+| 05_textbook_simple | textbook | yes (0.91) | yes (0.95) | no | **both** |
+| 06_textbook_switch | textbook | no | no | no | all zero-match |
+| 07_textbook_parallel | textbook | no | no | no | all zero-match |
+| 08_digital_verityn | digital | yes (0.51) | yes (0.71) | no | **both** |
+| 09_digital_phet | digital | no | yes (0.67) | no | bulb only |
+| 10_digital_schematic_cad | digital | no | no | no | all zero-match |
 
-Summary: _pending_ — `docs/sam-spike-results.json` not generated.
+Summary: **2 of 10** images detected both battery and bulb
+(threshold 7 of 10): FAIL. All 30 responses parsed cleanly — no
+transport, envelope, or grammar errors — so the misses are genuine
+zero-match lanes, not integration failures. Notably the switch
+prompt matched nothing anywhere, and hand-drawn sketches yielded a
+single bulb. The payload contract itself is verified working.

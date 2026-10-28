@@ -327,6 +327,51 @@ body {
     radial-gradient(560px 360px at 50% 90%, rgb(56 214 233 / 0.1), transparent 70%);
 }
 
+/* Reality Lens overlay: SAM boxes, current vectors, culprit spotlight. */
+.lens-box {
+  fill: none;
+  stroke: var(--color-flow);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--color-flow));
+}
+
+.lens-label {
+  fill: var(--color-flow);
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+@keyframes lens-dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+.lens-flow {
+  stroke: var(--color-flow);
+  stroke-linecap: round;
+  stroke-dasharray: 2 14;
+  animation: lens-dash 0.9s linear infinite;
+}
+
+.lens-idle {
+  stroke: var(--color-unknown);
+  stroke-linecap: round;
+  stroke-dasharray: 2 14;
+  opacity: 0.45;
+}
+
+@keyframes lens-pulse {
+  50% {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-coach) 30%, transparent);
+  }
+}
+
+.lens-spotlight {
+  border: 2px solid var(--color-coach);
+  animation: lens-pulse 1.4s ease-in-out infinite;
+}
+
 /* Coach identity: violet marker, newest coach message only per spec. */
 .coach-note {
   border-left: 2px solid var(--color-coach);
