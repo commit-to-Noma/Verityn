@@ -10,6 +10,17 @@ function StepBody({ body }: { body: TraceBody }) {
   switch (body.kind) {
     case 'empty':
       return <p className="text-ink-muted text-sm">{body.text}</p>
+    case 'demonstration':
+      return (
+        <ol className="flex flex-col gap-1">
+          {body.events.map((event, index) => (
+            <li key={`${event.phase}-${index}`} className="flex items-baseline gap-2 text-sm">
+              <span className="text-ink-muted w-20 shrink-0 text-xs capitalize">{event.phase}</span>
+              <span>{event.label}</span>
+            </li>
+          ))}
+        </ol>
+      )
     case 'prediction':
       return (
         <div className="flex flex-col gap-1">

@@ -20,14 +20,21 @@ import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
+import type { CoachServerAction } from '../api/client'
 import type { Demonstration } from '../coach/actions'
-import { describeDemonstration } from '../coach/actions'
+import {
+  describeDemonstration,
+  offerFromActions,
+  previewTargets,
+  validateServerActions,
+} from '../coach/actions'
 import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
 import { flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
-import type { CoachTraceOutcome, TraceInput } from '../lessons/trace'
+import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
+import SpeakButton from '../voice/SpeakButton'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
@@ -61,6 +68,10 @@ type VerdictState =
   | { phase: 'checking' }
   | { phase: 'done'; claim: Claim; verdict: VerdictResult; netlist: Netlist }
   | { phase: 'error'; message: string }
+
+function reducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
 
 function formatLatency(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`
@@ -118,6 +129,8 @@ function seedNodes(seed: LessonSeed | undefined): CircuitNodeType[] {
         glow: 0,
         invalid: false,
         closed: node.kind === 'switch' ? (node.closed ?? true) : true,
+        polarity: node.polarity,
+        review: node.review,
       },
     }))
 }
@@ -143,6 +156,7 @@ interface LadderRung {
   provider: string
   ms: number
   reply: string | null
+  actions: CoachServerAction[]
 }
 
 type LadderStatus =
@@ -178,17 +192,23 @@ function CoachAsk({
   netlist,
   onResult,
   onInteract,
+  onActions,
   demonstration,
   onDemonstrate,
+  autoDemonstrate,
 }: {
   session: string | null
   netlist: Netlist
   onResult?: (outcome: CoachTraceOutcome) => void
   /** Fired when the learner starts reflecting, so demo mode holds. */
   onInteract?: () => void
+  /** Server demonstration actions from the latest eligible answer. */
+  onActions?: (actions: CoachServerAction[]) => void
   /** Consented diagram demonstration offered on the R2 card, if any. */
   demonstration?: Demonstration | null
   onDemonstrate?: (demo: Demonstration) => void
+  /** Presenter mode: auto-apply a valid demonstration after a preview beat. */
+  autoDemonstrate?: boolean
 }) {
   const [rungs, setRungs] = useState<LadderRung[]>([])
   const [status, setStatus] = useState<LadderStatus>({ phase: 'idle' })
@@ -197,11 +217,49 @@ function CoachAsk({
   const [demoDone, setDemoDone] = useState(false)
   const coachController = useRef<AbortController | null>(null)
   const rungsRef = useRef<LadderRung[]>([])
+  const onActionsRef = useRef(onActions)
+  const onDemonstrateRef = useRef(onDemonstrate)
+  const demonstratedRef = useRef<Demonstration | null | undefined>(demonstration)
 
   useEffect(() => () => coachController.current?.abort(), [])
   useEffect(() => {
     rungsRef.current = rungs
   }, [rungs])
+  useEffect(() => {
+    onActionsRef.current = onActions
+    onDemonstrateRef.current = onDemonstrate
+    demonstratedRef.current = demonstration
+  })
+
+  const r2Served = rungs.some((card) => card.rung === 'R2')
+  const offerVisible =
+    r2Served && demonstration !== null && demonstration !== undefined && !demoDismissed && !demoDone
+  const autoPending = autoDemonstrate === true && offerVisible
+
+  /** Presenter auto-apply: a visible preview beat, cancelled by any choice. */
+  useEffect(() => {
+    if (!autoPending) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      const demo = demonstratedRef.current
+      if (demo !== null && demo !== undefined) {
+        setDemoDone(true)
+        onDemonstrateRef.current?.(demo)
+      }
+    }, 2500)
+    return () => window.clearTimeout(timer)
+  }, [autoPending])
+
+  const applyDemo = () => {
+    const demo = demonstratedRef.current
+    if (demo === null || demo === undefined) {
+      return
+    }
+    onInteract?.()
+    setDemoDone(true)
+    onDemonstrate?.(demo)
+  }
 
   const publish = (cards: LadderRung[]) => {
     const latest = cards[cards.length - 1]
@@ -251,7 +309,9 @@ function CoachAsk({
             provider: answer.provider,
             ms,
             reply: null,
+            actions: answer.actions,
           }
+          onActionsRef.current?.(answer.actions)
           const cards = [...rungsRef.current.filter((entry) => entry.rung !== served), card].sort(
             (a, b) => (RUNG_ORDER[a.rung] ?? 99) - (RUNG_ORDER[b.rung] ?? 99),
           )
@@ -312,6 +372,9 @@ function CoachAsk({
             </div>
             <p className="text-base">{card.text}</p>
             {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
+            <div>
+              <SpeakButton text={card.text} />
+            </div>
             {card.rung === 'R2' &&
               demonstration !== null &&
               demonstration !== undefined &&
@@ -319,14 +382,15 @@ function CoachAsk({
               !demoDone && (
                 <div className="border-glass-border flex flex-col gap-2 rounded-[10px] border p-3">
                   <p className="text-sm">{describeDemonstration(demonstration)}</p>
+                  {autoPending && (
+                    <p className="text-ink-muted text-xs" role="status">
+                      Presenter mode: auto-applying the demonstration…
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        onInteract?.()
-                        setDemoDone(true)
-                        onDemonstrate?.(demonstration)
-                      }}
+                      onClick={applyDemo}
                       className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
                     >
                       Show me
@@ -343,7 +407,8 @@ function CoachAsk({
               )}
             {card.rung === 'R2' && demoDone && (
               <p className="text-ink-muted text-xs">
-                Demonstrated on your canvas — the simulator judges the result.
+                Demonstrated on your canvas — the simulator judges the result. Undo is beside
+                the canvas controls.
               </p>
             )}
             {reflective &&
@@ -543,6 +608,8 @@ function ClaimVerdict({
   coachEnabled,
   demonstration,
   onDemonstrate,
+  onActions,
+  autoDemonstrate,
 }: {
   state: VerdictState
   choice: Choice
@@ -555,6 +622,8 @@ function ClaimVerdict({
   coachEnabled: boolean
   demonstration?: Demonstration | null
   onDemonstrate?: (demo: Demonstration) => void
+  onActions?: (actions: CoachServerAction[]) => void
+  autoDemonstrate?: boolean
 }) {
   if (state.phase === 'idle') {
     return (
@@ -637,8 +706,10 @@ function ClaimVerdict({
             netlist={state.netlist}
             onResult={onCoached}
             onInteract={onCoachInteract}
+            onActions={onActions}
             demonstration={demonstration}
             onDemonstrate={onDemonstrate}
+            autoDemonstrate={autoDemonstrate}
           />
         )}
       </>
@@ -680,6 +751,10 @@ function CanvasInner({
   solo = false,
   importRequest,
   gate,
+  simulateLocked = null,
+  peerSelection = null,
+  onPeerSelect,
+  autoDemonstrate = false,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -688,6 +763,14 @@ function CanvasInner({
   claim?: { type: string; component: string }
   coachSession?: string | null
   onSolved?: (result: SimulateResult) => void
+  /** Locks Test + auto-run until review confirms; the string is the reason. */
+  simulateLocked?: string | null
+  /** Externally selected node/edge id, mirrored onto canvas selection. */
+  peerSelection?: string | null
+  /** Fired when the learner selects a node/edge (null on pane click). */
+  onPeerSelect?: (id: string | null) => void
+  /** Presenter mode: auto-apply a valid demonstration after a preview beat. */
+  autoDemonstrate?: boolean
   /** Fired whenever the canvas edits invalidate the last result. */
   onDirty?: () => void
   /** Fired when the server verdict for the recorded prediction arrives. */
@@ -719,6 +802,10 @@ function CanvasInner({
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
+  const [serverActions, setServerActions] = useState<CoachServerAction[]>([])
+  const [demoEvents, setDemoEvents] = useState<DemoTraceEvent[]>([])
+  const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
+  const demoObserve = useRef<{ demo: Demonstration; show: boolean } | null>(null)
   const uncertainRef = useRef<string[]>(initialUncertain)
   const requestId = useRef(0)
   const controller = useRef<AbortController | null>(null)
@@ -884,10 +971,15 @@ function CanvasInner({
     setNodes([])
     setEdges([])
     uncertainRef.current = []
+    setDemoUndo(null)
+    demoObserve.current = null
     invalidate()
   }
 
   const run = useCallback(() => {
+    if (simulateLocked !== null) {
+      return
+    }
     controller.current?.abort()
     const next = new AbortController()
     controller.current = next
@@ -981,17 +1073,46 @@ function CanvasInner({
         })
       }
     })()
-  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim])
+  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked])
 
   const loopClosed = isClosedLoop(nodes, edges)
 
   useEffect(() => {
-    if (!loopClosed || runState.phase !== 'idle') {
+    if (!loopClosed || runState.phase !== 'idle' || simulateLocked !== null) {
       return
     }
     const timer = window.setTimeout(run, 450)
     return () => window.clearTimeout(timer)
-  }, [loopClosed, runState.phase, nodes, edges, run])
+  }, [loopClosed, runState.phase, nodes, edges, run, simulateLocked])
+
+  /** Mirror an externally selected peer (review panel) onto the canvas. */
+  useEffect(() => {
+    if (peerSelection === null) {
+      return
+    }
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === peerSelection
+          ? node.selected === true
+            ? node
+            : { ...node, selected: true }
+          : node.selected === true
+            ? { ...node, selected: false }
+            : node,
+      ),
+    )
+    setEdges((current) =>
+      current.map((edge) =>
+        edge.id === peerSelection
+          ? edge.selected === true
+            ? edge
+            : { ...edge, selected: true }
+          : edge.selected === true
+            ? { ...edge, selected: false }
+            : edge,
+      ),
+    )
+  }, [peerSelection, setNodes, setEdges])
 
   useEffect(() => {
     if (verdictState.phase === 'done') {
@@ -1015,8 +1136,9 @@ function CanvasInner({
       expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
       coach: solo ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE } : coachOutcome,
       coachAvailable: choice !== undefined || solo,
+      demonstrations: demoEvents.length > 0 ? demoEvents : undefined,
     })
-  }, [runState, verdictState, coachOutcome, prediction, challenge, choice, solo])
+  }, [runState, verdictState, coachOutcome, prediction, challenge, choice, solo, demoEvents])
 
   const handleCoached = (outcome: CoachTraceOutcome) => {
     setCoachOutcome(outcome)
@@ -1029,38 +1151,114 @@ function CanvasInner({
     setTool((current) => (current === next ? null : next))
   }
 
-  /** Consented demonstration for the R2 card, derived from live canvas state. */
+  /** Latest run, for solver re-judges scheduled after state commits. */
+  const runRef = useRef(run)
+  useEffect(() => {
+    runRef.current = run
+  })
+
+  /** Consented demonstration: server actions first, canvas fallback second. */
+  const acceptedActions = validateServerActions(
+    serverActions,
+    nodes.map((node) => ({ id: node.id, kind: node.data.kind, closed: node.data.closed })),
+  ).accepted
   const demonstration: Demonstration | null = (() => {
     const sw = nodes.find((node) => node.data.kind === 'switch')
-    if (sw !== undefined) {
-      return { action: sw.data.closed ? 'open_switch' : 'close_switch', target: sw.id }
-    }
-    if (claim !== undefined) {
-      return { action: 'highlight_path', target: claim.component }
-    }
-    return null
+    const fallback: Demonstration | null =
+      sw !== undefined
+        ? { action: sw.data.closed ? 'open_switch' : 'close_switch', target: sw.id }
+        : claim !== undefined
+          ? { action: 'highlight_path', target: claim.component }
+          : null
+    return offerFromActions(acceptedActions, fallback)
   })()
 
-  const handleDemonstrate = (demo: Demonstration) => {
-    if (demo.action === 'highlight_path') {
-      setNodes((current) =>
-        current.map((node) =>
-          node.id === demo.target ? { ...node, data: { ...node.data, demonstrated: true } } : node,
-        ),
-      )
-      return
+  const describeReading = (demo: Demonstration): string => {
+    if (runState.phase !== 'done') {
+      return `${demo.target} was not simulated.`
     }
-    const sw = nodes.find((node) => node.id === demo.target && node.data.kind === 'switch')
-    if (sw === undefined) {
-      return
+    if (!runState.result.ok) {
+      return `the circuit is invalid (${runState.result.error_code}).`
     }
-    // Switch actions reuse the manual toggle path: the solver re-judges.
-    if (demo.action === 'open_switch' && sw.data.closed) {
-      toggleSwitch(sw.id)
-    } else if (demo.action === 'close_switch' && !sw.data.closed) {
-      toggleSwitch(sw.id)
-    }
+    const bulbs = runState.netlist.components
+      .filter((part) => part.type === 'bulb')
+      .map((part) => {
+        const reading = runState.result.ok ? runState.result.components[part.id] : undefined
+        return `${part.id} ${reading?.power?.toFixed(1) ?? '?'} W`
+      })
+    return bulbs.length > 0 ? bulbs.join(', ') : 'no bulb measured.'
   }
+
+  const handleDemonstrate = (demo: Demonstration) => {
+    setDemoUndo({
+      nodes: nodes.map((node) => ({ ...node, position: { ...node.position }, data: { ...node.data } })),
+      edges: edges.map((edge) => ({ ...edge })),
+    })
+    setDemoEvents((prev) => [...prev, { phase: 'proposed', label: describeDemonstration(demo) }])
+    // A demonstration is a reversible coach excursion: the served rungs stay
+    // recorded even though the toggle invalidates the canvas around them.
+    const keptCoach = coachOutcome
+    // Switch actions reuse the manual toggle path, guarded by live state.
+    if (demo.action !== 'highlight_path') {
+      const sw = nodes.find((node) => node.id === demo.target && node.data.kind === 'switch')
+      if (demo.action === 'open_switch' && sw !== undefined && sw.data.closed) {
+        toggleSwitch(sw.id)
+      } else if (demo.action === 'close_switch' && sw !== undefined && !sw.data.closed) {
+        toggleSwitch(sw.id)
+      }
+    }
+    setCoachOutcome(keptCoach)
+    const preview = new Set([...previewTargets(acceptedActions), demo.target])
+    setNodes((current) =>
+      current.map((node) =>
+        preview.has(node.id) ? { ...node, data: { ...node.data, demonstrated: true } } : node,
+      ),
+    )
+    setDemoEvents((prev) => [...prev, { phase: 'applied', label: describeDemonstration(demo) }])
+    demoObserve.current = {
+      demo,
+      show: acceptedActions.some((action) => action.type === 'show_measurement'),
+    }
+    // The solver judges the committed canvas state, never the stale closure.
+    window.setTimeout(() => runRef.current(), 60)
+  }
+
+  const handleDemoUndo = () => {
+    if (demoUndo === null) {
+      return
+    }
+    const snapshot = demoUndo
+    const keptCoach = coachOutcome
+    setDemoUndo(null)
+    setNodes(snapshot.nodes)
+    setEdges(snapshot.edges)
+    invalidate()
+    setCoachOutcome(keptCoach)
+    setDemoEvents((prev) => [
+      ...prev,
+      { phase: 'undone', label: 'Restored the pre-demonstration circuit.' },
+    ])
+    demoObserve.current = null
+    window.setTimeout(() => runRef.current(), 60)
+  }
+
+  /** Record the fresh solver reading after a demonstration applies. */
+  useEffect(() => {
+    const pending = demoObserve.current
+    if (pending === null || runState.phase !== 'done') {
+      return
+    }
+    demoObserve.current = null
+    const reading = describeReading(pending.demo)
+    setDemoEvents((prev) => [...prev, { phase: 'observed', label: `Solver observed ${reading}` }])
+    if (pending.show) {
+      document
+        .querySelector('[aria-label="Simulation result"]')
+        ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+    }
+    // Reads the committed run only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runState])
 
   const tools = [
     { id: 'battery', label: 'Battery', Icon: Zap },
@@ -1148,16 +1346,23 @@ function CanvasInner({
                 placeToolAt(kind, event.clientX, event.clientY)
               }
             }}
-            onPaneClick={(event) => placeAt(event.clientX, event.clientY)}
+            onPaneClick={(event) => {
+              placeAt(event.clientX, event.clientY)
+              onPeerSelect?.(null)
+            }}
             onNodeClick={(_event, node) => {
               if (tool === 'delete') {
                 removeNode(node.id)
+              } else {
+                onPeerSelect?.(node.id)
               }
             }}
             onEdgeClick={(_event, edge) => {
               if (tool === 'delete') {
                 setEdges((current) => current.filter((entry) => entry.id !== edge.id))
                 invalidate()
+              } else {
+                onPeerSelect?.(edge.id)
               }
             }}
             isValidConnection={isValidWire}
@@ -1181,8 +1386,9 @@ function CanvasInner({
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={runState.phase === 'loading'}
+          disabled={runState.phase === 'loading' || simulateLocked !== null}
           onClick={run}
+          title={simulateLocked ?? undefined}
           className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
         >
           {runState.phase === 'loading' ? (
@@ -1203,7 +1409,22 @@ function CanvasInner({
         >
           Clear
         </button>
+        {demoUndo !== null && (
+          <button
+            type="button"
+            onClick={handleDemoUndo}
+            title="Restores the pre-demonstration circuit and re-runs the solver."
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Undo demonstration
+          </button>
+        )}
       </div>
+      {simulateLocked !== null && (
+        <p className="text-ink-muted text-sm" role="note">
+          {simulateLocked}
+        </p>
+      )}
       {runState.phase === 'idle' && (
         <div className={`flow-status ${loopClosed ? 'flow-status-ready' : ''}`} role="status">
           <span className="flow-status-dot" aria-hidden="true" />
@@ -1235,6 +1456,8 @@ function CanvasInner({
             coachEnabled={!solo}
             demonstration={demonstration}
             onDemonstrate={handleDemonstrate}
+            onActions={setServerActions}
+            autoDemonstrate={autoDemonstrate}
           />
         </div>
       )}
@@ -1301,6 +1524,10 @@ export default function CircuitCanvas({
   solo,
   importRequest,
   gate,
+  simulateLocked,
+  peerSelection,
+  onPeerSelect,
+  autoDemonstrate,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -1319,6 +1546,10 @@ export default function CircuitCanvas({
   solo?: boolean
   importRequest?: CanvasImportRequest | null
   gate?: ReactNode
+  simulateLocked?: string | null
+  peerSelection?: string | null
+  onPeerSelect?: (id: string | null) => void
+  autoDemonstrate?: boolean
 }) {
   return (
     <ReactFlowProvider>
@@ -1340,6 +1571,10 @@ export default function CircuitCanvas({
         solo={solo}
         importRequest={importRequest}
         gate={gate}
+        simulateLocked={simulateLocked}
+        peerSelection={peerSelection}
+        onPeerSelect={onPeerSelect}
+        autoDemonstrate={autoDemonstrate}
       />
     </ReactFlowProvider>
   )

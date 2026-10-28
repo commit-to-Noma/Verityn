@@ -90,6 +90,10 @@ export interface SeedNode {
   id: string
   kind: string
   closed?: boolean
+  /** Detected battery polarity (+/− terminals); batteries only. */
+  polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
+  /** Review provenance for vision-seeded replicas. */
+  review?: 'verified' | 'needs-review' | 'learner-corrected'
   x: number
   y: number
 }

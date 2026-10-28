@@ -236,9 +236,16 @@ async function drive() {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await send('Page.navigate', { url: BASE + '/' })
   await waitFor(() => hasText('Enter the lab'), 'hub')
-  await clickButton('Enter the lab')
+  check('hero headline', await hasText('Learn by predicting, testing, and explaining.'))
+  check('hero CTAs', await hasText('Start the circuit lab') && await hasText('Turn a diagram into an experiment') && await hasText('Explore the guided demo'))
+  check('method strip', await hasText('Try independently'))
+  check('lens card', await hasText('Reality Lens'))
+  check('planned subjects honest', await hasText('Planned') && await hasText('Active demo'))
+  await clickButton('Start the circuit lab')
 
   await waitFor(() => hasText('open gap'), 'l1 predict')
+  const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
+  check('mic button renders with honest state', micLabel === 'Dictate your reason' || micLabel === 'Voice input not supported', micLabel)
   await clickButton('No')
   await fillInput('predict-why', 'gap breaks the loop')
   await clickButton('Continue to fix it')
@@ -279,6 +286,16 @@ async function drive() {
   check('R2 provider deterministic', r2?.provider === 'deterministic', String(r2?.provider))
   check('R2 cites 0.0 A discrepancy', typeof r2?.text === 'string' && r2.text.includes('0.0 A') && r2.text.includes('S1'))
   console.log('R2 text:', JSON.stringify(r2?.text))
+  check('R2 carries validated actions', Array.isArray(r2?.actions) && r2.actions.some((a) => a.type === 'set_switch_state' && a.componentId === 'S1' && a.closed === true), JSON.stringify(r2?.actions))
+  check('listen button on coach card', await hasText('Listen'))
+
+  await clickButton('Show me')
+  await waitFor(() => hasText('Consistent with the model'), 'demo apply flips verdict', 25000)
+  check('demo apply shows fresh lit reading', await hasText('3.6 W'))
+  check('undo offered at canvas', await hasText('Undo demonstration'))
+  await clickButton('Undo demonstration')
+  await waitFor(() => hasText('Contradicted by the model'), 'demo undo restores', 25000)
+  check('undo restores dark reading', await hasText('0.0 W'))
 
   const coachCallsBeforeSolo = askRequestIds.length
   await clickButtonStarts('Continue to solo')
@@ -295,6 +312,19 @@ async function drive() {
   await clickButtonStarts('See your journey')
   await waitFor(() => hasText('Replay journey'), 'finale')
   check('finale capstone', await hasText('You did not memorize the answer. You tested it, explained it, and proved it.'))
+  const hasDemoTitle = await hasText('DEMONSTRATION')
+  const hasObserved = await hasText('Solver observed')
+  const hasUndone = await hasText('Restored the pre-demonstration circuit.')
+  check('demo timeline recorded', hasDemoTitle && hasObserved && hasUndone, `title=${hasDemoTitle} observed=${hasObserved} undone=${hasUndone}`)
+  check('served rungs survive the demo excursion', !(await hasText('you have not asked the coach yet')))
+  if (!hasDemoTitle || !hasObserved || !hasUndone) {
+    const context = await ev(`(() => {
+      const text = document.body.innerText;
+      const i = text.indexOf('REALITY CHECK');
+      return JSON.stringify(text.slice(Math.max(0, i - 200), i + 3000));
+    })()`)
+    console.log('REALITY FINALE CONTEXT:', context)
+  }
   check('reality check story node', await hasText('REALITY CHECK EVIDENCE'))
   const proofCount = await ev('document.querySelector(\'[aria-label="Proof summary"]\')?.children.length ?? 0')
   check('proof cards', proofCount === 3, `got ${proofCount}`)
@@ -303,6 +333,14 @@ async function drive() {
   check('drawer sections', await hasText('Learner tools') && await hasText('Reality Lens (Experimental)') && await hasText('Demo controls'))
   check('benches hidden by default', !(await hasText('Try a circuit')) && !(await hasText('Check a prediction')))
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
+
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
+  await send('Page.navigate', { url: BASE + '/' })
+  await waitFor(() => hasText('Start the circuit lab'), 'mobile hub')
+  const overflow = await ev('document.documentElement.scrollWidth - document.documentElement.clientWidth')
+  check('mobile homepage fits 390px', overflow <= 1, `overflow ${overflow}px`)
+  await clickButton('Start the circuit lab')
+  await waitFor(() => hasText('open gap'), 'mobile predict')
 
   console.log(fails.length === 0 ? 'BROWSER SMOKE PASSED' : `FAILURES: ${fails.join(', ')}`)
   ws.close()

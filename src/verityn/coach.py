@@ -47,6 +47,17 @@ VALID_RUNGS = ("R1", "R2", "R4")
 #: never model output).
 DETERMINISTIC_PROVIDER = "deterministic"
 
+#: Closed vocabulary of coach demonstration actions. Demonstrations
+#: only highlight validated parts or flip a validated switch; they
+#: never write wires, set measurements, or skip lesson gates.
+DEMO_ACTION_TYPES = ("highlight_component", "highlight_terminal",
+                     "set_switch_state", "pulse_current_path",
+                     "show_measurement")
+#: Terminals a demonstration may name.
+DEMO_TERMINALS = ("a", "b")
+#: Cap on actions per response; the learner consents to each demo.
+DEMO_ACTION_CAP = 4
+
 
 class CoachValidationError(ValueError):
     """A coach request that fails validation (maps to HTTP 400)."""
@@ -60,6 +71,11 @@ class CoachProviderError(RuntimeError):
     or None, reason a fixed rule code or None. Logs and responses must
     use these fields, never the message, which callers could fill
     arbitrarily.
+
+    Stage vocabulary: "transport" (no HTTP response: DNS, refused,
+    timeout), "http" (the server answered with an error status),
+    "parse" (unusable response envelope), "validate" (output failed
+    the strict contract), "internal" (caller-side misuse).
     """
 
     def __init__(self, message, *, stage, http_status=None, shape=None,
@@ -314,6 +330,96 @@ def r4_prompt(*, claim_component, facts, netlist):
             f"{claim_component} stay dark? The evidence says {evidence}.")
 
 
+def _netlist_parts(netlist):
+    """Map component id to its record for validated references."""
+    parts = {}
+    if not isinstance(netlist, dict):
+        return parts
+    components = netlist.get("components")
+    if not isinstance(components, list):
+        return parts
+    for part in components:
+        if (isinstance(part, dict) and isinstance(part.get("id"), str)
+                and part["id"] not in parts):
+            parts[part["id"]] = part
+    return parts
+
+
+def _valid_demo_action(action, parts):
+    """Return the canonical action or None when it cannot apply.
+
+    Every action names an existing part; switch flips name a switch
+    whose state actually changes; terminal highlights name a real
+    terminal. Unknown shapes never become actions.
+    """
+    if not isinstance(action, dict):
+        return None
+    kind = action.get("type")
+    target = action.get("componentId")
+    if kind not in DEMO_ACTION_TYPES or not isinstance(target, str):
+        return None
+    part = parts.get(target)
+    if not isinstance(part, dict):
+        return None
+    if kind == "highlight_terminal":
+        terminal = action.get("terminal")
+        if terminal not in DEMO_TERMINALS:
+            return None
+        return {"type": kind, "componentId": target,
+                "terminal": terminal}
+    if kind == "set_switch_state":
+        closed = action.get("closed")
+        if part.get("type") != "switch" or not isinstance(closed, bool):
+            return None
+        if part.get("closed", True) is closed:
+            return None
+        return {"type": kind, "componentId": target, "closed": closed}
+    if set(action) - {"type", "componentId"}:
+        return None
+    return {"type": kind, "componentId": target}
+
+
+def suggest_actions(*, netlist, facts, claim_component):
+    """Propose a validated demonstration from server facts.
+
+    Deterministic over the submitted circuit and solver facts: a dark
+    bulb behind an open switch offers a highlight plus a consented
+    switch flip toward the completed loop; a lit claim offers a path
+    pulse and its measurement. No model call, nothing invented — the
+    numbers always come from the next solver run.
+    """
+    parts = _netlist_parts(netlist)
+    if claim_component not in parts:
+        return []
+    candidates = []
+    numbers = _bulb_numbers(facts, claim_component)
+    dark = numbers is not None and numbers[1] <= evaluator.ZERO_POWER
+    switches = _open_switches(netlist)
+    if dark and switches:
+        target = switches[0]
+        candidates = [
+            {"type": "highlight_component", "componentId": target},
+            {"type": "set_switch_state", "componentId": target,
+             "closed": True},
+            {"type": "show_measurement", "componentId": claim_component},
+        ]
+    elif numbers is not None:
+        candidates = [
+            {"type": "pulse_current_path",
+             "componentId": claim_component},
+            {"type": "show_measurement",
+             "componentId": claim_component},
+        ]
+    accepted = []
+    for candidate in candidates:
+        valid = _valid_demo_action(candidate, parts)
+        if valid is not None:
+            accepted.append(valid)
+        if len(accepted) >= DEMO_ACTION_CAP:
+            break
+    return accepted
+
+
 def derive_eligibility(store, session_id, netlist, provider, pack=None,
                        fallback=None, rung="R1"):
     """Decide coaching eligibility from server-side records and evidence.
@@ -387,4 +493,6 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         "text": text,
         "provider": serving,
         "claim": claim,
+        "actions": suggest_actions(netlist=netlist, facts=facts,
+                                   claim_component=claim["component"]),
     }

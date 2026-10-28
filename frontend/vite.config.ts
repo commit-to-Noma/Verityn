@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // Flask backend in development. The built app is served
       // from the same origin in later milestones.
-      '/api': 'http://127.0.0.1:5000',
+      '/api': process.env.VERITYN_API ?? 'http://127.0.0.1:5000',
     },
   },
 })

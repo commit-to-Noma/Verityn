@@ -51,6 +51,13 @@ export type TraceBody =
   | { kind: 'solver'; summary: SolverSummary }
   | { kind: 'comparison'; status: VerdictStatus; note: string; evidence: EvidenceRow[] }
   | { kind: 'coach'; outcome: CoachTraceOutcome | null; hint: string }
+  | { kind: 'demonstration'; events: DemoTraceEvent[] }
+
+/** One recorded demonstration event; only actual occurrences are kept. */
+export interface DemoTraceEvent {
+  phase: 'proposed' | 'applied' | 'observed' | 'undone'
+  label: string
+}
 
 export interface TraceStep {
   id: string
@@ -71,6 +78,8 @@ export interface TraceInput {
   expectedLit: boolean | null
   coach: CoachTraceOutcome | null
   coachAvailable: boolean
+  /** Demonstration timeline; only events that actually occurred. */
+  demonstrations?: DemoTraceEvent[]
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -214,6 +223,14 @@ export function buildTrace(input: TraceInput): TraceStep[] {
             ? 'Your prediction matched the model, so no coaching was offered.'
             : 'No coaching is available for this outcome yet.'
     steps.push({ id: 'coach', title: 'Coach', body: { kind: 'coach', outcome: input.coach, hint } })
+  }
+
+  if (input.demonstrations !== undefined && input.demonstrations.length > 0) {
+    steps.push({
+      id: 'demonstration',
+      title: 'Demonstration',
+      body: { kind: 'demonstration', events: input.demonstrations },
+    })
   }
 
   return steps

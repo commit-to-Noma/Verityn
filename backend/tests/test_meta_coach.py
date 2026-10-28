@@ -361,7 +361,7 @@ def test_split_question_passes_validation():
     assert question == "What splits the loop?"
 
 
-def test_logs_transport_stage_with_status(monkeypatch, caplog):
+def test_logs_http_stage_with_status(monkeypatch, caplog):
     def boom(request, timeout):
         raise urllib.error.HTTPError(
             "http://x", 429, "slow", {}, io.BytesIO(b"SECRET-BODY"))
@@ -371,7 +371,7 @@ def test_logs_transport_stage_with_status(monkeypatch, caplog):
                      fallback=fake_coach.FakeCoachProvider())
     ans = ask_twist_yes(app.test_client()).get_json()
     assert ans["eligible"] is True
-    assert "stage=transport http_status=429" in caplog.text
+    assert "stage=http http_status=429" in caplog.text
     assert "SECRET-BODY" not in caplog.text
 
 

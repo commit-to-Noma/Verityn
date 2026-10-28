@@ -44,13 +44,88 @@ const ORIGIN_Y = 140
 const STEP_X = 190
 const STEP_Y = 160
 
+/** Natural image size in pixels, used to preserve aspect in mapping. */
+export interface ImageGeometry {
+  width: number
+  height: number
+}
+
+/** Replica work area: mapped positions stay inside this box. */
+const MAP_MAX_W = 640
+const MAP_MAX_H = 440
+const MAP_MARGIN = 80
+
+/** Map normalized evidence centers into canvas coordinates, preserving aspect.
+ *
+ * The source image aspect (width/height) sets the work-area shape; uniform
+ * scale fits it inside the max box and centers it. Deterministic: the same
+ * proposal and geometry always land identically. Rotation is not mapped —
+ * canvas parts are axis-aligned — and wire routes are reconstructed
+ * orthogonal edges between the established terminals, never traced paths.
+ */
+export function geometryPositions(
+  proposal: VisionProposal,
+  image: ImageGeometry,
+): Record<string, { x: number; y: number }> {
+  const safeW = image.width > 0 ? image.width : 1
+  const safeH = image.height > 0 ? image.height : 1
+  const scale = Math.min(MAP_MAX_W / safeW, MAP_MAX_H / safeH)
+  const areaW = safeW * scale
+  const areaH = safeH * scale
+  const offX = MAP_MARGIN + (MAP_MAX_W - areaW) / 2
+  const offY = MAP_MARGIN + (MAP_MAX_H - areaH) / 2
+  const positions: Record<string, { x: number; y: number }> = {}
+  for (const component of proposal.components) {
+    const bounds = component.evidence.bounds
+    const cx = bounds.x + bounds.width / 2
+    const cy = bounds.y + bounds.height / 2
+    positions[component.id] = {
+      x: Math.round(offX + cx * areaW),
+      y: Math.round(offY + cy * areaH),
+    }
+  }
+  return positions
+}
+
+/** Place proposal parts from image geometry; grid fallback keeps old callers. */
+export function layoutProposalFromGeometry(
+  proposal: VisionProposal,
+  image: ImageGeometry,
+): ProposalLayout {
+  const positions = geometryPositions(proposal, image)
+  const seed: LessonSeed = {
+    nodes: proposal.components.map((component) => ({
+      id: component.id,
+      kind: component.type,
+      // Unknown switch state seeds open (never closed): the safe
+      // direction, always paired with a needs-review badge.
+      closed: component.type === 'switch' ? (component.closed ?? false) : undefined,
+      polarity:
+        component.type === 'battery' ? (component.polarity ?? undefined) : undefined,
+      x: positions[component.id]?.x ?? ORIGIN_X,
+      y: positions[component.id]?.y ?? ORIGIN_Y,
+    })),
+    edges: proposal.connections.map((connection, index) => ({
+      id: `V${index + 1}`,
+      source: connection.from.node,
+      sourceTerminal: connection.from.terminal,
+      target: connection.to.node,
+      targetTerminal: connection.to.terminal,
+    })),
+  }
+  const uncertainIds = proposal.connections
+    .map((connection, index) => (connection.uncertain ? `V${index + 1}` : null))
+    .filter((id): id is string => id !== null)
+  return { seed, uncertainIds }
+}
+
 /** Place proposal parts on a grid and name its wires V1..Vn. */
 export function layoutProposal(proposal: VisionProposal): ProposalLayout {
   const seed: LessonSeed = {
     nodes: proposal.components.map((component, index) => ({
       id: component.id,
       kind: component.type,
-      closed: component.type === 'switch' ? (component.closed ?? true) : undefined,
+      closed: component.type === 'switch' ? (component.closed ?? false) : undefined,
       x: ORIGIN_X + (index % COLUMNS) * STEP_X,
       y: ORIGIN_Y + Math.floor(index / COLUMNS) * STEP_Y,
     })),

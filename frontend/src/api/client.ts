@@ -231,8 +231,27 @@ export interface CoachPredictResult {
   choice: string
 }
 
+export interface CoachServerAction {
+  type:
+    | 'highlight_component'
+    | 'highlight_terminal'
+    | 'set_switch_state'
+    | 'pulse_current_path'
+    | 'show_measurement'
+  componentId: string
+  terminal?: 'a' | 'b'
+  closed?: boolean
+}
+
 export type CoachAskResult =
-  | { eligible: true; rung: string; text: string; provider: string; claim: Claim }
+  | {
+      eligible: true
+      rung: string
+      text: string
+      provider: string
+      claim: Claim
+      actions: CoachServerAction[]
+    }
   | { eligible: false; reason_code: string; message: string }
 
 /** Provider value to honest badge text. Fake output is never Meta. */
@@ -285,6 +304,44 @@ function guardCoachPredictResult(body: unknown): CoachPredictResult {
   return { session_id: body.session_id, challenge_id: body.challenge_id, choice: body.choice }
 }
 
+const SERVER_ACTION_TYPES = new Set([
+  'highlight_component',
+  'highlight_terminal',
+  'set_switch_state',
+  'pulse_current_path',
+  'show_measurement',
+])
+
+function guardServerAction(body: unknown): CoachServerAction {
+  if (
+    !isRecord(body) ||
+    typeof body.type !== 'string' ||
+    !SERVER_ACTION_TYPES.has(body.type) ||
+    typeof body.componentId !== 'string' ||
+    body.componentId === ''
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  const action = { type: body.type, componentId: body.componentId } as CoachServerAction
+  if (body.type === 'highlight_terminal') {
+    if (body.terminal !== 'a' && body.terminal !== 'b') {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+    action.terminal = body.terminal
+  } else if (body.terminal !== undefined) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  if (body.type === 'set_switch_state') {
+    if (typeof body.closed !== 'boolean') {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+    action.closed = body.closed
+  } else if (body.closed !== undefined) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  return action
+}
+
 function guardCoachAskResult(body: unknown): CoachAskResult {
   if (!isRecord(body) || typeof body.eligible !== 'boolean') {
     throw new ApiError('payload', 'Unexpected response from the server.')
@@ -293,7 +350,8 @@ function guardCoachAskResult(body: unknown): CoachAskResult {
     if (
       typeof body.rung !== 'string' ||
       typeof body.text !== 'string' ||
-      typeof body.provider !== 'string'
+      typeof body.provider !== 'string' ||
+      !Array.isArray(body.actions)
     ) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
@@ -303,6 +361,7 @@ function guardCoachAskResult(body: unknown): CoachAskResult {
       text: body.text,
       provider: body.provider,
       claim: guardClaim(body.claim),
+      actions: body.actions.map(guardServerAction),
     }
   }
   if (typeof body.reason_code !== 'string' || typeof body.message !== 'string') {
@@ -345,8 +404,9 @@ export const VISION_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 export interface VisionComponent {
   id: string
   type: 'battery' | 'bulb' | 'switch'
-  closed?: boolean
-  polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
+  /** Strict keys: null marks unknown or not-applicable, never missing. */
+  closed: boolean | null
+  polarity: { positive: 'a' | 'b'; negative: 'a' | 'b' } | null
   evidence: VisionComponentEvidence
 }
 
@@ -405,19 +465,29 @@ function guardVisionProposal(body: unknown): VisionProposal {
       !isRecord(component) ||
       typeof component.id !== 'string' ||
       (component.type !== 'battery' && component.type !== 'bulb' && component.type !== 'switch') ||
-      (component.closed !== undefined && typeof component.closed !== 'boolean') ||
       !isVisionComponentEvidence(component.evidence)
     ) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
-    if (component.type === 'battery') {
-      if (!isRecord(component.polarity) ||
-        (component.polarity.positive !== 'a' && component.polarity.positive !== 'b') ||
-        (component.polarity.negative !== 'a' && component.polarity.negative !== 'b') ||
-        component.polarity.positive === component.polarity.negative) {
+    // Strict keys are always present; null is the only unknown marker.
+    if (component.type === 'switch') {
+      if (typeof component.closed !== 'boolean' && component.closed !== null) {
         throw new ApiError('payload', 'Unexpected response from the server.')
       }
-    } else if (component.polarity !== undefined) {
+    } else if (component.closed !== null) {
+      throw new ApiError('payload', 'Unexpected response from the server.')
+    }
+    if (component.type === 'battery') {
+      if (
+        component.polarity !== null &&
+        (!isRecord(component.polarity) ||
+          (component.polarity.positive !== 'a' && component.polarity.positive !== 'b') ||
+          (component.polarity.negative !== 'a' && component.polarity.negative !== 'b') ||
+          component.polarity.positive === component.polarity.negative)
+      ) {
+        throw new ApiError('payload', 'Unexpected response from the server.')
+      }
+    } else if (component.polarity !== null) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
   }

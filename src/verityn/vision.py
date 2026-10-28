@@ -53,9 +53,15 @@ _PROPOSAL_JSON_SCHEMA = {
                         "id": {"type": "string"},
                         "type": {"type": "string",
                                  "enum": list(COMPONENT_TYPES)},
-                        "closed": {"type": "boolean"},
+                        # Strict subset: every property is required, so
+                        # unknowns are explicit nulls, never missing keys.
+                        # closed is null for non-switches and for
+                        # switches whose state is not visible; polarity
+                        # is null for non-batteries and for batteries
+                        # whose terminals are not established.
+                        "closed": {"type": ["boolean", "null"]},
                         "polarity": {
-                            "type": "object",
+                            "type": ["object", "null"],
                             "properties": {
                                 "positive": {"type": "string",
                                               "enum": ["a", "b"]},
@@ -86,7 +92,8 @@ _PROPOSAL_JSON_SCHEMA = {
                             "additionalProperties": False,
                         },
                     },
-                    "required": ["id", "type", "evidence"],
+                    "required": ["id", "type", "closed",
+                                     "polarity", "evidence"],
                     "additionalProperties": False,
                 },
             },
@@ -141,9 +148,12 @@ _SYSTEM_PROMPT = (
     "other text. Include status ready|needs_review|unsupported, "
     "components, and connections. Each component must include evidence "
     "with a stable region_id, normalized 0..1 bounds, and rotation. "
-    "Batteries must include polarity identifying positive and negative "
-    "terminals. Each connection must include evidence.region_id. "
-    "Components use type battery|bulb|switch and switches include closed. "
+    "Every component includes closed and polarity keys: switches use "
+    "closed true|false (null when the state is not visible), other "
+    "parts use closed null. Batteries use polarity identifying "
+    "positive and negative terminals (null when not visible), other "
+    "parts use polarity null. Each connection must include "
+    "evidence.region_id. Components use type battery|bulb|switch. "
     "Connections use from/to node plus terminal a|b and uncertain true "
     "when unsure. Label each part's two terminals a and b consistently. "
     "When the topology cannot be safely reconstructed, use unsupported "
@@ -239,6 +249,7 @@ def validate_proposal(output):
         raise _rejected()
     seen = {}
     canon_components = []
+    unknowns = 0
     for comp in components:
         if not isinstance(comp, dict):
             raise _rejected()
@@ -250,29 +261,40 @@ def validate_proposal(output):
             raise _rejected()
         if cid in seen:
             raise _rejected()
-        if set(comp) - {"id", "type", "closed", "polarity", "evidence"}:
+        # The strict schema requires every key; unknowns arrive as
+        # explicit nulls, never as missing keys or silent defaults.
+        if set(comp) != {"id", "type", "closed", "polarity",
+                         "evidence"}:
             raise _rejected()
         evidence = _validate_evidence(comp.get("evidence"))
         entry = {"id": cid, "type": ctype, "evidence": evidence}
+        closed = comp["closed"]
         if ctype == "switch":
-            if not isinstance(comp.get("closed"), bool):
+            if not isinstance(closed, bool) and closed is not None:
                 raise _rejected()
-            entry["closed"] = comp["closed"]
-        elif "closed" in comp:
+            if closed is None:
+                unknowns += 1
+        elif closed is not None:
             raise _rejected()
+        entry["closed"] = closed
+        polarity = comp["polarity"]
         if ctype == "battery":
-            polarity = comp.get("polarity")
-            if (not isinstance(polarity, dict) or set(polarity) != {"positive", "negative"}
-                    or polarity["positive"] not in TERMINALS
-                    or polarity["negative"] not in TERMINALS
-                    or polarity["positive"] == polarity["negative"]):
-                raise _rejected()
-            entry["polarity"] = {
-                "positive": polarity["positive"],
-                "negative": polarity["negative"],
-            }
-        elif "polarity" in comp:
+            if polarity is None:
+                unknowns += 1
+            else:
+                if (not isinstance(polarity, dict)
+                        or set(polarity) != {"positive", "negative"}
+                        or polarity["positive"] not in TERMINALS
+                        or polarity["negative"] not in TERMINALS
+                        or polarity["positive"] == polarity["negative"]):
+                    raise _rejected()
+                polarity = {
+                    "positive": polarity["positive"],
+                    "negative": polarity["negative"],
+                }
+        elif polarity is not None:
             raise _rejected()
+        entry["polarity"] = polarity
         seen[cid] = ctype
         canon_components.append(entry)
     canon_connections = []
@@ -313,9 +335,10 @@ def validate_proposal(output):
             "uncertain": conn["uncertain"],
             "evidence": evidence,
         })
-    if status == "ready" and any(conn["uncertain"] for conn in canon_connections):
+    uncertain = any(conn["uncertain"] for conn in canon_connections)
+    if status == "ready" and (uncertain or unknowns):
         raise _rejected()
-    if status == "needs_review" and not any(conn["uncertain"] for conn in canon_connections):
+    if status == "needs_review" and not uncertain and not unknowns:
         raise _rejected()
     return {"status": status, "components": canon_components,
             "connections": canon_connections}

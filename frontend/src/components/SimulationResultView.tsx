@@ -20,7 +20,7 @@ export default function SimulationResultView({ result }: { result: SimulateResul
   return (
     <>
       {result.ok ? (
-        <div className="glass-panel flex flex-col gap-2 p-4" aria-live="polite">
+        <div className="glass-panel flex flex-col gap-2 p-4" aria-live="polite" aria-label="Simulation result">
           {Object.entries(result.components).map(([id, values]) => (
             <div key={id} className="flex items-baseline justify-between gap-4 text-sm">
               <span className="font-medium">{id}</span>

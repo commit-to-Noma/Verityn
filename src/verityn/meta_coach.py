@@ -141,9 +141,11 @@ def _post_json(url, payload, headers, timeout_s):
             raw = response.read()
             status = response.status
     except urllib.error.HTTPError as err:
+        # The server answered: an HTTP rejection (e.g. 400), not a
+        # transport failure. The response body is never read or logged.
         raise CoachProviderError(
             f"Meta request failed (HTTP {err.code}).",
-            stage="transport", http_status=err.code) from err
+            stage="http", http_status=err.code) from err
     except TimeoutError as err:
         raise CoachProviderError("Meta request timed out.",
                                  stage="transport") from err

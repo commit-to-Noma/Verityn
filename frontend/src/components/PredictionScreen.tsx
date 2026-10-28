@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Check, Mic } from 'lucide-react'
+import { Check } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
+import MicButton from '../voice/MicButton'
 import CircuitPreview from './CircuitPreview'
 import CoachNote from './CoachNote'
 
@@ -81,15 +82,11 @@ export default function PredictionScreen({
             autoComplete="off"
             className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 pr-12 text-base"
           />
-          <button
-            type="button"
-            disabled
-            title="Voice input coming soon (Muse Voice Transcribe)"
-            aria-label="Voice input coming soon"
-            className="text-ink-muted absolute top-1/2 right-2 -translate-y-1/2 cursor-not-allowed rounded-[8px] p-2 opacity-40"
-          >
-            <Mic className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <MicButton
+            onTranscript={(text) =>
+              setWhy((current) => (current.trim() === '' ? text : `${current} ${text}`))
+            }
+          />
         </div>
         {why.trim() !== '' && (
           <p className="text-ink-muted text-sm" aria-live="polite">

@@ -1,7 +1,10 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import ChapterComplete from './components/ChapterComplete'
-import CircuitCanvas from './components/CircuitCanvas'
 import JourneyFinale from './components/JourneyFinale'
+
+/** Canvas weight splits out: stages show a brief fallback while it loads. */
+const CircuitCanvas = lazy(() => import('./components/CircuitCanvas'))
+const CANVAS_FALLBACK = <p className="text-ink-muted text-sm">Preparing the workbench…</p>
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import LabIntro from './components/LabIntro'
@@ -256,12 +259,33 @@ export default function App() {
   })
 
   const firstStage = useRef(true)
+  const lensJump = useRef(false)
   useEffect(() => {
     if (firstStage.current) {
       firstStage.current = false
       return
     }
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
+  }, [stage])
+
+  /** Homepage lens entry: enter the lab, open the tools, land on Snap & Build. */
+  const handleExploreLens = useCallback(() => {
+    lensJump.current = true
+    setEntered(true)
+  }, [])
+
+  useEffect(() => {
+    if (!lensJump.current || stage === 'intro') {
+      return
+    }
+    lensJump.current = false
+    const tools = document.querySelector('#lab-tools')
+    if (tools instanceof HTMLDetailsElement) {
+      tools.open = true
+    }
+    document
+      .querySelector('#snap-build-heading')
+      ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
   }, [stage])
 
   const handleRealityPredicted = (prediction: Prediction) => {
@@ -361,7 +385,16 @@ export default function App() {
         </Suspense>
       }
     >
-      {stage === 'intro' && <LabIntro onEnter={() => setEntered(true)} />}
+      {stage === 'intro' && (
+        <LabIntro
+          onEnter={() => setEntered(true)}
+          onExploreLens={handleExploreLens}
+          onDemo={() => {
+            setAuto(true)
+            setEntered(true)
+          }}
+        />
+      )}
       {stage === 'l1-predict' && (
         <PredictionScreen
           challenge={L1}
@@ -373,6 +406,7 @@ export default function App() {
       {stage === 'l1-build' && l1Prediction !== null && (
         <div className="flex flex-col gap-4">
           <PredictionSummary prediction={l1Prediction} hint={L1.fix.hint} />
+          <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="l1"
             seed={L1.seed}
@@ -385,6 +419,7 @@ export default function App() {
             challenge={L1}
             gate={complete?.chapter === 'l1' ? gateNode : null}
           />
+          </Suspense>
         </div>
       )}
       {stage === 'reality-predict' && (
@@ -398,6 +433,7 @@ export default function App() {
       {stage === 'reality-build' && realityPrediction !== null && (
         <div className="flex flex-col gap-4">
           <PredictionSummary prediction={realityPrediction} hint={L1.twist.fix.hint} />
+          <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="reality"
             seed={L1.twist.seed}
@@ -414,8 +450,10 @@ export default function App() {
             onEvidence={handleEvidence}
             prediction={realityPrediction}
             challenge={L1.twist}
+            autoDemonstrate={auto}
             gate={complete?.chapter === 'reality' ? gateNode : null}
           />
+          </Suspense>
         </div>
       )}
       {stage === 'transfer-predict' && (
@@ -442,6 +480,7 @@ export default function App() {
               against the simulator.
             </p>
           </div>
+          <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="transfer"
             seed={TRANSFER.seed}
@@ -457,6 +496,7 @@ export default function App() {
             solo
             gate={complete?.chapter === 'transfer' ? gateNode : null}
           />
+          </Suspense>
         </div>
       )}
       {stage === 'finale' && (

@@ -320,4 +320,23 @@ describe('buildTrace', () => {
     expect(steps[2]?.body).toEqual({ kind: 'empty', text: 'Not simulated yet.' })
     expect(steps[3]?.body).toMatchObject({ kind: 'comparison', status: 'UNASSESSABLE' })
   })
+
+  it('adds a demonstration timeline only for recorded events', () => {
+    const events = [
+      { phase: 'proposed', label: 'Coach wants to close S1.' },
+      { phase: 'applied', label: 'Coach wants to close S1.' },
+      { phase: 'observed', label: 'Solver observed L1 3.6 W' },
+    ] as const
+    const withDemo = buildTrace(
+      baseInput({ demonstrations: events.map((event) => ({ ...event })) }),
+    )
+    expect(withDemo[withDemo.length - 1]).toMatchObject({
+      id: 'demonstration',
+      title: 'Demonstration',
+    })
+    const withoutDemo = buildTrace(baseInput({}))
+    expect(withoutDemo.some((step) => step.id === 'demonstration')).toBe(false)
+    const emptied = buildTrace(baseInput({ demonstrations: [] }))
+    expect(emptied.some((step) => step.id === 'demonstration')).toBe(false)
+  })
 })

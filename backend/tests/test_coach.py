@@ -533,3 +533,69 @@ def test_r4_prompt_unit_shapes():
                            netlist=OPEN_NET) == \
         ("Confirmation check: in your own words, why did the "
          "circuit disagree with your prediction?")
+
+
+DARK_TWIST_FACTS = {"L1.power_W": 0.0, "L1.current_A": 0.0,
+                    "S1.current_A": 0.0, "B1.volts": 6.0}
+LIT_TWIST_FACTS = {"L1.power_W": 3.6, "L1.current_A": 0.6,
+                   "S1.current_A": 0.6, "B1.volts": 6.0}
+
+
+def test_suggest_actions_dark_open_switch():
+    actions = coach.suggest_actions(netlist=wired(TWIST_START),
+                                    facts=DARK_TWIST_FACTS,
+                                    claim_component="L1")
+    assert actions == [
+        {"type": "highlight_component", "componentId": "S1"},
+        {"type": "set_switch_state", "componentId": "S1", "closed": True},
+        {"type": "show_measurement", "componentId": "L1"},
+    ]
+
+
+def test_suggest_actions_lit_claim_pulses_path():
+    actions = coach.suggest_actions(netlist=lit_twist(),
+                                    facts=LIT_TWIST_FACTS,
+                                    claim_component="L1")
+    assert actions == [
+        {"type": "pulse_current_path", "componentId": "L1"},
+        {"type": "show_measurement", "componentId": "L1"},
+    ]
+
+
+def test_suggest_actions_unknown_claim_is_empty():
+    assert coach.suggest_actions(netlist=wired(TWIST_START),
+                                 facts=DARK_TWIST_FACTS,
+                                 claim_component="L9") == []
+
+
+def test_valid_demo_action_rejects_bad_targets():
+    parts = coach._netlist_parts(wired(TWIST_START))
+    assert coach._valid_demo_action({"type": "set_switch_state",
+                                     "componentId": "L1",
+                                     "closed": True}, parts) is None
+    assert coach._valid_demo_action({"type": "set_switch_state",
+                                     "componentId": "S1",
+                                     "closed": False}, parts) is None
+    assert coach._valid_demo_action({"type": "delete_circuit",
+                                     "componentId": "S1"}, parts) is None
+    assert coach._valid_demo_action({"type": "highlight_component",
+                                     "componentId": "S9"}, parts) is None
+    assert coach._valid_demo_action(
+        {"type": "highlight_terminal", "componentId": "S1",
+         "terminal": "c"}, parts) is None
+    assert coach._valid_demo_action(
+        {"type": "highlight_terminal", "componentId": "S1",
+         "terminal": "a"}, parts) == \
+        {"type": "highlight_terminal", "componentId": "S1",
+         "terminal": "a"}
+
+
+def test_ask_includes_validated_actions(client):
+    recorded = record(client, TWIST, "yes", "The loop looks complete.")
+    verdict = ask(client, recorded["session_id"], wired(TWIST_START))
+    assert verdict["eligible"] is True
+    assert verdict["actions"] == [
+        {"type": "highlight_component", "componentId": "S1"},
+        {"type": "set_switch_state", "componentId": "S1", "closed": True},
+        {"type": "show_measurement", "componentId": "L1"},
+    ]

@@ -22,18 +22,19 @@ TINY_PNG = "data:image/png;base64,iVBORw0KGgo="
 GOOD_PROPOSAL = {
     "status": "needs_review",
     "components": [
-        {"id": "B1", "type": "battery",
+        {"id": "B1", "type": "battery", "closed": None,
          "polarity": {"positive": "a", "negative": "b"},
          "evidence": {"region_id": "r-battery",
                        "bounds": {"x": 0.1, "y": 0.2,
                                   "width": 0.12, "height": 0.2},
                        "rotation": 0}},
         {"id": "S1", "type": "switch", "closed": True,
+         "polarity": None,
          "evidence": {"region_id": "r-switch",
                        "bounds": {"x": 0.4, "y": 0.2,
                                   "width": 0.12, "height": 0.2},
                        "rotation": 0}},
-        {"id": "L1", "type": "bulb",
+        {"id": "L1", "type": "bulb", "closed": None, "polarity": None,
          "evidence": {"region_id": "r-bulb",
                        "bounds": {"x": 0.7, "y": 0.2,
                                   "width": 0.12, "height": 0.2},
@@ -245,7 +246,7 @@ def test_invalid_model_output_500s_without_content(monkeypatch, app,
     assert "MARKER-EVIL" not in caplog.text
 
 
-def test_transport_error_500s_without_content(monkeypatch, app, caplog):
+def test_http_error_500s_without_content(monkeypatch, app, caplog):
     def boom(request, timeout):
         raise urllib.error.HTTPError(
             "http://x", 500, "broke", {}, io.BytesIO(b"SECRET-BODY"))
@@ -254,7 +255,7 @@ def test_transport_error_500s_without_content(monkeypatch, app, caplog):
     res = app.test_client().post("/api/vision/propose",
                                  json={"image": TINY_PNG})
     assert res.status_code == 500
-    assert "stage=transport http_status=500" in caplog.text
+    assert "stage=http http_status=500" in caplog.text
     assert "SECRET-BODY" not in caplog.text
     assert "iVBORw0KGgo" not in caplog.text
 
@@ -289,3 +290,218 @@ def test_validate_proposal_rejects_inconsistent_status():
 def test_validate_proposal_accepts_unsupported_without_parts():
     proposal = {"status": "unsupported", "components": [], "connections": []}
     assert vision.validate_proposal(proposal) == proposal
+
+
+def _captured_payload(monkeypatch, provider, data_url):
+    seen = {}
+
+    def capture(url, payload, headers, timeout_s):
+        seen["url"] = url
+        seen["payload"] = payload
+        return 200, chat_response(GOOD_PROPOSAL)
+
+    monkeypatch.setattr(meta_coach, "_post_json", capture)
+    provider.propose(data_url)
+    return seen
+
+
+def test_propose_user_message_matches_documented_shape(monkeypatch,
+                                                       provider):
+    seen = _captured_payload(monkeypatch, provider, TINY_PNG)
+    assert seen["url"] == "https://api.meta.ai/v1/chat/completions"
+    messages = seen["payload"]["messages"]
+    assert messages[0] == {"role": "system",
+                           "content": vision._SYSTEM_PROMPT}
+    assert messages[1]["role"] == "user"
+    content = messages[1]["content"]
+    assert isinstance(content, list)
+    assert {"type": "text",
+            "text": "Transcribe this circuit schematic."} in content
+    images = [part for part in content
+              if part.get("type") == "image_url"]
+    assert len(images) == 1
+    assert set(images[0]) == {"type", "image_url"}
+    assert set(images[0]["image_url"]) == {"url"}
+    assert images[0]["image_url"]["url"] == TINY_PNG
+    assert seen["payload"]["response_format"] == {
+        "type": "json_schema",
+        "json_schema": vision._PROPOSAL_JSON_SCHEMA}
+
+
+def _fixture_data_url(name):
+    from pathlib import Path
+    raw = (Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+           / "sam_spike" / name).read_bytes()
+    return raw, "data:image/png;base64," + base64.b64encode(raw).decode()
+
+
+def test_png_fixture_produces_single_prefix_data_url():
+    raw, data_url = _fixture_data_url("05_textbook_simple..png")
+    assert raw[:8] == b"\x89PNG\r\n\x1a\n"
+    assert vision.parse_data_url(data_url) == data_url
+    assert data_url.count("data:") == 1
+    assert data_url.count(";base64,") == 1
+    header, _, encoded = data_url.partition(",")
+    assert header == "data:image/png;base64"
+    assert base64.b64decode(encoded, validate=True) == raw
+
+
+def test_propose_sends_fixture_bytes_verbatim(monkeypatch, provider):
+    raw, data_url = _fixture_data_url("08_digital_verityn.png")
+    seen = _captured_payload(monkeypatch, provider, data_url)
+    content = seen["payload"]["messages"][1]["content"]
+    url = [part for part in content
+           if part.get("type") == "image_url"][0]["image_url"]["url"]
+    assert url == data_url
+    assert base64.b64decode(url.partition(",")[2],
+                            validate=True) == raw
+
+
+def test_http_400_is_request_rejection(monkeypatch, provider):
+    calls = []
+
+    def boom(request, timeout):
+        calls.append(request)
+        raise urllib.error.HTTPError("http://x", 400, "bad", {},
+                                     io.BytesIO(b"SECRET-BODY"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", boom)
+    with pytest.raises(coach.CoachProviderError) as exc:
+        provider.propose(TINY_PNG)
+    assert exc.value.stage == "http"
+    assert exc.value.http_status == 400
+    assert "SECRET-BODY" not in str(exc.value)
+    assert len(calls) == 1
+
+
+def test_dns_failure_is_transport_without_status(monkeypatch,
+                                                 provider):
+    def down(request, timeout):
+        raise urllib.error.URLError("unreachable")
+
+    monkeypatch.setattr(urllib.request, "urlopen", down)
+    with pytest.raises(coach.CoachProviderError) as exc:
+        provider.propose(TINY_PNG)
+    assert exc.value.stage == "transport"
+    assert exc.value.http_status is None
+    assert "unreachable" not in str(exc.value)
+
+
+def test_malformed_transport_output_never_returns(monkeypatch,
+                                                  provider):
+    def boom(*args):
+        raise AssertionError("solver must not run on propose")
+
+    monkeypatch.setattr(solver, "solve", boom)
+    monkeypatch.setattr(meta_coach, "_post_json",
+                        lambda *a: (200, chat_response({"nope": []})))
+    with pytest.raises(coach.CoachProviderError) as exc:
+        provider.propose(TINY_PNG)
+    assert exc.value.stage == "validate"
+
+
+STRICT_TYPES = {"object", "array", "string", "boolean", "number",
+                "null", "integer"}
+STRICT_NODE_KEYS = {"type", "properties", "required",
+                    "additionalProperties", "items", "enum"}
+
+
+def check_strict_node(node, path):
+    """Recursively enforce the documented strict-subset rules."""
+    assert isinstance(node, dict), path
+    assert set(node) <= STRICT_NODE_KEYS, (
+        f"{path}: unsupported keys {sorted(set(node))}")
+    types = node.get("type")
+    if isinstance(types, str):
+        types = [types]
+    assert isinstance(types, list) and types, f"{path} needs a type"
+    assert set(types) <= STRICT_TYPES, f"{path}: {types}"
+    if "enum" in node:
+        assert types == ["string"], f"{path}: enum needs a string"
+    if "object" in types:
+        assert node.get("additionalProperties") is False, (
+            f"{path} must forbid extra properties")
+        props = node.get("properties")
+        assert isinstance(props, dict) and props, (
+            f"{path} needs properties")
+        required = node.get("required")
+        assert isinstance(required, list), f"{path} needs required"
+        assert set(required) == set(props), (
+            f"{path}: required {sorted(required)} != "
+            f"properties {sorted(props)}")
+        for key, sub in props.items():
+            check_strict_node(sub, f"{path}.{key}")
+    else:
+        assert "properties" not in node, f"{path}: no object"
+        assert "required" not in node, f"{path}: no object"
+        assert "additionalProperties" not in node, f"{path}: no object"
+    if "array" in types:
+        assert isinstance(node.get("items"), dict), (
+            f"{path} needs items")
+        check_strict_node(node["items"], f"{path}[]")
+
+
+def test_response_schema_is_strict_subset():
+    wrapper = vision._PROPOSAL_JSON_SCHEMA
+    assert set(wrapper) == {"name", "strict", "schema"}
+    assert wrapper["strict"] is True
+    check_strict_node(wrapper["schema"], "schema")
+
+
+def test_validate_proposal_preserves_unknown_switch():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["components"][1]["closed"] = None
+    for conn in proposal["connections"]:
+        conn["uncertain"] = False
+    proposal["status"] = "needs_review"
+    out = vision.validate_proposal(proposal)
+    assert out["components"][1]["closed"] is None
+
+
+def test_validate_proposal_rejects_ready_with_unknown_switch():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["components"][1]["closed"] = None
+    for conn in proposal["connections"]:
+        conn["uncertain"] = False
+    proposal["status"] = "ready"
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(proposal)
+
+
+def test_validate_proposal_preserves_unknown_polarity():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["components"][0]["polarity"] = None
+    for conn in proposal["connections"]:
+        conn["uncertain"] = False
+    proposal["status"] = "needs_review"
+    out = vision.validate_proposal(proposal)
+    assert out["components"][0]["polarity"] is None
+
+
+def test_validate_proposal_rejects_ready_with_unknown_polarity():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["components"][0]["polarity"] = None
+    for conn in proposal["connections"]:
+        conn["uncertain"] = False
+    proposal["status"] = "ready"
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(proposal)
+
+
+def test_validate_proposal_rejects_missing_closed_key():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    del proposal["components"][1]["closed"]
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(proposal)
+
+
+def test_validate_proposal_rejects_mistyped_presence():
+    closed = copy.deepcopy(GOOD_PROPOSAL)
+    closed["components"][2]["closed"] = True
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(closed)
+    polar = copy.deepcopy(GOOD_PROPOSAL)
+    polar["components"][1]["polarity"] = {"positive": "a",
+                                          "negative": "b"}
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(polar)

@@ -19,6 +19,10 @@ export type CircuitNodeData = {
   readOnly?: boolean
   /** Coach demonstration spotlight; cleared on the next canvas edit. */
   demonstrated?: boolean
+  /** Detected battery polarity (+/− terminals); display only. */
+  polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
+  /** Review provenance badge for vision-seeded replicas. */
+  review?: 'verified' | 'needs-review' | 'learner-corrected'
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
@@ -104,6 +108,28 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
               ? `Bulb · ${data.label}`
               : `Switch · ${data.label}`}
         </span>
+        {data.kind === 'battery' && data.polarity !== undefined && (
+          <span className="font-mono text-[10px] text-ink-muted" title="Detected polarity">
+            +{data.polarity.positive} −{data.polarity.negative}
+          </span>
+        )}
+        {data.review !== undefined && (
+          <span
+            className={`rounded-full border px-2 py-px text-[10px] font-medium ${
+              data.review === 'verified'
+                ? 'border-ok/60 text-ok'
+                : data.review === 'learner-corrected'
+                  ? 'border-flow/60 text-flow'
+                  : 'border-glass-border text-ink-muted'
+            }`}
+          >
+            {data.review === 'verified'
+              ? 'Verified'
+              : data.review === 'learner-corrected'
+                ? 'Learner corrected'
+                : 'Needs review'}
+          </span>
+        )}
       </div>
       {data.kind === 'switch' &&
         (data.readOnly ? (

@@ -221,6 +221,7 @@ describe('askCoach', () => {
     text: 'What has to be true?',
     provider: 'prototype-fake',
     claim,
+    actions: [{ type: 'highlight_component', componentId: 'S1' }],
   }
   const refused = { eligible: false, reason_code: 'NOT_CONTRADICTED', message: 'Consistent.' }
 
@@ -254,6 +255,9 @@ describe('askCoach', () => {
     ['text mistyped', { ...granted, text: 7 }],
     ['claim mistyped', { ...granted, claim: { type: 'lit' } }],
     ['reason mistyped', { ...refused, reason_code: 7 }],
+    ['actions missing', { ...granted, actions: undefined }],
+    ['action mistyped', { ...granted, actions: [{ type: 'delete_all' }] }],
+    ['switch flip mistyped', { ...granted, actions: [{ type: 'set_switch_state', componentId: 'S1' }] }],
     ['not an object', []],
   ])('rejects malformed payloads: %s', async (_label, body) => {
     stubFetch(() => okResponse(body))
@@ -277,9 +281,9 @@ describe('proposeCircuit', () => {
   const proposal = {
     status: 'needs_review',
     components: [
-      { id: 'B1', type: 'battery', polarity: { positive: 'a', negative: 'b' },
+      { id: 'B1', type: 'battery', closed: null, polarity: { positive: 'a', negative: 'b' },
         evidence: { region_id: 'r-b', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.2 }, rotation: 0 } },
-      { id: 'L1', type: 'bulb',
+      { id: 'L1', type: 'bulb', closed: null, polarity: null,
         evidence: { region_id: 'r-l', bounds: { x: 0.7, y: 0.2, width: 0.1, height: 0.2 }, rotation: 0 } },
     ],
     connections: [
@@ -303,11 +307,25 @@ describe('proposeCircuit', () => {
     expect(JSON.parse(init.body as string)).toEqual({ image: 'data:image/png;base64,AA==' })
   })
 
+  it('accepts explicit nulls for unknown battery polarity', async () => {
+    const nulled = {
+      ...good,
+      proposal: {
+        ...proposal,
+        components: [{ ...proposal.components[0], polarity: null }, proposal.components[1]],
+      },
+    }
+    stubFetch(() => okResponse(nulled))
+    await expect(proposeCircuit('data:image/png;base64,AA==')).resolves.toEqual(nulled)
+  })
+
   it.each([
     ['missing proposal', { assumptions: [], provider: 'meta-spark' }],
     ['bad component type', { ...good, proposal: { ...proposal, components: [{ id: 'X1', type: 'resistor' }] } }],
     ['bad endpoint', { ...good, proposal: { ...proposal, connections: [{ from: { node: 'B1' }, to: { node: 'L1', terminal: 'a' }, uncertain: false }] } }],
     ['uncertain mistyped', { ...good, proposal: { ...proposal, connections: [{ from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: 'no' }] } }],
+    ['bulb with closed state', { ...good, proposal: { ...proposal, components: [{ ...proposal.components[1], closed: true }] } }],
+    ['missing closed key', { ...good, proposal: { ...proposal, components: [{ ...proposal.components[0], closed: undefined }] } }],
     ['assumptions mistyped', { ...good, assumptions: 'none' }],
     ['not an object', []],
   ])('rejects malformed payloads: %s', async (_label, body) => {
