@@ -32,10 +32,10 @@ reduced-motion parity, greyscale-readable verdicts.
 ## 2. Browser journey (demo verification, no new dependencies)
 
 Production build served alongside the API, driven in headless Chrome
-over CDP with plain Node (fetch + WebSocket): L1 predict → invalid
-first → wire → trace; Twist contradict → coach badge → trace;
-transfer locked until pack values, then predict → build → verdict
-with zero `/api/coach/*` requests in the network log; Not-sure and
+over CDP with plain Node (fetch + WebSocket): predict → build → Reality Check;
+contradiction → coach badge → evidence pointer; constrained demonstration
+preview/apply/undo; transfer locked until pack values, then Solo predict →
+build → verdict with zero `/api/coach/*` requests in the network log; Not-sure and
 stale-clearing paths; prediction-gate bypass attempts. No scenario
 is reported passed unless actually exercised. Screenshots record the
 verdict, trace, and solo states.
@@ -48,23 +48,31 @@ is a single generation with no retries, against explicit questions
 shape metadata, allowlisted finish reasons, and token counts are
 captured. Billing impact is dashboard-only and never inferred.
 
+Vision checks use the same one-request/no-retry rule. Record only sanitized
+stage, HTTP status category, proposal status, component/connection counts,
+polarity-known count, and validation result. A transport failure with no HTTP
+status is not evidence of a provider schema failure. The offline fixture remains
+the honest fallback for browser rehearsal.
+
 ## 4. Roadmap test requirements (locked tiers, deadline Nov 4, 9:00 PM ET)
 
 1. **Reliable demo & framing.** The §2 journey stays green; any new
    UI copy asserting solver-vs-AI responsibility gets a naming-audit
    case; defect fixes land with regression tests first.
-2. **Snap & Build.** Proposal schema tests (malformed/unparseable
-   uploads rejected); confirmation-gate tests proving unconfirmed
-   proposals never reach simulate/evaluate; solver behaviour on
-   confirmed netlists unchanged.
+2. **Reality Lens.** Proposal schema tests (malformed/unparseable uploads
+   rejected); status/polarity/provenance tests; geometry-to-layout tests;
+   confirmation-gate tests proving unconfirmed proposals never reach
+   simulate/evaluate; solver behaviour on confirmed netlists unchanged.
 3. **Physics visuals.** Glow intensity is a pure function of
    solver power (unit-tested, P = I²R); animation active strictly
    when solver current > 0 and frozen on edit (state tests);
    highlight IDs validated against solver evidence (unknown IDs
    dropped); reduced-motion path renders identical facts.
-4. **Voice & visual coaching.** Transcripts treated as plain Why
-   text through existing guards; highlight IDs validated against
-   the live canvas netlist; typed input intact with voice absent.
+4. **Voice, demonstrations & visual coaching.** Transcripts treated as plain
+   Why text through existing guards; permission/unsupported/silence failures
+   preserve typed input; demonstration actions validated against the live
+   canvas netlist; apply/undo reruns the solver; highlight IDs validated;
+   unknown IDs are dropped without guessing.
 
 ## 5. What we report (README results)
 

@@ -69,7 +69,7 @@ function DiagramOverlay({
         viewBox={`0 0 ${sample.width} ${sample.height}`}
         className="absolute inset-0 block h-full w-full"
         role="img"
-        aria-label={`SAM segmentation boxes for ${sample.title}`}
+        aria-label={`Detected regions for ${sample.title}`}
       >
         {(
           [
@@ -92,7 +92,7 @@ function DiagramOverlay({
               fontSize={labelSize}
               className="lens-label"
             >
-              {name} · SAM 3.1
+              {name} · detected region
             </text>
           </g>
         ))}
@@ -124,7 +124,7 @@ function DiagramOverlay({
   )
 }
 
-/** Reality Lens: SAM boxes plus solver-driven physics on one diagram. */
+/** Reality Lens: reviewed regions plus solver-driven physics on one diagram. */
 export default function RealityLens({
   sample,
   onBack,

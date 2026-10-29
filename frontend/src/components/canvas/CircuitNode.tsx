@@ -55,6 +55,7 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
       }`}
     >
       <Handle id="a" type="source" position={Position.Left} className="terminal-handle" aria-label="Terminal a" />
+      <Handle id="a" type="target" position={Position.Left} className="terminal-handle" aria-label="Terminal a input" />
       <div className="flex flex-col items-center gap-1">
         {data.kind === 'battery' ? (
           <svg className="component-illustration battery-illustration" viewBox="0 0 92 64" aria-hidden="true">
@@ -159,6 +160,7 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         </span>
       )}
       <Handle id="b" type="source" position={Position.Right} className="terminal-handle" aria-label="Terminal b" />
+      <Handle id="b" type="target" position={Position.Right} className="terminal-handle" aria-label="Terminal b input" />
     </div>
   )
 }

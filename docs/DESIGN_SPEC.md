@@ -1,5 +1,8 @@
 # Verityn: UI build spec (draft)
 
+The current feature/state checklist is maintained in
+[PRODUCT_PLAN.md](./PRODUCT_PLAN.md). This spec remains the visual contract.
+
 Scope: linear learning flow (predict → build → compare → transfer) plus
 example panels. Circuit workspace is the visual centrepiece. No 3D, no extra screens.
 Tokens: CSS variables mapped into Tailwind 4. No raw hex in components.
@@ -173,3 +176,22 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
 - Coach-requested highlights (P4): rendered only for IDs validated
   against the current canvas netlist; unknown IDs are dropped
   silently, never guessed.
+
+## 14. Current shipped UI addendum
+
+- The learner-facing stage sequence is **Predict → Build → Reality Check → Solo**.
+  “Twist” is not a user-facing label.
+- The home screen has three entry points: circuit lab, Reality Lens, and guided
+  demo. Future subjects are labelled as future work.
+- Reality Lens is a two-panel review: source image, detections/model view,
+  proposed battery/bulb/switch/wire layout, component and connection review
+  states, provenance, and Confirm/Discard.
+- Demonstrations are application-owned actions with preview and undo. The coach
+  cannot create arbitrary nodes, wires, verdicts, or measurements.
+- Evidence Trace includes prediction, build, simulation, comparison, coach,
+  demonstration, and solo events. Finale cards are derived from saved snapshots
+  and show an incomplete fallback when a chapter was skipped.
+- Gate states to test: prediction commit, invalid circuit, coach
+  unavailable/retry, demonstration preview/apply/undo, unsupported or
+  needs-review vision proposal, vision confirm/discard, voice failure, replay,
+  and Solo coach-off.

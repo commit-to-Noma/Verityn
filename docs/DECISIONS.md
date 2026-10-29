@@ -1,5 +1,8 @@
 # Verityn: locked direction
 
+The complete implementation and release checklist is in
+[PRODUCT_PLAN.md](./PRODUCT_PLAN.md).
+
 Settled decisions. Implementation takes priority over reopening
 these unless the official rules or a real technical blocker forces
 a change.
@@ -21,14 +24,13 @@ prove lasting learning or cure skill rot.
 
 Muse Spark is the structured interpreter and Socratic coach;
 deterministic simulation is the source of truth. Claim extraction
-and tool calling are DEFERRED past the demo: the shipped path is
-choice chips plus the validated fallback coach, which is the
-resilient version. Voice is optional. Extra models are out of
-scope: the SAM 3.1 spike ran 2026-10-28 and failed its gate
-(2 of 10), so Path 1 was adopted instead — a Reality Lens overlay
-restricted to the two spike-verified sample diagrams, with all
-physics from the deterministic solver. No open-ended vision
-parsing.
+and unrestricted tool calling remain deferred, but a small closed vocabulary
+of validated demonstration actions is shipped. Voice is optional. Reality Lens
+uses a reviewable vision proposal with component/connection evidence,
+provenance, and polarity where known. The learner confirms it before any
+canvas or solver handoff. A verified offline fixture keeps the path demoable;
+live provider verification is a separate authorized release gate. No model may
+invent measurements, verdicts, or topology certainty.
 
 ## Language
 
@@ -43,3 +45,15 @@ Official rules and access confirmed; complete loop works; Meta AI
 role visible and essential; no invented feedback; impact honestly
 stated; resilient demo (no login, reset, typed input, fallback,
 smoke test); submission ready early with backup recording.
+
+## Additional locked decisions
+
+- Reality Check is the learner-facing name for the contradiction/evidence stage;
+  legacy lesson and server identifiers may remain unchanged for compatibility.
+- A model-requested demonstration is previewed, validated by application code,
+  applied only to the confirmed circuit, and recorded in the Evidence Trace.
+- Vision output is never presented as calibrated confidence. Missing or
+  conflicting evidence becomes needs_review or unsupported.
+- Solo must make zero coach requests across manual, replay, and Auto-demo paths.
+- Live diagnostics use one request per attempt and no retries; transport, HTTP,
+  parse, and validation failures are reported as different categories.

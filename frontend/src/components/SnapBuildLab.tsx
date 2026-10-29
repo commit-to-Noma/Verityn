@@ -490,8 +490,9 @@ export default function SnapBuildLab() {
       <div className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
         <p className="text-ink-muted text-sm">
-          SAM 3.1-segmented diagrams with solver-backed physics. Detection verified in the
-          spike run; every number comes from the deterministic simulator.
+          Curated segmented diagrams with solver-backed physics. Regions are
+          review evidence, not a correctness verdict; every number comes from
+          the deterministic simulator.
         </p>
         {lensSample === null ? (
           <div className="grid gap-3 sm:grid-cols-2">

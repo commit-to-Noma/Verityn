@@ -1,5 +1,8 @@
 # Verityn: Architecture (as built + locked roadmap)
 
+The current feature checklist, UI inventory, model boundaries, and remaining
+work are maintained in [PRODUCT_PLAN.md](./PRODUCT_PLAN.md).
+
 Concept: **a simulation-grounded, AI-guided circuit-learning system.**
 Neuro-symbolic division of responsibilities: a modified-nodal-analysis
 solver establishes physical ground truth, Muse Spark guides Socratic
@@ -42,13 +45,13 @@ simulate (POST /api/simulate -> solver verdict: measurements or an
           error code with offender ids; never invented numbers)
    |
    v
-compare (Twist/Transfer: POST /api/evaluate judges the recorded claim
+compare (Reality Check/Transfer: POST /api/evaluate judges the recorded claim
          against the built netlist as CONSISTENT / CONTRADICTED /
          UNASSESSABLE. L1 compares against the pack's solver-verified
          start expectation, which the evaluator refuses to judge.)
    |
    v
-coach (Twist only, contradicted verdicts only: POST /api/coach/ask.
+coach (Reality Check only, contradicted verdicts only: POST /api/coach/ask.
       Eligibility is derived server-side from the stored prediction
       plus a fresh solve. Meta Spark primary, template fallback.)
    |
@@ -58,9 +61,9 @@ transfer (solo second-bulb parallel task; coach fully off: no session
 ```
 
 Evidence Trace (client-side, derived from existing state): prediction,
-built circuit, solver outcome, comparison, coaching. Unlocks: Twist
-requires the L1 circuit at pack values; transfer requires the Twist
-circuit at pack values. All gates are build-based, never
+built circuit, solver outcome, comparison, coaching, demonstrations, and
+solo. Unlocks: Reality Check requires the L1 circuit at pack values; transfer
+requires the Reality Check circuit at pack values. All gates are build-based, never
 prediction-correctness-based, so a wrong guess never deadlocks.
 
 ## 3. Modules
@@ -103,12 +106,13 @@ response bodies, or model text.
 
 ## 6. Roadmap (locked tiers)
 
-1. **Reliable demo & framing.** Verified L1 → Twist → Transfer
+1. **Reliable demo & framing.** Verified L1 → Reality Check → Transfer
    browser loop; solver-vs-AI responsibilities explicit in the UI;
    trace framed as observed evidence; defects fixed before complexity.
-2. **Multimodal "Snap & Build".** Vision-proposed netlist preview +
-   mandatory learner confirmation gate. New: upload route, proposal
-   schema, confirmation state. Solver and verdict paths unchanged.
+2. **Multimodal "Reality Lens".** Vision-proposed netlist preview +
+   mandatory learner confirmation gate. The reviewable path is shipped;
+   live-provider verification remains a release gate. Solver and verdict
+   paths are unchanged.
 3. **Physics brought to life.** Continuous bulb glow from solver power
    (P = I²R); wire current animation gated on solver current > 0,
    frozen on open switches; highlights restricted to validated solver
@@ -128,4 +132,4 @@ Infrastructure: Meta Model API stays primary. Open-weight hosting
 - Which parts are plain code (physics, verdicts, gates, templates)
   is stated openly, in the UI where it matters.
 - Lesson packs ship expected values in the frontend bundle (as do
-  the L1/Twist packs); the UI never reveals them before the attempt.
+  the L1/Reality Check packs); the UI never reveals them before the attempt.
