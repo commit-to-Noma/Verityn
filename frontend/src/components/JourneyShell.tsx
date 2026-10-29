@@ -4,7 +4,7 @@ import { progressIndex } from '../journey/stages'
 import HealthStatus from './HealthStatus'
 import JourneyProgress from './JourneyProgress'
 
-/** Guided-journey frame: header progress, one stage at a time, tools tucked away. */
+/** Guided-journey frame: header progress, one stage at a time, developer controls tucked away. */
 export default function JourneyShell({
   stage,
   auto,
@@ -28,9 +28,11 @@ export default function JourneyShell({
             Auto-demo
           </span>
         )}
-        <div className="ml-auto">
-          <HealthStatus compact />
-        </div>
+        {stage !== 'intro' && (
+          <div className="ml-auto">
+            <HealthStatus compact />
+          </div>
+        )}
       </header>
       {stage !== 'intro' && nav != null && <nav aria-label="Lab sections">{nav}</nav>}
       <main key={stage} className="stage-enter flex flex-col">
@@ -39,10 +41,8 @@ export default function JourneyShell({
       <footer>
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">
-            Tools
-            <span className="ml-2 font-normal text-ink-muted">
-              Optional extras — outside the learning flow.
-            </span>
+            Presenter &amp; developer controls
+            <span className="ml-2 font-normal text-ink-muted">Auto-demo and API benches.</span>
           </summary>
           <div className="mt-4 flex flex-col gap-8">{tools}</div>
         </details>

@@ -88,10 +88,13 @@ time to see the result.
 ### Home and lab shell
 
 The first screen answers what Verityn does, why prediction comes first, and what
-Meta AI does. Primary actions are `Start circuit lab`, `Turn a diagram into an
-experiment`, and `Explore guided demo`. The lab shell exposes stage, simulator
-readiness, backend health, replay, and the next action. Learner tools are
-discoverable without opening developer controls.
+Meta AI does. The hero names the transformation (diagram → Meta interpretation
+→ editable circuit → solver evidence); primary entry is `Start with a diagram`,
+secondary is `Learn through the guided circuit lab`, and `Watch the guided
+demo` is a quiet link. A `What does what` strip credits Meta Muse Spark,
+Reality Lens, and the Verityn Solver. The lab shell exposes stage, simulator
+readiness, backend health, replay, and the next action. Reality Lens is a
+first-class page; developer controls stay in their own drawer.
 
 ### Prediction and build
 

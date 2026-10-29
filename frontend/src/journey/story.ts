@@ -78,7 +78,7 @@ function transferDetail(chapter: ChapterRecap | undefined): string {
 export const MISSING_CHAPTER = 'Complete this chapter to unlock its evidence.'
 
 /** Three-beat proof strip: the claim, the evidence, the solo transfer. */
-export function proofCards(chapters: ChapterRecap[]): StoryNode[] {
+export function evidenceCards(chapters: ChapterRecap[]): StoryNode[] {
   const [l1, reality, transfer] = chapters
   return [
     { title: 'Prediction', detail: l1?.input ? choiceDetail(l1) : MISSING_CHAPTER },

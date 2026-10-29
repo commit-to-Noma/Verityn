@@ -1,5 +1,5 @@
 import type { ChapterRecap } from '../journey/story'
-import { MISSING_CHAPTER, proofCards } from '../journey/story'
+import { MISSING_CHAPTER, evidenceCards } from '../journey/story'
 import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
 
@@ -30,8 +30,8 @@ export default function JourneyFinale({
           not a grade.
         </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3" aria-label="Proof summary">
-        {proofCards(chapters).map((card) => (
+      <div className="grid gap-2 sm:grid-cols-3" aria-label="Evidence summary">
+        {evidenceCards(chapters).map((card) => (
           <div key={card.title} className="glass-panel p-3">
             <p className="text-flow text-[11px] font-semibold uppercase tracking-[0.14em]">
               {card.title}

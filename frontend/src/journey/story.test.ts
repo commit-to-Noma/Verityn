@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SimulateResult } from '../api/client'
 import type { TraceInput } from '../lessons/trace'
 import type { ChapterRecap } from './story'
-import { proofCards, storyNodes } from './story'
+import { evidenceCards, storyNodes } from './story'
 
 function solved(power: Record<string, number>): SimulateResult {
   const components: SimulateResult['components'] = {}
@@ -99,9 +99,9 @@ describe('storyNodes', () => {
   })
 })
 
-describe('proofCards', () => {
+describe('evidenceCards', () => {
   it('summarizes claim, evidence, and solo transfer', () => {
-    const cards = proofCards([
+    const cards = evidenceCards([
       chapter('L1', L1_INPUT),
       chapter('L1T1', TWIST_INPUT),
       chapter('L1T2', TRANSFER_INPUT),
@@ -117,7 +117,7 @@ describe('proofCards', () => {
   })
 
   it('degrades gracefully when chapters are missing', () => {
-    const cards = proofCards([])
+    const cards = evidenceCards([])
     expect(cards).toHaveLength(3)
     for (const card of cards) {
       expect(card.detail).toBe('Complete this chapter to unlock its evidence.')
@@ -125,7 +125,7 @@ describe('proofCards', () => {
   })
 
   it('placeholds only the skipped chapter', () => {
-    const cards = proofCards([
+    const cards = evidenceCards([
       chapter('L1', L1_INPUT),
       { id: 'L1T1', title: 'L1T1', solo: false, input: null },
       chapter('L1T2', TRANSFER_INPUT),

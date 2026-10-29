@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { CircleCheckBig, CircleQuestionMark, CircleX, LoaderCircle } from 'lucide-react'
-import type { VisionProposeResult } from '../api/client'
+import type { SimulateResult, VisionProposeResult } from '../api/client'
 import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, visionProviderBadge } from '../api/client'
 import type { ImageGeometry } from '../canvas/layout'
 import { layoutProposalFromGeometry } from '../canvas/layout'
@@ -21,6 +21,7 @@ import {
 } from '../vision/review'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
+import ReadoutValue from './ReadoutValue'
 
 /** Lens overlay splits out: only loaded when a sample opens. */
 const RealityLens = lazy(() => import('./RealityLens'))
@@ -68,7 +69,7 @@ function ReviewPanels({
   nonce: number
   confirmed: boolean
   onConfirm: () => void
-  onTested: () => void
+  onTested: (result: SimulateResult) => void
   onReset: () => void
 }) {
   const proposal = result.proposal
@@ -337,7 +338,7 @@ function ReviewPanels({
                 peerSelection={selection}
                 onPeerSelect={setSelection}
                 onDirty={() => setCorrected(true)}
-                onSolved={() => onTested()}
+                onSolved={(result) => onTested(result)}
               />
             )}
           </div>
@@ -389,11 +390,51 @@ function ReviewPanels({
 }
 
 /** Standalone vision lab: upload, inspect, confirm, then build normally. */
+/** Proof moment: the confirmed proposal's fresh solver measurements, nothing else. */
+function LensProof({ result, bulbIds }: { result: SimulateResult; bulbIds: string[] }) {
+  const measured = bulbIds.filter((id) => result.components[id] !== undefined)
+  return (
+    <div className="glass-panel evidence-reveal flex flex-col gap-2 p-5" role="status">
+      <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">
+        Confirmed experiment
+      </p>
+      <p className="text-lg font-semibold">The model proposed this circuit. You confirmed it.</p>
+      {measured.length > 0 ? (
+        <ul className="flex flex-wrap gap-2">
+          {measured.map((id) => {
+            const reading = result.components[id]
+            if (reading === undefined) {
+              return null
+            }
+            return (
+              <li
+                key={id}
+                className="border-glass-border flex items-baseline gap-2 rounded-[10px] border px-3 py-2 text-sm"
+              >
+                <span className="font-mono font-medium">{id}</span>
+                <ReadoutValue value={reading.current} unit="A" />
+                <span aria-hidden="true">·</span>
+                <ReadoutValue value={reading.power} unit="W" />
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm">The simulator solved your confirmed circuit with no faults.</p>
+      )}
+      <p className="text-ink-muted text-xs">
+        Measured by the deterministic solver from your confirmed circuit.
+      </p>
+    </div>
+  )
+}
+
 export default function SnapBuildLab() {
   const [lensSample, setLensSample] = useState<LensSample | null>(null)
   const [state, setState] = useState<LabState>({ phase: 'idle' })
   const [confirmed, setConfirmed] = useState(false)
   const [tested, setTested] = useState(false)
+  const [lensResult, setLensResult] = useState<SimulateResult | null>(null)
   const controller = useRef<AbortController | null>(null)
   const nonce = useRef(0)
 
@@ -453,6 +494,7 @@ export default function SnapBuildLab() {
         nonce.current += 1
         setConfirmed(false)
         setTested(false)
+        setLensResult(null)
         setState({ phase: 'proposed', image, size, result, nonce: nonce.current })
       } catch (err) {
         if (next.signal.aborted) {
@@ -476,6 +518,7 @@ export default function SnapBuildLab() {
     controller.current?.abort()
     setConfirmed(false)
     setTested(false)
+    setLensResult(null)
     setState({ phase: 'idle' })
   }
 
@@ -494,8 +537,7 @@ export default function SnapBuildLab() {
           </span>
         </div>
         <p className="text-ink-muted mt-1 text-sm">
-          Photograph a schematic, inspect what the vision model proposes, and load it to the
-          canvas only when you confirm. Nothing proposed is simulated until you test it.
+          Nothing proposed is simulated until you confirm it, then test it.
         </p>
         <ol aria-label="Reality Lens progress" className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {LENS_STEP_LABELS.map((label, index) => {
@@ -521,6 +563,23 @@ export default function SnapBuildLab() {
           })}
         </ol>
       </div>
+      {state.phase === 'idle' && (
+        <div className="flex flex-col gap-3">
+          <h3 className="text-base font-semibold">Your diagram</h3>
+          <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">
+            <span className="border-glass-border rounded-[10px] border px-4 py-2 text-sm font-medium">
+              Choose an image
+            </span>
+            <span className="text-ink-muted text-sm">PNG, JPEG, or WebP, up to 4 MB.</span>
+            <input
+              type="file"
+              accept={VISION_MIME_TYPES.join(',')}
+              className="sr-only"
+              onChange={(event) => pickFile(event.target.files?.[0])}
+            />
+          </label>
+        </div>
+      )}
       <div className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
         <p className="text-ink-muted text-sm">
@@ -564,20 +623,6 @@ export default function SnapBuildLab() {
           </Suspense>
         )}
       </div>
-      {state.phase === 'idle' && (
-        <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">
-          <span className="border-glass-border rounded-[10px] border px-4 py-2 text-sm font-medium">
-            Choose an image
-          </span>
-          <span className="text-ink-muted text-sm">PNG, JPEG, or WebP, up to 4 MB.</span>
-          <input
-            type="file"
-            accept={VISION_MIME_TYPES.join(',')}
-            className="sr-only"
-            onChange={(event) => pickFile(event.target.files?.[0])}
-          />
-        </label>
-      )}
       {(state.phase === 'selected' || state.phase === 'working') && (
         <div className="glass-panel flex flex-col gap-3 p-4">
           <img src={state.image} alt="Uploaded schematic" className="max-h-64 self-start rounded-[10px]" />
@@ -617,10 +662,21 @@ export default function SnapBuildLab() {
             nonce={state.nonce}
             confirmed={confirmed}
             onConfirm={() => setConfirmed(true)}
-            onTested={() => setTested(true)}
+            onTested={(result) => {
+              setTested(true)
+              setLensResult(result)
+            }}
             onReset={reset}
           />
         </div>
+      )}
+      {state.phase === 'proposed' && confirmed && lensResult !== null && lensResult.ok && (
+        <LensProof
+          result={lensResult}
+          bulbIds={state.result.proposal.components
+            .filter((component) => component.type === 'bulb')
+            .map((component) => component.id)}
+        />
       )}
       {state.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">

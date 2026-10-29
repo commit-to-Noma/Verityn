@@ -7,6 +7,7 @@ const CircuitCanvas = lazy(() => import('./components/CircuitCanvas'))
 const CANVAS_FALLBACK = <p className="text-ink-muted text-sm">Preparing the workbench…</p>
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
+import HealthStatus from './components/HealthStatus'
 import LabIntro from './components/LabIntro'
 import PredictionScreen from './components/PredictionScreen'
 
@@ -82,6 +83,7 @@ export default function App() {
   const [complete, setComplete] = useState<ChapterGate | null>(null)
   const [auto, setAuto] = useState(() => new URLSearchParams(window.location.search).has('auto'))
   const [autoPending, setAutoPending] = useState(false)
+  const [lensPage, setLensPage] = useState(false)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const advanceTimer = useRef<number | null>(null)
@@ -259,7 +261,6 @@ export default function App() {
   })
 
   const firstStage = useRef(true)
-  const lensJump = useRef(false)
   useEffect(() => {
     if (firstStage.current) {
       firstStage.current = false
@@ -268,30 +269,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
-  /** Open the tools drawer and land on Snap & Build. Shared by homepage and lab nav. */
+  /** Reality Lens is a first-class workspace, not a footer tool. */
   const jumpToLens = useCallback(() => {
-    const tools = document.querySelector('#lab-tools')
-    if (tools instanceof HTMLDetailsElement) {
-      tools.open = true
-    }
-    document
-      .querySelector('#snap-build-heading')
-      ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+    setLensPage(true)
   }, [])
 
-  /** Homepage lens entry: enter the lab, then jump once the lab stage renders. */
   const handleExploreLens = useCallback(() => {
-    lensJump.current = true
-    setEntered(true)
-  }, [])
-
-  useEffect(() => {
-    if (!lensJump.current || stage === 'intro') {
-      return
-    }
-    lensJump.current = false
     jumpToLens()
-  }, [stage, jumpToLens])
+  }, [jumpToLens])
 
   const handleAutoToggle = useCallback(
     (checked: boolean) => {
@@ -327,6 +312,70 @@ export default function App() {
     { id: L1.twist.id, title: L1.twist.title, solo: false, input: snapshots[L1.twist.id] ?? null },
     { id: TRANSFER.id, title: TRANSFER.title, solo: true, input: snapshots[TRANSFER.id] ?? null },
   ]
+
+  const developerTools = (
+    <div className="flex flex-col gap-4">
+      <label className="flex cursor-pointer items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          checked={auto}
+          onChange={(event) => handleAutoToggle(event.target.checked)}
+          className="h-5 w-5 accent-flow"
+        />
+        <span>
+          Auto-advance chapters
+          <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
+        </span>
+      </label>
+      <p className="text-ink-muted text-sm">
+        Demo mode lets the presenter rehearse the journey without changing the learner
+        experience.
+      </p>
+      <details className="border-glass-border rounded-[10px] border p-4">
+        <summary className="cursor-pointer text-sm font-semibold">Developer API benches</summary>
+        <div className="mt-4 flex flex-col gap-4">
+          <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
+          <EvaluatePanel key={preset.id} preset={preset} />
+        </div>
+      </details>
+    </div>
+  )
+
+  if (lensPage) {
+    return (
+      <JourneyShell stage="intro" auto={auto} tools={developerTools}>
+        <div className="flex flex-col gap-6">
+          <button
+            type="button"
+            onClick={() => setLensPage(false)}
+            className="border-glass-border min-h-[44px] w-fit rounded-[10px] border px-4 text-sm font-medium"
+          >
+            ← Back to guided journey
+          </button>
+          <section aria-labelledby="lens-page-heading" className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
+                Meta vision workspace
+              </p>
+              <h1 id="lens-page-heading" className="text-3xl font-semibold tracking-tight">
+                Reality Lens
+              </h1>
+              <p className="max-w-2xl text-base text-ink-muted">
+                Turn a diagram into an experiment. Review what the vision model proposes,
+                correct the circuit yourself, then confirm it before the simulator runs.
+              </p>
+              <div className="flex items-center gap-2">
+                <HealthStatus compact />
+              </div>
+            </div>
+            <Suspense fallback={<p className="text-ink-muted text-sm">Preparing Reality Lens…</p>}>
+              <SnapBuildLab />
+            </Suspense>
+          </section>
+        </div>
+      </JourneyShell>
+    )
+  }
 
   const gateNode =
     complete === null ? null : (
@@ -364,54 +413,8 @@ export default function App() {
         </div>
       }
       tools={
-        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing optional lab tools…</p>}>
-          <section aria-label="Learner tools" className="flex flex-col gap-2">
-            <h3 className="text-base font-semibold">Learner tools</h3>
-            <p className="text-ink-muted text-sm">
-              The guided journey above is the learner path — predict, build, and check against
-              the simulator. Everything in this drawer is optional.
-            </p>
-          </section>
-          <section aria-label="Reality Lens (Experimental)" className="flex flex-col gap-4">
-            <h3 className="text-base font-semibold">Reality Lens (Experimental)</h3>
-            <p className="text-ink-muted text-sm">Optional exploration after the core journey.</p>
-            <SnapBuildLab />
-          </section>
-          <details className="glass-panel p-4">
-            <summary className="cursor-pointer text-sm font-semibold">
-              Demo controls
-              <span className="ml-2 font-normal text-ink-muted">
-                Auto-advance and developer extras.
-              </span>
-            </summary>
-            <div className="mt-4 flex flex-col gap-4">
-            <label className="flex cursor-pointer items-center gap-3 text-sm">
-              <input
-                type="checkbox"
-                checked={auto}
-                onChange={(event) => handleAutoToggle(event.target.checked)}
-                className="h-5 w-5 accent-flow"
-              />
-              <span>
-                Auto-advance chapters
-                <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
-              </span>
-            </label>
-            <p className="text-ink-muted text-sm">
-              Demo mode lets the presenter rehearse the journey without changing the learner
-              experience.
-            </p>
-            <details className="border-glass-border rounded-[10px] border p-4">
-              <summary className="cursor-pointer text-sm font-semibold">
-                Developer API benches
-              </summary>
-              <div className="mt-4 flex flex-col gap-4">
-                <SimulatePanel preset={preset} onSelectPreset={setPresetId} />
-                <EvaluatePanel key={preset.id} preset={preset} />
-              </div>
-            </details>
-            </div>
-          </details>
+        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing presenter controls…</p>}>
+          {developerTools}
         </Suspense>
       }
     >
@@ -536,13 +539,7 @@ export default function App() {
             window.location.href = window.location.pathname
           }}
           onExploreLens={() => {
-            const tools = document.querySelector('#lab-tools')
-            if (tools instanceof HTMLDetailsElement) {
-              tools.open = true
-            }
-            document
-              .querySelector('#snap-build-heading')
-              ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+            jumpToLens()
           }}
         />
       )}
