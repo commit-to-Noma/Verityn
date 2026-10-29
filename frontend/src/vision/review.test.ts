@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { VisionProposal } from '../api/client'
 import {
+  DEFAULT_LENS_VIEW,
+  LENS_VIEW_MODES,
   canLoadProposal,
   componentReviewStatus,
   connectionReviewStatus,
@@ -45,24 +47,38 @@ describe('reviewBanner', () => {
   it('blocks unsupported diagrams without guessing', () => {
     const banner = reviewBanner('unsupported', 0, 0)
     expect(banner.tone).toBe('blocked')
-    expect(banner.text).toMatch(/couldn't read/i)
-    expect(banner.text).toMatch(/nothing was guessed/i)
+    expect(banner.text).toBe(
+      'This image does not look like a supported circuit. Nothing was guessed.',
+    )
+    expect(banner.hint).toContain('battery, bulb, switch')
   })
 
-  it('asks for review with exact uncertain counts', () => {
+  it('asks for review of highlighted terminals', () => {
     const banner = reviewBanner('needs_review', 2, 5)
     expect(banner.tone).toBe('warn')
-    expect(banner.text).toContain('2 of 5')
+    expect(banner.text).toBe(
+      'Some connections need your review. Check the highlighted terminals before confirming.',
+    )
+    expect(banner.hint).toBeUndefined()
   })
 
-  it('uses singular connection wording', () => {
-    expect(reviewBanner('needs_review', 1, 1).text).toContain('1 of 1 connection needs')
-  })
-
-  it('confirms ready proposals', () => {
+  it('invites review of ready proposals', () => {
     const banner = reviewBanner('ready', 0, 3)
     expect(banner.tone).toBe('ok')
-    expect(banner.text).toMatch(/review/i)
+    expect(banner.text).toBe('Review the proposal before testing it.')
+  })
+})
+
+describe('lens review modes', () => {
+  it('defaults to Compare', () => {
+    expect(DEFAULT_LENS_VIEW).toBe('compare')
+    expect(LENS_VIEW_MODES[0]).toEqual({ id: 'compare', label: 'Compare' })
+    expect(LENS_VIEW_MODES.map((mode) => mode.id)).toEqual([
+      'compare',
+      'original',
+      'detected',
+      'model',
+    ])
   })
 })
 

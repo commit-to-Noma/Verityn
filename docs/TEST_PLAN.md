@@ -223,3 +223,28 @@ Phase 1 shell acceptance (all in the real browser unless noted):
   confirm gate, and solver-backed proof values from a fresh run.
 - Headline `Make a prediction. Meet reality.` present; no
   removed feature; unfinished shell work disabled or bypassable.
+
+Phase 2 lens acceptance (all in the real browser unless noted):
+
+- Upload panel visible on arrival and still mounted after select,
+  error, and proposal; selected preview renders above the
+  samples; same-file reselection, Remove, replacement, invalid
+  type, oversize, and unreadable-file paths behave.
+- Extension fallback accepts a valid image when the browser
+  reports an empty MIME type (unit-tested); accept string covers
+  PNG/JPEG/WebP MIME types and extensions.
+- Stubbed-proposal journey (Fetch-layer stub, zero live calls):
+  Hub → Reality Lens → upload → Interpret → Compare default →
+  original + replica side by side → confirm gate locked → Confirm
+  → fresh solver proof (`Confirmed circuit tested`, measured
+  values, `Measured by Verityn Solver`) → Try another image →
+  unsupported refusal with guidance and no replica → Hub.
+- Ready proposal shows data-derived counts and invites review;
+  needs_review flags highlighted terminals with dashed-grey
+  uncertain wires; unsupported renders no fake model.
+- Meta-vision outage offers Try again, verified sample, and
+  Guided Lab return; samples stay usable; health badges stay
+  separate (`Simulator ready` vs `Meta vision unavailable`).
+- 1440px, 1180px, 390px: panels side by side on desktop, stacked
+  on mobile, zero horizontal overflow; no `Experimental` or
+  `Snap & Build` learner-facing text remains.

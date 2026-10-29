@@ -13,30 +13,41 @@ export type ReviewTone = 'ok' | 'warn' | 'blocked'
 export interface ReviewBanner {
   tone: ReviewTone
   text: string
+  hint?: string
 }
+
+export type LensViewMode = 'compare' | 'original' | 'detected' | 'model'
+
+export const LENS_VIEW_MODES: ReadonlyArray<{ id: LensViewMode; label: string }> = [
+  { id: 'compare', label: 'Compare' },
+  { id: 'original', label: 'Original' },
+  { id: 'detected', label: 'Detected evidence' },
+  { id: 'model', label: 'Interactive model' },
+]
+
+/** Review always opens side by side; the learner can narrow to one panel. */
+export const DEFAULT_LENS_VIEW: LensViewMode = 'compare'
 
 /** Status banner for the review panel. Counts come from the proposal. */
 export function reviewBanner(
   status: VisionProposal['status'],
-  uncertainCount: number,
-  connectionCount: number,
+  _uncertainCount: number,
+  _connectionCount: number,
 ): ReviewBanner {
   if (status === 'unsupported') {
     return {
       tone: 'blocked',
-      text: "Couldn't read this diagram as a circuit. Try another image — nothing was guessed.",
+      text: 'This image does not look like a supported circuit. Nothing was guessed.',
+      hint: 'Try a schematic or photo containing a battery, bulb, switch, and visible wire connections.',
     }
   }
   if (status === 'needs_review') {
     return {
       tone: 'warn',
-      text:
-        `${uncertainCount} of ${connectionCount} ` +
-        `connection${connectionCount === 1 ? '' : 's'} needs your review — ` +
-        'uncertain wires load dashed grey. Verify them before testing.',
+      text: 'Some connections need your review. Check the highlighted terminals before confirming.',
     }
   }
-  return { tone: 'ok', text: 'All connections read clearly. Review, then load to the canvas.' }
+  return { tone: 'ok', text: 'Review the proposal before testing it.' }
 }
 
 /** Only load proposals that name at least one reviewed component. */

@@ -233,3 +233,35 @@ re-verified on return while recorded predictions stand (smoke
 covers the rebuild-to-re-earn path). The M8 naming audit still
 bans bare `Meta AI` in shipped strings, so the homepage names the
 precise `Meta Muse Spark` component instead.
+
+### Phase 2 — Reality Lens flagship (implemented, uncommitted)
+
+- [x] Learner-facing name is `Reality Lens` (no `Experimental`
+  badge, no `Snap & Build` heading); supporting copy attributes
+  proposal to Meta Muse Spark and measurement to Verityn Solver.
+- [x] Upload panel stays mounted in every phase; extension
+  fallback accepts valid images with an empty MIME type; 4 MB
+  limit, unreadable-file, and wrong-type errors are visible; the
+  input resets so the same file can be picked twice.
+- [x] Order is upload → selected/working → error → verified
+  samples → proposal review → solver proof.
+- [x] Review defaults to Compare: `Original diagram` + `Detected
+  evidence` beside `Interactive circuit replica`, with a `Review
+  before testing` gate; overlays and the evidence list select
+  both directions by component/connection id.
+- [x] Honest proposal states: ready invites review, needs_review
+  flags highlighted terminals, unsupported refuses with guidance
+  and renders no replica.
+- [x] Meta-vision outage state offers Try again, verified sample,
+  and Guided Lab return; `Meta vision unavailable` stays separate
+  from `Simulator ready`; samples keep working.
+- [x] Confirmation copy and proof card restyled; every proof
+  value comes from the fresh confirmed solver run.
+- [x] Full gates + extended stubbed-proposal smoke re-run and
+  green before any further work; no live Meta calls in tests.
+
+Phase 2 findings: the replica mounts on the reveal beat after the
+panels, so the smoke waits for (not snapshots) the lock notice.
+Honest coverage is unchanged from `vision-breadth.md`: 05 ready,
+06 needs_review, 08 next, hand-drawn needs_review,
+resistor/AC unsupported.

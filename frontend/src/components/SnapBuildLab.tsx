@@ -1,13 +1,15 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import { CircleCheckBig, CircleQuestionMark, CircleX, LoaderCircle } from 'lucide-react'
 import type { SimulateResult, VisionProposeResult } from '../api/client'
-import { ApiError, VISION_MAX_IMAGE_BYTES, VISION_MIME_TYPES, proposeCircuit, visionProviderBadge } from '../api/client'
+import { ApiError, proposeCircuit, visionProviderBadge } from '../api/client'
 import type { ImageGeometry } from '../canvas/layout'
 import { layoutProposalFromGeometry } from '../canvas/layout'
-import type { LessonSeed } from '../lessons/lesson'
+import { LIT_POWER_W, type LessonSeed } from '../lessons/lesson'
 import type { LensSample } from '../lens/samples'
 import { LENS_SAMPLES } from '../lens/samples'
 import {
+  DEFAULT_LENS_VIEW,
+  LENS_VIEW_MODES,
   REVIEW_STATUS_LABELS,
   canLoadProposal,
   componentReviewStatus,
@@ -17,8 +19,10 @@ import {
   regionStyle,
   reviewBanner,
   reviewSummary,
+  type LensViewMode,
   type RevealStep,
 } from '../vision/review'
+import { LENS_ACCEPT, validateLensFile } from '../vision/upload'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
 import ReadoutValue from './ReadoutValue'
@@ -31,24 +35,11 @@ type LabState =
   | { phase: 'selected'; image: string; name: string; size: ImageGeometry }
   | { phase: 'working'; image: string; size: ImageGeometry }
   | { phase: 'proposed'; image: string; size: ImageGeometry; result: VisionProposeResult; nonce: number }
-  | { phase: 'error'; message: string; image: string | null; size: ImageGeometry | null }
-
-function formatBytes(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+  | { phase: 'error'; message: string; image: string | null; size: ImageGeometry | null; reason: 'file' | 'vision' }
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
-
-type ViewMode = 'compare' | 'original' | 'detected' | 'model'
-
-const VIEW_MODES: { id: ViewMode; label: string }[] = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'original', label: 'Original' },
-  { id: 'detected', label: 'Detected' },
-  { id: 'model', label: 'Interactive model' },
-]
 
 const REVEAL_BEAT_MS = 350
 
@@ -73,7 +64,7 @@ function ReviewPanels({
   onReset: () => void
 }) {
   const proposal = result.proposal
-  const [view, setView] = useState<ViewMode>('compare')
+  const [view, setView] = useState<LensViewMode>(DEFAULT_LENS_VIEW)
   const [selection, setSelection] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
   const [corrected, setCorrected] = useState(false)
@@ -150,7 +141,7 @@ function ReviewPanels({
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Review view">
-        {VIEW_MODES.map((mode) => (
+        {LENS_VIEW_MODES.map((mode) => (
           <button
             key={mode.id}
             type="button"
@@ -186,6 +177,7 @@ function ReviewPanels({
         <div>
           <p className="text-sm font-medium">{reviewSummary(proposal)}</p>
           <p className="text-ink-muted text-sm">{banner.text}</p>
+          {banner.hint !== undefined && <p className="text-ink-muted text-sm">{banner.hint}</p>}
         </div>
       </div>
       {reveal !== 'review' && (
@@ -234,6 +226,7 @@ function ReviewPanels({
                 </div>
               )}
             </div>
+            <h5 className="text-sm font-semibold">Detected evidence</h5>
             <ul className="flex flex-col gap-1">
               {proposal.components.map((component) => {
                 const status = componentReviewStatus(component.id, proposal, corrected)
@@ -349,6 +342,10 @@ function ReviewPanels({
           Assumed: {assumption}
         </p>
       ))}
+      <h4 className="text-base font-semibold">Review before testing</h4>
+      {loadable && !confirmed && (
+        <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         {loadable && !confirmed && (
           <button
@@ -373,8 +370,8 @@ function ReviewPanels({
         )}
         {confirmed && (
           <p className="text-ink-muted text-sm" role="status">
-            Model confirmed{corrected ? ' with your corrections' : ''}. Test it on the replica —
-            the solver judges whatever is built.
+            Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
+            the circuit you approved.
           </p>
         )}
         <button
@@ -389,32 +386,32 @@ function ReviewPanels({
   )
 }
 
-/** Standalone vision lab: upload, inspect, confirm, then build normally. */
 /** Proof moment: the confirmed proposal's fresh solver measurements, nothing else. */
 function LensProof({ result, bulbIds }: { result: SimulateResult; bulbIds: string[] }) {
+  // Every value comes from the fresh solver response for the confirmed circuit.
   const measured = bulbIds.filter((id) => result.components[id] !== undefined)
   return (
-    <div className="glass-panel evidence-reveal flex flex-col gap-2 p-5" role="status">
-      <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">
-        Confirmed experiment
-      </p>
-      <p className="text-lg font-semibold">The model proposed this circuit. You confirmed it.</p>
+    <div className="glow-card evidence-reveal flex flex-col gap-2 p-5" role="status">
+      <p className="text-sm font-semibold">Confirmed circuit tested</p>
       {measured.length > 0 ? (
-        <ul className="flex flex-wrap gap-2">
+        <ul className="flex flex-col gap-2">
           {measured.map((id) => {
             const reading = result.components[id]
             if (reading === undefined) {
               return null
             }
             return (
-              <li
-                key={id}
-                className="border-glass-border flex items-baseline gap-2 rounded-[10px] border px-3 py-2 text-sm"
-              >
-                <span className="font-mono font-medium">{id}</span>
-                <ReadoutValue value={reading.current} unit="A" />
-                <span aria-hidden="true">·</span>
-                <ReadoutValue value={reading.power} unit="W" />
+              <li key={id} className="glass-panel flex flex-col gap-0.5 rounded-[10px] p-3">
+                <p className="font-mono text-sm font-medium">{id}</p>
+                <p className="text-sm">
+                  <ReadoutValue value={reading.current} unit="A" />
+                </p>
+                <p className="text-sm">
+                  <ReadoutValue value={reading.power} unit="W" />
+                </p>
+                <p className="text-ink-muted text-xs">
+                  {reading.power > LIT_POWER_W ? 'Bulb lit' : 'Bulb dark'}
+                </p>
               </li>
             )
           })}
@@ -422,14 +419,13 @@ function LensProof({ result, bulbIds }: { result: SimulateResult; bulbIds: strin
       ) : (
         <p className="text-sm">The simulator solved your confirmed circuit with no faults.</p>
       )}
-      <p className="text-ink-muted text-xs">
-        Measured by the deterministic solver from your confirmed circuit.
-      </p>
+      <p className="text-sm">The solver measured this confirmed circuit.</p>
+      <p className="text-ink-muted text-xs">Measured by Verityn Solver</p>
     </div>
   )
 }
 
-export default function SnapBuildLab() {
+export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => void }) {
   const [lensSample, setLensSample] = useState<LensSample | null>(null)
   const [state, setState] = useState<LabState>({ phase: 'idle' })
   const [confirmed, setConfirmed] = useState(false)
@@ -444,23 +440,15 @@ export default function SnapBuildLab() {
     if (!file) {
       return
     }
-    if (!VISION_MIME_TYPES.includes(file.type)) {
-      setState({ phase: 'error', message: 'Use a PNG, JPEG, or WebP image.', image: null, size: null })
-      return
-    }
-    if (file.size > VISION_MAX_IMAGE_BYTES) {
-      setState({
-        phase: 'error',
-        message: `Image is too large (${formatBytes(file.size)}; max ${formatBytes(VISION_MAX_IMAGE_BYTES)}).`,
-        image: null,
-        size: null,
-      })
+    const verdict = validateLensFile(file)
+    if (!verdict.ok) {
+      setState({ phase: 'error', message: verdict.message, image: null, size: null, reason: 'file' })
       return
     }
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result !== 'string') {
-        setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null })
+        setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null, reason: 'file' })
         return
       }
       const dataUrl = reader.result
@@ -473,10 +461,12 @@ export default function SnapBuildLab() {
           size: { width: probe.naturalWidth, height: probe.naturalHeight },
         })
       }
-      probe.onerror = () => setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null })
+      probe.onerror = () =>
+        setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null, reason: 'file' })
       probe.src = dataUrl
     }
-    reader.onerror = () => setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null })
+    reader.onerror = () =>
+      setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null, reason: 'file' })
     reader.readAsDataURL(file)
   }
 
@@ -501,14 +491,15 @@ export default function SnapBuildLab() {
           return
         }
         const message = err instanceof ApiError ? err.message : 'Request failed.'
+        const visionDown = message === 'Vision unavailable.'
         setState({
           phase: 'error',
-          message:
-            message === 'Vision unavailable.'
-              ? 'Vision needs a Meta API key on the backend. The rest of Verityn works without it.'
-              : message,
+          message: visionDown
+            ? 'Meta vision is unavailable right now. Use a verified sample or return to the Guided Lab.'
+            : message,
           image,
           size,
+          reason: visionDown ? 'vision' : 'file',
         })
       }
     })()
@@ -525,19 +516,11 @@ export default function SnapBuildLab() {
   const steps = lensSteps(state.phase === 'proposed', confirmed, tested)
 
   return (
-    <section aria-labelledby="snap-build-heading" className="flex flex-col gap-4">
+    <section aria-label="Diagram upload and review" className="flex flex-col gap-4">
       <div>
-        <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">Lab</p>
-        <div className="flex items-center gap-3">
-          <h2 id="snap-build-heading" className="text-xl font-semibold">
-            Snap &amp; Build
-          </h2>
-          <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-            Experimental
-          </span>
-        </div>
-        <p className="text-ink-muted mt-1 text-sm">
-          Nothing proposed is simulated until you confirm it, then test it.
+        <p className="text-ink-muted text-sm">
+          Bring a circuit diagram to life. Meta Muse Spark proposes what it sees; you review the
+          model, correct it if needed, and confirm it before Verityn Solver tests it.
         </p>
         <ol aria-label="Reality Lens progress" className="mt-2 flex flex-wrap items-center gap-2 text-sm">
           {LENS_STEP_LABELS.map((label, index) => {
@@ -563,25 +546,115 @@ export default function SnapBuildLab() {
           })}
         </ol>
       </div>
-      {state.phase === 'idle' && (
-        <div className="flex flex-col gap-3">
-          <h3 className="text-base font-semibold">Your diagram</h3>
-          <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">
-            <span className="border-glass-border rounded-[10px] border px-4 py-2 text-sm font-medium">
-              Choose an image
-            </span>
-            <span className="text-ink-muted text-sm">PNG, JPEG, or WebP, up to 4 MB.</span>
-            <input
-              type="file"
-              accept={VISION_MIME_TYPES.join(',')}
-              className="sr-only"
-              onChange={(event) => pickFile(event.target.files?.[0])}
-            />
-          </label>
+      <div className="flex flex-col gap-3">
+        <h3 className="text-base font-semibold">Your diagram</h3>
+        <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">
+          <span className="border-glass-border rounded-[10px] border px-4 py-2 text-sm font-medium">
+            {state.phase === 'idle' ? 'Choose an image' : 'Choose a different image'}
+          </span>
+          <span className="text-ink-muted text-sm">PNG, JPEG, or WebP, up to 4 MB.</span>
+          <input
+            type="file"
+            accept={LENS_ACCEPT}
+            className="sr-only"
+            onChange={(event) => {
+              pickFile(event.target.files?.[0])
+              // Allow selecting the same file twice in a row.
+              event.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {(state.phase === 'selected' || state.phase === 'working') && (
+        <div className="glass-panel flex flex-col gap-3 p-4">
+          <img src={state.image} alt="Uploaded schematic" className="max-h-64 self-start rounded-[10px]" />
+          {state.phase === 'selected' && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => interpret(state.image, state.size)}
+                className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+              >
+                Interpret with Meta Spark
+              </button>
+              <button
+                type="button"
+                onClick={reset}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          {state.phase === 'working' && (
+            <div className="flex items-center gap-3" aria-live="polite">
+              <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+              <p className="text-ink-muted text-sm">Reading the schematic…</p>
+            </div>
+          )}
         </div>
       )}
-      <div className="flex flex-col gap-3">
+      {state.phase === 'error' && (
+        <div className="glass-panel flex flex-col gap-3 p-4" role="alert">
+          {state.reason === 'vision' && (
+            <span className="border-glass-border text-ink-muted w-fit rounded-full border px-3 py-1 text-xs font-medium">
+              Meta vision unavailable
+            </span>
+          )}
+          <p className="text-sm">{state.message}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            {state.image !== null && state.size !== null && (
+              <button
+                type="button"
+                onClick={() => {
+                  const retry = state
+                  if (retry.phase === 'error' && retry.image !== null && retry.size !== null) {
+                    interpret(retry.image, retry.size)
+                  }
+                }}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                Try again
+              </button>
+            )}
+            {state.reason === 'vision' && (
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById('lens-samples')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                Use a verified sample
+              </button>
+            )}
+            {state.reason === 'vision' && onReturnToLab !== undefined && (
+              <button
+                type="button"
+                onClick={onReturnToLab}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                Return to Guided Lab
+              </button>
+            )}
+            {state.reason === 'file' && (
+              <button
+                type="button"
+                onClick={reset}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
+        <p className="text-ink-muted text-sm">
+          Verified sample — use this when Meta vision is unavailable or when you want to rehearse
+          the workflow.
+        </p>
         <p className="text-ink-muted text-sm">
           Curated segmented diagrams with solver-backed physics. Regions are
           review evidence, not a correctness verdict; every number comes from
@@ -623,35 +696,6 @@ export default function SnapBuildLab() {
           </Suspense>
         )}
       </div>
-      {(state.phase === 'selected' || state.phase === 'working') && (
-        <div className="glass-panel flex flex-col gap-3 p-4">
-          <img src={state.image} alt="Uploaded schematic" className="max-h-64 self-start rounded-[10px]" />
-          {state.phase === 'selected' && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => interpret(state.image, state.size)}
-                className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-              >
-                Interpret with Meta Spark
-              </button>
-              <button
-                type="button"
-                onClick={reset}
-                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-              >
-                Remove
-              </button>
-            </div>
-          )}
-          {state.phase === 'working' && (
-            <div className="flex items-center gap-3" aria-live="polite">
-              <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
-              <p className="text-ink-muted text-sm">Reading the schematic…</p>
-            </div>
-          )}
-        </div>
-      )}
       {state.phase === 'proposed' && (
         <div className="glass-panel flex flex-col gap-3 p-4">
           <ReviewPanels
@@ -677,32 +721,6 @@ export default function SnapBuildLab() {
             .filter((component) => component.type === 'bulb')
             .map((component) => component.id)}
         />
-      )}
-      {state.phase === 'error' && (
-        <div className="glass-panel flex items-center gap-3 p-4" role="alert">
-          <p className="min-w-0 flex-1 text-sm">{state.message}</p>
-          {state.image !== null && state.size !== null && (
-            <button
-              type="button"
-              onClick={() => {
-                const retry = state
-                if (retry.phase === 'error' && retry.image !== null && retry.size !== null) {
-                  interpret(retry.image, retry.size)
-                }
-              }}
-              className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Try again
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={reset}
-            className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Dismiss
-          </button>
-        </div>
       )}
     </section>
   )

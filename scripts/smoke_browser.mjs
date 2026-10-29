@@ -5,9 +5,12 @@
  * frontend + backend pair:
  *
  *   Predict -> Build -> Reality Check -> R1 -> R2 -> R4 -> Solo -> Finale
+ *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
- * interactions. Exits nonzero on any failure.
+ * interactions. The lens proposals are stubbed at the network layer from
+ * captured fixtures: no live Meta call is ever made by this script.
+ * Exits nonzero on any failure.
  *
  * Usage (backend on :5000, frontend dev server running):
  *   node scripts/smoke_browser.mjs
@@ -18,14 +21,21 @@
  *   CDP_PORT     remote-debugging port (default 9333)
  */
 import { spawn } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const BASE = process.env.BASE ?? 'http://localhost:5173'
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const CDP_PORT = Number(process.env.CDP_PORT ?? '9333')
 const CDP = `http://127.0.0.1:${CDP_PORT}`
+const HERE = dirname(fileURLToPath(import.meta.url))
+const switchFixture = JSON.parse(
+  readFileSync(join(HERE, '..', 'tests', 'fixtures', 'vision_live', '06_textbook_switch.proposal.json'), 'utf8'),
+)
+const switchImage = join(HERE, '..', 'tests', 'fixtures', 'sam_spike', '06_textbook_switch.jpeg')
+const visionStubs = []
 const lazyChunks = new Set()
 const fails = []
 let ws
@@ -128,6 +138,13 @@ async function hasText(t) {
   return ev(`document.body.innerText.includes(${JSON.stringify(t)})`)
 }
 
+async function uploadLensFile(absPath) {
+  const doc = await send('DOM.getDocument', { depth: 0 })
+  const { nodeId } = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector: 'input[type="file"]' })
+  if (!nodeId) throw new Error('lens file input missing')
+  await send('DOM.setFileInputFiles', { nodeId, files: [absPath] })
+}
+
 async function handleCenter(nodeId, terminal) {
   return ev(`(() => {
     const el = document.querySelector('[data-nodeid="${nodeId}"][data-handleid="${terminal}"]');
@@ -228,6 +245,19 @@ async function drive() {
       }
       if (url.includes('SnapBuildLab') || url.includes('RealityLens')) {
         lazyChunks.add(url)
+      }
+    } else if (msg.method === 'Fetch.requestPaused') {
+      const { requestId, request } = msg.params
+      const stub = request.url.includes('/api/vision/propose') ? visionStubs.shift() : undefined
+      if (stub !== undefined) {
+        send('Fetch.fulfillRequest', {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from(stub).toString('base64'),
+        }).catch(() => {})
+      } else {
+        send('Fetch.continueRequest', { requestId }).catch(() => {})
       }
     }
   }
@@ -361,7 +391,48 @@ async function drive() {
   await waitFor(() => hasText('META VISION WORKSPACE'), 'lens page')
   check('lens page heading', await hasText('Reality Lens'))
   check('lens back button', await hasText('← Back to guided journey'))
-  await waitFor(() => hasText('Snap & Build'), 'lens lab', 20000)
+  await waitFor(() => hasText('Your diagram'), 'lens lab', 20000)
+  check('upload panel first', await hasText('Choose an image'))
+  check('samples below upload', await hasText('Verified samples'))
+  // Stub the proposal at the network layer: no live Meta call in smoke.
+  await send('Fetch.enable', { patterns: [{ urlPattern: '*/api/vision/propose*' }] })
+  visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
+  await uploadLensFile(switchImage)
+  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens selected')
+  check('preview visible', await ev(`!!document.querySelector('img[alt="Uploaded schematic"]')`))
+  check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
+  await clickButton('Interpret with Meta Spark')
+  await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
+  check('review defaults to Compare', await ev(`(() => {
+    const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Compare');
+    return b?.getAttribute('aria-pressed') === 'true';
+  })()`))
+  check('replica beside original', await hasText('Interactive circuit replica'))
+  check('detected evidence list', await hasText('Detected evidence') && await hasText('switch_1'))
+  check('proposal counts from data', await hasText('1 battery, 1 switch, 1 bulb'))
+  check('needs-review copy', await hasText('Some connections need your review'))
+  // The replica (and its lock notice) mounts on the reveal beat after the panels.
+  await waitFor(() => hasText('Confirm the model below before testing'), 'lens lock', 20000)
+  check('confirm gate visible', await hasText('Confirm the model below before testing it against the simulator.'))
+  check('no proof before confirm', !(await hasText('Confirmed circuit tested')))
+  await clickButton('Confirm model')
+  await waitFor(() => hasText('Verityn Solver will test'), 'lens confirmed')
+  await waitFor(() => hasText('Confirmed circuit tested'), 'lens proof', 25000)
+  check('proof cites open-switch reading', await hasText('Bulb dark') && await hasText('0.0 A'))
+  check('proof attribution', await hasText('Measured by Verityn Solver'))
+  await clickButton('Try another image')
+  await waitFor(() => hasText('Choose an image'), 'lens reset')
+  visionStubs.push(JSON.stringify({
+    proposal: { status: 'unsupported', components: [], connections: [] },
+    assumptions: [],
+    provider: 'fixture-stub',
+  }))
+  await uploadLensFile(switchImage)
+  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens reselect')
+  await clickButton('Interpret with Meta Spark')
+  await waitFor(() => hasText('does not look like a supported circuit'), 'lens unsupported', 20000)
+  check('unsupported guidance', await hasText('Try a schematic or photo'))
+  check('no fake replica', !(await hasText('Interactive circuit replica')))
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
   await clickButton('← Back to guided journey')
   await waitFor(() => hasText('Replay journey'), 'back to finale')
@@ -388,7 +459,7 @@ async function drive() {
   await waitFor(() => hasText('Enter the guided lab'), 'mobile rehub')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('META VISION WORKSPACE'), 'mobile lens')
-  await waitFor(() => hasText('Snap & Build'), 'mobile lens lab', 20000)
+  await waitFor(() => hasText('Your diagram'), 'mobile lens lab', 20000)
   const lensOverflow = await ev('document.documentElement.scrollWidth - document.documentElement.clientWidth')
   check('mobile lens page fits 390px', lensOverflow <= 1, `overflow ${lensOverflow}px`)
 

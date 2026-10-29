@@ -395,7 +395,7 @@ export default function App() {
               </div>
             </div>
             <Suspense fallback={<p className="text-ink-muted text-sm">Preparing Reality Lens…</p>}>
-              <SnapBuildLab />
+              <SnapBuildLab onReturnToLab={() => handleNavigate('lab')} />
             </Suspense>
           </section>
         </div>
