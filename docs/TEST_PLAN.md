@@ -248,3 +248,30 @@ Phase 2 lens acceptance (all in the real browser unless noted):
 - 1440px, 1180px, 390px: panels side by side on desktop, stacked
   on mobile, zero horizontal overflow; no `Experimental` or
   `Snap & Build` learner-facing text remains.
+
+Phase 3 demo acceptance (all in the real browser unless noted):
+
+- `Watch the guided demo` visibly performs the journey without
+  stalling: scripted choice + why commit, repair wires land,
+  solver measures 0.6 A / 3.6 W, contradiction shows 0.0 A /
+  0.0 W, R1 → R2 → demonstration → undo → R4 all served, Solo
+  completes coach-off, finale shows `Demo complete`.
+- Unit-tested: script validity (choices, lesson IDs, seed
+  terminals, closed action vocabulary, no solo-coach section),
+  the pure beat machine (order, forward-only, pause/resume,
+  skip-signal, takeover/exit, replay, finish), and scripted
+  wires through the real converter.
+- Pause freezes every demo timer (predictions, builds, asks,
+  apply, undo, gates); resume re-arms from visible state; skip
+  hurries exactly one pending beat action, never two.
+- Manual prediction input or structural canvas edits exit the
+  demo and preserve the learner's work; gate Continue clicks
+  complete the beat and the demo continues.
+- Solo makes zero `/api/coach/*` requests and shows no coach UI;
+  provider badges always reflect the serving backend.
+- Replay restarts cleanly; Try-it-yourself resets to manual lab;
+  Exit returns to the hub; shell navigation exits the demo.
+- 1440px, 1180px, 390px: demo bar wraps cleanly, step stays
+  visible, controls stay 44px, zero horizontal overflow.
+- Normal learner mode unchanged without the demo: manual
+  predictions, no silent advances, `?auto=1` keeps its old beat.

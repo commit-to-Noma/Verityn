@@ -194,6 +194,13 @@ function rungCaption(provider: string): string | null {
   return null
 }
 
+/** Guided-demo beat between served ladder rungs. */
+const DEMO_ASK_BEAT_MS = 2000
+/** Guided-demo beat before a scripted repair wire lands. */
+const DEMO_BUILD_BEAT_MS = 2200
+/** Guided-demo beat between an observed demonstration and its undo. */
+const DEMO_UNDO_BEAT_MS = 2600
+
 function CoachAsk({
   session,
   netlist,
@@ -203,6 +210,9 @@ function CoachAsk({
   demonstration,
   onDemonstrate,
   autoDemonstrate,
+  autoAsk = false,
+  demoSignal = 0,
+  demoAppliedBefore = false,
   contradicted,
   ladderMemory,
   onLadderChange,
@@ -220,6 +230,13 @@ function CoachAsk({
   onDemonstrate?: (demo: Demonstration) => void
   /** Presenter mode: auto-apply a valid demonstration after a preview beat. */
   autoDemonstrate?: boolean
+  /** Guided demo: ask each rung after a readable beat, through the real endpoint. */
+  autoAsk?: boolean
+  /** Guided demo: a change hurries the pending ask or demonstration apply. */
+  demoSignal?: number
+  /** A demonstration already ran on this canvas: never auto-apply twice,
+   * even though verdict remounts reset the card-local demo flags. */
+  demoAppliedBefore?: boolean
   /** False hides the ladder without unmounting, so served rungs survive verdict flips. */
   contradicted: boolean
   /** Canvas-owned memory that rehydrates the ladder after a verdict-subtree remount. */
@@ -237,6 +254,7 @@ function CoachAsk({
   const onActionsRef = useRef(onActions)
   const onDemonstrateRef = useRef(onDemonstrate)
   const demonstratedRef = useRef<Demonstration | null | undefined>(demonstration)
+  const askRef = useRef<((rung: string) => void) | null>(null)
 
   useEffect(() => () => coachController.current?.abort(), [])
   useEffect(() => {
@@ -252,22 +270,27 @@ function CoachAsk({
   const r2Served = rungs.some((card) => card.rung === 'R2')
   const offerVisible =
     r2Served && demonstration !== null && demonstration !== undefined && !demoDismissed && !demoDone
-  const autoPending = autoDemonstrate === true && offerVisible
+  const autoPending = autoDemonstrate === true && offerVisible && !demoAppliedBefore
+  // A demo skip is consumed by whichever beat is pending; anything idle
+  // leaves it for the beat that is actually waiting.
+  const signalRef = useRef(demoSignal)
 
   /** Presenter auto-apply: a visible preview beat, cancelled by any choice. */
   useEffect(() => {
     if (!autoPending) {
       return
     }
+    const hurried = demoSignal !== signalRef.current
+    signalRef.current = demoSignal
     const timer = window.setTimeout(() => {
       const demo = demonstratedRef.current
       if (demo !== null && demo !== undefined) {
         setDemoDone(true)
         onDemonstrateRef.current?.(demo)
       }
-    }, 2500)
+    }, hurried ? 60 : 2500)
     return () => window.clearTimeout(timer)
-  }, [autoPending])
+  }, [autoPending, demoSignal])
 
   const applyDemo = () => {
     const demo = demonstratedRef.current
@@ -374,6 +397,52 @@ function CoachAsk({
 
   const served = new Set(rungs.map((card) => card.rung))
   const nextRung: string | null = RUNGS.find((rung) => !served.has(rung)) ?? null
+
+  useEffect(() => {
+    askRef.current = ask
+  })
+
+  /** Guided demo: ask each rung through the real endpoint after a beat.
+   * R4 waits until the demonstration is applied or declined, so the story
+   * stays in order; a manual ask clears the pending timer by asking first. */
+  useEffect(() => {
+    if (!autoAsk || !contradicted || netlist === null || session === null) {
+      return
+    }
+    if (status.phase !== 'idle' || nextRung === null) {
+      return
+    }
+    const demoSettled =
+      demoAppliedBefore ||
+      demoDone ||
+      demoDismissed ||
+      demonstration === null ||
+      demonstration === undefined
+    if (nextRung === 'R4' && !demoSettled) {
+      return
+    }
+    const hurried = demoSignal !== signalRef.current
+    signalRef.current = demoSignal
+    const rung = nextRung
+    const timer = window.setTimeout(() => {
+      askRef.current?.(rung)
+    }, hurried ? 60 : DEMO_ASK_BEAT_MS)
+    return () => window.clearTimeout(timer)
+    // askRef mirrors the latest ask; the rung list drives re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoAsk,
+    contradicted,
+    netlist,
+    session,
+    status.phase,
+    nextRung,
+    demoAppliedBefore,
+    demoDone,
+    demoDismissed,
+    demonstration,
+    demoSignal,
+  ])
 
   if (!contradicted) {
     return null
@@ -700,6 +769,9 @@ function ClaimVerdict({
   onDemonstrate,
   onActions,
   autoDemonstrate,
+  autoAsk,
+  demoSignal,
+  demoAppliedBefore,
   ladderMemory,
   onLadderChange,
 }: {
@@ -716,6 +788,9 @@ function ClaimVerdict({
   onDemonstrate?: (demo: Demonstration) => void
   onActions?: (actions: CoachServerAction[]) => void
   autoDemonstrate?: boolean
+  autoAsk?: boolean
+  demoSignal?: number
+  demoAppliedBefore?: boolean
   ladderMemory: { current: LadderMemory }
   onLadderChange: (memory: LadderMemory) => void
 }) {
@@ -765,6 +840,9 @@ function ClaimVerdict({
           demonstration={demonstration}
           onDemonstrate={onDemonstrate}
           autoDemonstrate={autoDemonstrate}
+          autoAsk={autoAsk}
+          demoSignal={demoSignal}
+          demoAppliedBefore={demoAppliedBefore}
           contradicted={contradicted}
           ladderMemory={ladderMemory}
           onLadderChange={onLadderChange}
@@ -776,6 +854,16 @@ function ClaimVerdict({
 
 const DEFAULT_INSTRUCTIONS =
   'Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.'
+
+/** Guided-demo repair: scripted wires through the normal connect path. */
+export interface CanvasDemoBuild {
+  connections: Array<{
+    source: string
+    sourceTerminal: string
+    target: string
+    targetTerminal: string
+  }>
+}
 
 function CanvasInner({
   seed,
@@ -799,6 +887,12 @@ function CanvasInner({
   peerSelection = null,
   onPeerSelect,
   autoDemonstrate = false,
+  autoAsk = false,
+  demoSignal = 0,
+  demoBuild = null,
+  demoPaused = false,
+  demoAutoUndo = false,
+  onDemoTakeover,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -815,12 +909,24 @@ function CanvasInner({
   onPeerSelect?: (id: string | null) => void
   /** Presenter mode: auto-apply a valid demonstration after a preview beat. */
   autoDemonstrate?: boolean
+  /** Guided demo: ask each ladder rung after a beat, through the real endpoint. */
+  autoAsk?: boolean
+  /** Guided demo: a change hurries the pending build, ask, or undo. */
+  demoSignal?: number
+  /** Guided demo: scripted repair wires, applied through the normal path. */
+  demoBuild?: CanvasDemoBuild | null
+  /** Guided demo: while paused, no demo timer runs. */
+  demoPaused?: boolean
+  /** Guided demo: undo the demonstration after the observed reading lands. */
+  demoAutoUndo?: boolean
+  /** Guided demo: a manual structural edit hands the canvas to the learner. */
+  onDemoTakeover?: () => void
   /** Fired whenever the canvas edits invalidate the last result. */
   onDirty?: () => void
   /** Fired when the server verdict for the recorded prediction arrives. */
   onVerdict?: (status: VerdictStatus) => void
   /** Fired when the coach answers (reality check only; never in solo). */
-  onCoachDone?: () => void
+  onCoachDone?: (outcome?: CoachTraceOutcome) => void
   /** Fired when the learner starts a coach reflection. */
   onCoachInteract?: () => void
   /** Fired with the evidence-trace input for journey recaps. */
@@ -866,12 +972,29 @@ function CanvasInner({
   const onVerdictRef = useRef(onVerdict)
   const onCoachDoneRef = useRef(onCoachDone)
   const onEvidenceRef = useRef(onEvidence)
+  const onDemoTakeoverRef = useRef(onDemoTakeover)
   useEffect(() => {
     onDirtyRef.current = onDirty
     onVerdictRef.current = onVerdict
     onCoachDoneRef.current = onCoachDone
     onEvidenceRef.current = onEvidence
+    onDemoTakeoverRef.current = onDemoTakeover
   })
+
+  /** Latest nodes for demo timers scheduled after state commits. */
+  const nodesRef = useRef(nodes)
+  useEffect(() => {
+    nodesRef.current = nodes
+  })
+
+  /** True while the demo or a consented demonstration mutates the canvas;
+   * only a real manual edit takes the demo over. */
+  const programmatic = useRef(false)
+  const noteManualEdit = () => {
+    if (!programmatic.current) {
+      onDemoTakeoverRef.current?.()
+    }
+  }
 
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -913,6 +1036,7 @@ function CanvasInner({
   }
 
   const toggleSwitch = (id: string) => {
+    noteManualEdit()
     setNodes((current) =>
       current.map((node) =>
         node.id === id && node.data.kind === 'switch'
@@ -946,6 +1070,7 @@ function CanvasInner({
     if (tool !== 'battery' && tool !== 'bulb' && tool !== 'switch') {
       return
     }
+    noteManualEdit()
     const position = screenToFlowPosition({ x: clientX, y: clientY })
     counters.current[tool] += 1
     const prefix = tool === 'battery' ? 'B' : tool === 'bulb' ? 'L' : 'S'
@@ -969,6 +1094,7 @@ function CanvasInner({
   }
 
   const placeToolAt = (kind: Exclude<Tool, 'delete' | null>, clientX: number, clientY: number) => {
+    noteManualEdit()
     setTool(kind)
     const position = screenToFlowPosition({ x: clientX, y: clientY })
     counters.current[kind] += 1
@@ -1001,12 +1127,14 @@ function CanvasInner({
   }
 
   const removeNode = (id: string) => {
+    noteManualEdit()
     setNodes((current) => current.filter((node) => node.id !== id))
     setEdges((current) => current.filter((edge) => edge.source !== id && edge.target !== id))
     invalidate()
   }
 
   const onConnect = (connection: Connection) => {
+    noteManualEdit()
     counters.current.wire += 1
     const id = `W${counters.current.wire}`
     setEdges((current) =>
@@ -1016,6 +1144,7 @@ function CanvasInner({
   }
 
   const clear = () => {
+    noteManualEdit()
     setNodes([])
     setEdges([])
     uncertainRef.current = []
@@ -1168,6 +1297,81 @@ function CanvasInner({
     }
   }, [verdictState])
 
+  /** Guided-demo repair: scripted wires through the same path as a drag.
+   *
+   * The endpoints stay selected (highlighted) until the wire lands; the
+   * normal converter and auto-run judge whatever results. Missing nodes
+   * (deleted mid-beat) stall honestly instead of inventing edges. */
+  const demoAppliedRef = useRef<CanvasDemoBuild | null>(null)
+  const demoSignalRef = useRef(demoSignal)
+  useEffect(() => {
+    if (demoBuild === null || demoPaused || demoAppliedRef.current === demoBuild) {
+      return
+    }
+    const endpoints = new Set(
+      demoBuild.connections.flatMap((connection) => [connection.source, connection.target]),
+    )
+    setNodes((current) =>
+      current.map((node) =>
+        endpoints.has(node.id) && node.selected !== true ? { ...node, selected: true } : node,
+      ),
+    )
+    const hurried = demoSignal !== demoSignalRef.current
+    demoSignalRef.current = demoSignal
+    const request = demoBuild
+    const timer = window.setTimeout(
+      () => {
+        programmatic.current = true
+        try {
+          const ids = new Set(nodesRef.current.map((node) => node.id))
+          const missing = request.connections.some(
+            (connection) => !ids.has(connection.source) || !ids.has(connection.target),
+          )
+          if (!missing) {
+            setEdges((current) => {
+              const next = [...current]
+              for (const connection of request.connections) {
+                counters.current.wire += 1
+                next.push({
+                  id: `W${counters.current.wire}`,
+                  type: 'smoothstep',
+                  source: connection.source,
+                  sourceHandle: connection.sourceTerminal,
+                  target: connection.target,
+                  targetHandle: connection.targetTerminal,
+                  style: FLOW_EDGE_STYLE,
+                })
+              }
+              return next
+            })
+            setNodes((current) =>
+              current.map((node) =>
+                endpoints.has(node.id) && node.selected === true
+                  ? { ...node, selected: false }
+                  : node,
+              ),
+            )
+            demoAppliedRef.current = request
+            invalidate()
+          }
+        } finally {
+          programmatic.current = false
+        }
+      },
+      hurried ? 60 : DEMO_BUILD_BEAT_MS,
+    )
+    return () => {
+      window.clearTimeout(timer)
+      setNodes((current) =>
+        current.map((node) =>
+          endpoints.has(node.id) && node.selected === true ? { ...node, selected: false } : node,
+        ),
+      )
+    }
+    // The scripted request is stable per stage; pause/signal drive re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoBuild, demoPaused, demoSignal])
+
   useEffect(() => {
     if (runState.phase !== 'done' || !prediction || !challenge) {
       return
@@ -1191,7 +1395,7 @@ function CanvasInner({
   const handleCoached = (outcome: CoachTraceOutcome) => {
     setCoachOutcome(outcome)
     if (outcome.phase === 'done') {
-      onCoachDoneRef.current?.()
+      onCoachDoneRef.current?.(outcome)
     }
   }
 
@@ -1238,24 +1442,29 @@ function CanvasInner({
   }
 
   const handleDemonstrate = (demo: Demonstration) => {
-    setDemoUndo({
-      nodes: nodes.map((node) => ({ ...node, position: { ...node.position }, data: { ...node.data } })),
-      edges: edges.map((edge) => ({ ...edge })),
-    })
-    setDemoEvents((prev) => [...prev, { phase: 'proposed', label: describeDemonstration(demo) }])
-    // A demonstration is a reversible coach excursion: the served rungs stay
-    // recorded even though the toggle invalidates the canvas around them.
-    const keptCoach = coachOutcome
-    // Switch actions reuse the manual toggle path, guarded by live state.
-    if (demo.action !== 'highlight_path') {
-      const sw = nodes.find((node) => node.id === demo.target && node.data.kind === 'switch')
-      if (demo.action === 'open_switch' && sw !== undefined && sw.data.closed) {
-        toggleSwitch(sw.id)
-      } else if (demo.action === 'close_switch' && sw !== undefined && !sw.data.closed) {
-        toggleSwitch(sw.id)
+    programmatic.current = true
+    try {
+      setDemoUndo({
+        nodes: nodes.map((node) => ({ ...node, position: { ...node.position }, data: { ...node.data } })),
+        edges: edges.map((edge) => ({ ...edge })),
+      })
+      setDemoEvents((prev) => [...prev, { phase: 'proposed', label: describeDemonstration(demo) }])
+      // A demonstration is a reversible coach excursion: the served rungs stay
+      // recorded even though the toggle invalidates the canvas around them.
+      const keptCoach = coachOutcome
+      // Switch actions reuse the manual toggle path, guarded by live state.
+      if (demo.action !== 'highlight_path') {
+        const sw = nodes.find((node) => node.id === demo.target && node.data.kind === 'switch')
+        if (demo.action === 'open_switch' && sw !== undefined && sw.data.closed) {
+          toggleSwitch(sw.id)
+        } else if (demo.action === 'close_switch' && sw !== undefined && !sw.data.closed) {
+          toggleSwitch(sw.id)
+        }
       }
+      setCoachOutcome(keptCoach)
+    } finally {
+      programmatic.current = false
     }
-    setCoachOutcome(keptCoach)
     const preview = new Set([...previewTargets(acceptedActions), demo.target])
     setNodes((current) =>
       current.map((node) =>
@@ -1275,13 +1484,18 @@ function CanvasInner({
     if (demoUndo === null) {
       return
     }
-    const snapshot = demoUndo
-    const keptCoach = coachOutcome
-    setDemoUndo(null)
-    setNodes(snapshot.nodes)
-    setEdges(snapshot.edges)
-    invalidate()
-    setCoachOutcome(keptCoach)
+    programmatic.current = true
+    try {
+      const snapshot = demoUndo
+      const keptCoach = coachOutcome
+      setDemoUndo(null)
+      setNodes(snapshot.nodes)
+      setEdges(snapshot.edges)
+      invalidate()
+      setCoachOutcome(keptCoach)
+    } finally {
+      programmatic.current = false
+    }
     setDemoEvents((prev) => [
       ...prev,
       { phase: 'undone', label: 'Restored the pre-demonstration circuit.' },
@@ -1307,6 +1521,32 @@ function CanvasInner({
     // Reads the committed run only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runState])
+
+  /** Latest undo for the demo timer; a manual undo clears it by emptying state. */
+  const undoRef = useRef(handleDemoUndo)
+  useEffect(() => {
+    undoRef.current = handleDemoUndo
+  })
+
+  /** Guided demo: restore the pre-demonstration circuit once the observed
+   * reading has landed, so the ladder can finish on the original story. */
+  useEffect(() => {
+    if (!demoAutoUndo || demoUndo === null) {
+      return
+    }
+    const last = demoEvents[demoEvents.length - 1]
+    if (last === undefined || last.phase !== 'observed') {
+      return
+    }
+    const hurried = demoSignal !== demoSignalRef.current
+    demoSignalRef.current = demoSignal
+    const timer = window.setTimeout(() => {
+      undoRef.current()
+    }, hurried ? 60 : DEMO_UNDO_BEAT_MS)
+    return () => window.clearTimeout(timer)
+    // undoRef mirrors the latest undo; the trace drives re-runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoAutoUndo, demoUndo, demoEvents, demoSignal])
 
   const tools = [
     { id: 'battery', label: 'Battery', Icon: Zap },
@@ -1375,6 +1615,29 @@ function CanvasInner({
       <p className="text-ink-muted text-sm">
         {nodes.length === 0 ? DEFAULT_INSTRUCTIONS : instructions}
       </p>
+      {demoBuild !== null &&
+        demoBuild.connections.some(
+          (connection) =>
+            !edges.some(
+              (edge) =>
+                edge.source === connection.source &&
+                edge.sourceHandle === connection.sourceTerminal &&
+                edge.target === connection.target &&
+                edge.targetHandle === connection.targetTerminal,
+            ),
+        ) && (
+          <div className="glass-panel p-3" aria-live="polite">
+            <p className="text-sm font-medium">Demo: repairing the open connection</p>
+            <p className="text-ink-muted text-sm">
+              {demoBuild.connections
+                .map(
+                  (connection) =>
+                    `${connection.source}.${connection.sourceTerminal} → ${connection.target}.${connection.targetTerminal}`,
+                )
+                .join(', ')}
+            </p>
+          </div>
+        )}
       <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
@@ -1407,6 +1670,7 @@ function CanvasInner({
             }}
             onEdgeClick={(_event, edge) => {
               if (tool === 'delete') {
+                noteManualEdit()
                 setEdges((current) => current.filter((entry) => entry.id !== edge.id))
                 invalidate()
               } else {
@@ -1513,6 +1777,9 @@ function CanvasInner({
             onDemonstrate={handleDemonstrate}
             onActions={setServerActions}
             autoDemonstrate={autoDemonstrate}
+            autoAsk={autoAsk}
+            demoSignal={demoSignal}
+            demoAppliedBefore={demoEvents.some((event) => event.phase === 'applied')}
             ladderMemory={ladderMemory}
             onLadderChange={handleLadderChange}
           />
@@ -1585,6 +1852,12 @@ export default function CircuitCanvas({
   peerSelection,
   onPeerSelect,
   autoDemonstrate,
+  autoAsk,
+  demoSignal,
+  demoBuild,
+  demoPaused,
+  demoAutoUndo,
+  onDemoTakeover,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -1595,7 +1868,7 @@ export default function CircuitCanvas({
   onSolved?: (result: SimulateResult) => void
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
-  onCoachDone?: () => void
+  onCoachDone?: (outcome?: CoachTraceOutcome) => void
   onCoachInteract?: () => void
   onEvidence?: (chapterId: string, input: TraceInput) => void
   prediction?: Prediction | null
@@ -1607,6 +1880,12 @@ export default function CircuitCanvas({
   peerSelection?: string | null
   onPeerSelect?: (id: string | null) => void
   autoDemonstrate?: boolean
+  autoAsk?: boolean
+  demoSignal?: number
+  demoBuild?: CanvasDemoBuild | null
+  demoPaused?: boolean
+  demoAutoUndo?: boolean
+  onDemoTakeover?: () => void
 }) {
   return (
     <ReactFlowProvider>
@@ -1632,6 +1911,12 @@ export default function CircuitCanvas({
         peerSelection={peerSelection}
         onPeerSelect={onPeerSelect}
         autoDemonstrate={autoDemonstrate}
+        autoAsk={autoAsk}
+        demoSignal={demoSignal}
+        demoBuild={demoBuild}
+        demoPaused={demoPaused}
+        demoAutoUndo={demoAutoUndo}
+        onDemoTakeover={onDemoTakeover}
       />
     </ReactFlowProvider>
   )

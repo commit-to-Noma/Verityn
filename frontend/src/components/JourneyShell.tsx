@@ -12,6 +12,7 @@ export default function JourneyShell({
   tools,
   location,
   onNavigate,
+  demoBar,
   wide = false,
 }: {
   stage: Stage
@@ -20,6 +21,8 @@ export default function JourneyShell({
   tools: ReactNode
   location: ShellLocation
   onNavigate: (target: ShellLocation) => void
+  /** Guided-demo controls; rendered in the shell, never in dev tools. */
+  demoBar?: ReactNode
   /** Wide views (homepage, lens, canvas) use the full frame; reading views stay narrow. */
   wide?: boolean
 }) {
@@ -81,6 +84,7 @@ export default function JourneyShell({
           </button>
         ))}
       </nav>
+      {demoBar}
       <main key={stage} className={`stage-enter flex flex-col ${wide ? 'w-full' : 'mx-auto w-full max-w-3xl'}`}>
         {children}
       </main>

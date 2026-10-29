@@ -265,3 +265,33 @@ panels, so the smoke waits for (not snapshots) the lock notice.
 Honest coverage is unchanged from `vision-breadth.md`: 05 ready,
 06 needs_review, 08 next, hand-drawn needs_review,
 resistor/AC unsupported.
+
+### Phase 3 — Guided demo (implemented, uncommitted)
+
+- [x] `Watch the guided demo` performs the real journey (same
+  screens, solver, ladder, finale): Predict → Build → Reality
+  Check → Coach → Demonstrate → Solo → Finale, with a visible
+  `Demo playing · <beat> / Step N of 7` bar and Pause, Skip,
+  Replay, Try-it-yourself, and Exit controls in the shell.
+- [x] Deterministic script (`frontend/src/demo/script.ts`):
+  scripted predictions commit through the normal think-first
+  path; scripted repairs wire through the normal converter and
+  auto-run; the demonstration uses the validated offer + undo.
+- [x] Coach ladder auto-asks the real endpoint (R1 → R2 → apply →
+  undo → R4); provider badges stay truthful; no scripted coach
+  text, so no rehearsal label is needed.
+- [x] Solo stays coach-off with zero `/api/coach/*` calls; the
+  finale shows real snapshots and claims nothing beyond them.
+- [x] Manual prediction input or canvas edits take over: the demo
+  exits, the learner's work stands, nothing resets.
+- [x] `?auto=1` presenter fallback preserved with its old
+  first-heard coached beat; demo gates on R4 instead.
+- [x] Full gates + extended smoke (demo run, pause/resume,
+  replay, takeover) re-run and green; no live Meta calls.
+
+Phase 3 findings: verdict-subtree remounts reset the card-local
+demo flags, so auto-apply and the R4 wait are keyed on the
+mount-stable demonstration trace — otherwise the demo re-applies
+in a loop and the pending undo never lands. L1's StartVerdict
+also renders `Consistent with the model`, so the smoke keys the
+apply check on the Undo button instead.

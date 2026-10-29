@@ -6,6 +6,7 @@
  *
  *   Predict -> Build -> Reality Check -> R1 -> R2 -> R4 -> Solo -> Finale
  *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
+ *     -> Guided demo full run (pause/resume, replay, manual takeover)
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
  * interactions. The lens proposals are stubbed at the network layer from
@@ -462,6 +463,54 @@ async function drive() {
   await waitFor(() => hasText('Your diagram'), 'mobile lens lab', 20000)
   const lensOverflow = await ev('document.documentElement.scrollWidth - document.documentElement.clientWidth')
   check('mobile lens page fits 390px', lensOverflow <= 1, `overflow ${lensOverflow}px`)
+
+  // ---- Guided demo: a separate clean run that performs itself. ----
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+  await send('Page.navigate', { url: BASE + '/' })
+  await waitFor(() => hasText('Watch the guided demo'), 'demo hub')
+  await clickButton('Watch the guided demo')
+  await waitFor(() => hasText('Demo playing'), 'demo starts')
+  check('demo step 1', await hasText('Step 1 of 7'))
+  await clickButton('Pause demo')
+  await waitFor(() => hasText('Demo paused'), 'demo paused')
+  await sleep(3500)
+  check('pause holds prediction', await ev(`!!document.getElementById('predict-why')`))
+  await clickButton('Resume demo')
+  await waitFor(() => hasText('Demo playing'), 'demo resumed')
+  await waitFor(() => ev(`(() => {
+    const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'No');
+    return b?.getAttribute('aria-pressed') === 'true';
+  })()`), 'demo scripted choice', 30000)
+  await waitFor(() => ev(`document.getElementById('predict-why')?.value === 'The open gap breaks the loop.'`), 'demo scripted why', 30000)
+  await waitFor(() => hasText('Connect the two glowing terminal dots'), 'demo l1 build', 30000)
+  check('demo step 2', await hasText('Step 2 of 7'))
+  check('demo repair notice', await hasText('Demo: repairing the open connection'))
+  await waitFor(() => hasText('Repair verified'), 'demo l1 solved', 30000)
+  check('demo measured numbers', await hasText('Your completed circuit produces 0.6 A and 3.6 W.'))
+  await waitFor(() => hasText('switch is open'), 'demo reality predict', 30000)
+  await waitFor(() => hasText('Ask the coach'), 'demo coach invited', 45000)
+  await waitFor(() => hasText('Fallback coach'), 'demo r1', 30000)
+  await waitFor(() => hasText('Evidence pointer'), 'demo r2', 30000)
+  await waitFor(() => hasText('Undo demonstration'), 'demo applied', 30000)
+  await waitFor(() => hasText('Consistent with the model'), 'demo verdict flips', 30000)
+  await waitFor(() => hasText('Contradicted by the model'), 'demo undone', 30000)
+  await waitFor(() => hasText('Confirmation check'), 'demo r4', 30000)
+  const demoCoachBeforeSolo = askRequestIds.length
+  await waitFor(() => hasText('Solo mode'), 'demo solo', 30000)
+  check('demo solo coach off', !(await hasText('Ask the coach')))
+  await waitFor(() => hasText('See your journey'), 'demo solo gate', 60000)
+  check('demo solo zero coach calls', askRequestIds.length === demoCoachBeforeSolo,
+    `before ${demoCoachBeforeSolo}, after ${askRequestIds.length}`)
+  await clickButtonStarts('See your journey')
+  await waitFor(() => hasText('Demo complete'), 'demo finale')
+  check('demo step 7', await hasText('Step 7 of 7'))
+  await clickButton('Replay demo')
+  await waitFor(() => hasText('Step 1 of 7'), 'demo replay')
+  await waitFor(() => ev(`(document.getElementById('predict-why')?.value ?? '') !== ''`), 'replay scripted why', 30000)
+  await fillInput('predict-why', 'manual takeover')
+  await sleep(300)
+  check('takeover exits demo', !(await hasText('Demo playing')) && !(await hasText('Demo paused')))
+  check('takeover keeps input', await ev(`document.getElementById('predict-why')?.value === 'manual takeover'`))
 
   console.log(fails.length === 0 ? 'BROWSER SMOKE PASSED' : `FAILURES: ${fails.join(', ')}`)
   ws.close()

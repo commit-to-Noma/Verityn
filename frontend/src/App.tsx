@@ -1,6 +1,10 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ChapterComplete from './components/ChapterComplete'
 import JourneyFinale from './components/JourneyFinale'
+import DemoBar from './demo/DemoBar'
+import type { DemoBeat, DemoState } from './demo/machine'
+import { IDLE_DEMO, demoTransition } from './demo/machine'
+import { DEMO_SCRIPT } from './demo/script'
 
 /** Canvas weight splits out: stages show a brief fallback while it loads. */
 const CircuitCanvas = lazy(() => import('./components/CircuitCanvas'))
@@ -9,7 +13,7 @@ import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import HealthStatus from './components/HealthStatus'
 import LabIntro from './components/LabIntro'
-import PredictionScreen from './components/PredictionScreen'
+import PredictionScreen, { type PredictionDemo } from './components/PredictionScreen'
 
 /** Drawer-only weight: split out so the first paint stays lean. */
 const SimulatePanel = lazy(() => import('./components/SimulatePanel'))
@@ -22,7 +26,7 @@ import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
 import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
-import type { TraceInput } from './lessons/trace'
+import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
 
 /** Demo-mode auto-advance delays; manual mode shows the gate with no timer. */
@@ -84,12 +88,22 @@ export default function App() {
   const [auto, setAuto] = useState(() => new URLSearchParams(window.location.search).has('auto'))
   const [autoPending, setAutoPending] = useState(false)
   const [lensPage, setLensPage] = useState(false)
+  /** Guided demo: a visible product mode above the `?auto=1` presenter timers. */
+  const [demo, setDemo] = useState<DemoState>(IDLE_DEMO)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const advanceTimer = useRef<number | null>(null)
   const autoRef = useRef(auto)
+  const demoRef = useRef(demo)
+  const completeRef = useRef(complete)
+  /** Pre-demo auto switch, restored when the demo ends or hands over. */
+  const autoBeforeDemo = useRef(false)
+  /** The demo gate waits for R4; the presenter fallback keeps its old beat. */
+  const realityR4 = useRef(false)
   useEffect(() => {
     autoRef.current = auto
+    demoRef.current = demo
+    completeRef.current = complete
   })
 
   const cancelAdvance = useCallback(() => {
@@ -117,7 +131,8 @@ export default function App() {
       document
         .querySelector('[aria-label="Evidence trace"]')
         ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
-      if (autoRef.current) {
+      // A paused demo latches the gate but arms nothing; resume re-arms it.
+      if (autoRef.current && !demoRef.current.paused) {
         setAutoPending(true)
         advanceTimer.current = window.setTimeout(() => {
           advanceTimer.current = null
@@ -130,6 +145,14 @@ export default function App() {
     [cancelAdvance],
   )
 
+  /** Demo beat helper: silent outside the demo, forward-only inside it. */
+  const advanceDemoBeat = useCallback((beat: DemoBeat) => {
+    if (!demoRef.current.active) {
+      return
+    }
+    setDemo((current) => demoTransition(current, { type: 'advanced', beat }))
+  }, [])
+
   const handleContinue = useCallback(() => {
     if (complete === null) {
       return
@@ -139,9 +162,20 @@ export default function App() {
     complete.advance()
   }, [cancelAdvance, complete])
 
-  const handleEvidence = useCallback((chapterId: string, input: TraceInput) => {
-    setSnapshots((current) => ({ ...current, [chapterId]: input }))
-  }, [])
+  const handleEvidence = useCallback(
+    (chapterId: string, input: TraceInput) => {
+      setSnapshots((current) => ({ ...current, [chapterId]: input }))
+      // The demonstration beat is real trace evidence, not a demo flag.
+      if (
+        demoRef.current.active &&
+        chapterId === L1.twist.id &&
+        input.demonstrations?.some((event) => event.phase === 'applied') === true
+      ) {
+        setDemo((current) => demoTransition(current, { type: 'advanced', beat: 'demonstrate' }))
+      }
+    },
+    [],
+  )
 
   const handleL1Solved = useCallback(
     (result: SimulateResult) => {
@@ -152,13 +186,16 @@ export default function App() {
             title: 'Reality check passed',
             detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
             nextLabel: 'Continue to Reality Check →',
-            advance: () => setRealityStarted(true),
+            advance: () => {
+              setRealityStarted(true)
+              advanceDemoBeat('reality')
+            },
           },
           ADVANCE_BEAT_MS,
         )
       }
     },
-    [showGate],
+    [showGate, advanceDemoBeat],
   )
 
   const handleRealitySolved = useCallback(
@@ -170,13 +207,16 @@ export default function App() {
             title: 'Reality check complete',
             detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
             nextLabel: 'Continue to solo →',
-            advance: () => setTransferStarted(true),
+            advance: () => {
+              setTransferStarted(true)
+              advanceDemoBeat('solo')
+            },
           },
           ADVANCE_BEAT_MS,
         )
       }
     },
-    [showGate],
+    [showGate, advanceDemoBeat],
   )
 
   const handleTransferSolved = useCallback(
@@ -188,7 +228,12 @@ export default function App() {
             title: 'Solo complete',
             detail: 'You solved it with the coach off. Review the evidence, then see your journey.',
             nextLabel: 'See your journey →',
-            advance: () => setTransferDone(true),
+            advance: () => {
+              setTransferDone(true)
+              if (demoRef.current.active) {
+                setDemo((current) => demoTransition(current, { type: 'finish' }))
+              }
+            },
           },
           ADVANCE_BEAT_MS,
         )
@@ -214,31 +259,64 @@ export default function App() {
             }
           : gate,
       )
+      advanceDemoBeat('coach')
     },
-    [cancelAdvance],
+    [cancelAdvance, advanceDemoBeat],
   )
 
-  const handleRealityCoached = useCallback(() => {
-    if (complete?.chapter !== 'reality' || complete.coach !== 'invited') {
-      return
-    }
-    setComplete({
-      ...complete,
-      title: 'Coach heard',
-      detail: 'Continue when ready.',
-      coach: 'heard',
-    })
-    if (autoRef.current) {
-      cancelAdvance()
-      setAutoPending(true)
-      advanceTimer.current = window.setTimeout(() => {
-        advanceTimer.current = null
-        setAutoPending(false)
-        setComplete(null)
-        complete.advance()
-      }, COACHED_BEAT_MS)
-    }
-  }, [cancelAdvance, complete])
+  const handleRealityCoached = useCallback(
+    (outcome?: CoachTraceOutcome) => {
+      if (complete?.chapter !== 'reality') {
+        return
+      }
+      if (!demoRef.current.active) {
+        // Presenter fallback, unchanged: the first heard rung starts the beat.
+        if (complete.coach !== 'invited') {
+          return
+        }
+        setComplete({
+          ...complete,
+          title: 'Coach heard',
+          detail: 'Continue when ready.',
+          coach: 'heard',
+        })
+        if (autoRef.current) {
+          cancelAdvance()
+          setAutoPending(true)
+          advanceTimer.current = window.setTimeout(() => {
+            advanceTimer.current = null
+            setAutoPending(false)
+            setComplete(null)
+            complete.advance()
+          }, COACHED_BEAT_MS)
+        }
+        return
+      }
+      // Guided demo: the full ladder plays, and only R4 may advance the gate.
+      if (complete.coach === 'invited') {
+        setComplete({
+          ...complete,
+          title: 'Coach heard',
+          detail: 'Continue when ready.',
+          coach: 'heard',
+        })
+      }
+      if (outcome?.phase === 'done' && outcome.rung === 'R4') {
+        realityR4.current = true
+        if (!demoRef.current.paused) {
+          cancelAdvance()
+          setAutoPending(true)
+          advanceTimer.current = window.setTimeout(() => {
+            advanceTimer.current = null
+            setAutoPending(false)
+            setComplete(null)
+            complete.advance()
+          }, COACHED_BEAT_MS)
+        }
+      }
+    },
+    [cancelAdvance, complete],
+  )
 
   /** Edits cancel a pending demo timer; the latched gate stays passable. */
   const handleDirty = useCallback(() => {
@@ -249,6 +327,88 @@ export default function App() {
   const handleInteract = useCallback(() => {
     cancelAdvance()
   }, [cancelAdvance])
+
+  const resetJourney = useCallback(() => {
+    cancelAdvance()
+    setL1Prediction(null)
+    setRealityStarted(false)
+    setRealityPrediction(null)
+    setRealitySession(null)
+    setTransferStarted(false)
+    setTransferPrediction(null)
+    setTransferDone(false)
+    setSnapshots({})
+    setComplete(null)
+    realityR4.current = false
+  }, [cancelAdvance])
+
+  /** Enter the guided demo: a clean journey that performs itself. */
+  const startDemo = useCallback(() => {
+    if (!demoRef.current.active) {
+      autoBeforeDemo.current = autoRef.current
+    }
+    resetJourney()
+    setAuto(true)
+    setLensPage(false)
+    setEntered(true)
+    setDemo((current) => demoTransition(current, { type: 'start' }))
+  }, [resetJourney])
+
+  /** Leave demo mode, keep the journey exactly where it stands. */
+  const endDemoToManual = useCallback(() => {
+    if (!demoRef.current.active) {
+      return
+    }
+    cancelAdvance()
+    setAuto(autoBeforeDemo.current)
+    setDemo((current) => demoTransition(current, { type: 'takeover' }))
+  }, [cancelAdvance])
+
+  const handleDemoPause = useCallback(() => {
+    cancelAdvance()
+    setDemo((current) => demoTransition(current, { type: 'pause' }))
+  }, [cancelAdvance])
+
+  const handleDemoResume = useCallback(() => {
+    setDemo((current) => demoTransition(current, { type: 'resume' }))
+    // Re-arm a gate timer the pause cancelled — but never one the coach
+    // invite legitimately holds for the ladder.
+    const gate = completeRef.current
+    if (demoRef.current.active && gate !== null && gate.coach !== 'invited') {
+      showGate(gate, ADVANCE_BEAT_MS)
+    }
+  }, [showGate])
+
+  const handleDemoSkip = useCallback(() => {
+    const state = demoRef.current
+    if (!state.active || state.complete) {
+      return
+    }
+    // While the ladder is still open, skip only hurries its pending beat;
+    // the gate advance is a later beat, never the same one.
+    const ladderOpen =
+      (state.beat === 'reality' || state.beat === 'coach' || state.beat === 'demonstrate') &&
+      !realityR4.current
+    if (!ladderOpen && completeRef.current !== null) {
+      handleContinue()
+      return
+    }
+    setDemo((current) => demoTransition(current, { type: 'skip' }))
+  }, [handleContinue])
+
+  const handleDemoExit = useCallback(() => {
+    endDemoToManual()
+    resetJourney()
+    setLensPage(false)
+    setEntered(false)
+  }, [endDemoToManual, resetJourney])
+
+  const handleDemoManual = useCallback(() => {
+    endDemoToManual()
+    resetJourney()
+    setLensPage(false)
+    setEntered(true)
+  }, [endDemoToManual, resetJourney])
 
   const stage = stageFor({
     entered,
@@ -273,10 +433,11 @@ export default function App() {
    * journey unmounts the canvases, so any latched gate is cleared: builds must
    * be re-verified on return, while recorded predictions stand. */
   const jumpToLens = useCallback(() => {
+    endDemoToManual()
     cancelAdvance()
     setComplete(null)
     setLensPage(true)
-  }, [cancelAdvance])
+  }, [cancelAdvance, endDemoToManual])
 
   const location = shellLocation(entered, lensPage)
 
@@ -285,6 +446,7 @@ export default function App() {
    * on return rather than advancing on unseen evidence. */
   const handleNavigate = useCallback(
     (target: ShellLocation) => {
+      endDemoToManual()
       cancelAdvance()
       setComplete(null)
       if (target === 'lens') {
@@ -297,7 +459,7 @@ export default function App() {
         setEntered(false)
       }
     },
-    [cancelAdvance],
+    [cancelAdvance, endDemoToManual],
   )
 
   const handleExploreLens = useCallback(() => {
@@ -314,8 +476,14 @@ export default function App() {
     [cancelAdvance],
   )
 
+  const handleL1Predicted = (prediction: Prediction) => {
+    setL1Prediction(prediction)
+    advanceDemoBeat('build')
+  }
+
   const handleRealityPredicted = (prediction: Prediction) => {
     setRealityPrediction(prediction)
+    realityR4.current = false
     void (async () => {
       try {
         const recorded = await recordPrediction(
@@ -338,6 +506,48 @@ export default function App() {
     { id: L1.twist.id, title: L1.twist.title, solo: false, input: snapshots[L1.twist.id] ?? null },
     { id: TRANSFER.id, title: TRANSFER.title, solo: true, input: snapshots[TRANSFER.id] ?? null },
   ]
+
+  // Scripted predictions, one stable object per stage: only active/paused/
+  // signal re-create them, so unrelated renders never restart demo beats.
+  const l1Demo = useMemo<PredictionDemo | undefined>(
+    () =>
+      demo.active
+        ? {
+            choice: DEMO_SCRIPT.firstPrediction.choice,
+            why: DEMO_SCRIPT.firstPrediction.why,
+            paused: demo.paused,
+            signal: demo.signal,
+            onTakeover: endDemoToManual,
+          }
+        : undefined,
+    [demo.active, demo.paused, demo.signal, endDemoToManual],
+  )
+  const realityDemo = useMemo<PredictionDemo | undefined>(
+    () =>
+      demo.active
+        ? {
+            choice: DEMO_SCRIPT.realityPrediction.choice,
+            why: DEMO_SCRIPT.realityPrediction.why,
+            paused: demo.paused,
+            signal: demo.signal,
+            onTakeover: endDemoToManual,
+          }
+        : undefined,
+    [demo.active, demo.paused, demo.signal, endDemoToManual],
+  )
+  const transferDemo = useMemo<PredictionDemo | undefined>(
+    () =>
+      demo.active
+        ? {
+            choice: DEMO_SCRIPT.soloPrediction.choice,
+            why: DEMO_SCRIPT.soloPrediction.why,
+            paused: demo.paused,
+            signal: demo.signal,
+            onTakeover: endDemoToManual,
+          }
+        : undefined,
+    [demo.active, demo.paused, demo.signal, endDemoToManual],
+  )
 
   const developerTools = (
     <div className="flex flex-col gap-4">
@@ -420,12 +630,25 @@ export default function App() {
     stage === 'reality-build' ||
     stage === 'transfer-build'
 
+  const demoBar = (
+    <DemoBar
+      demo={demo}
+      onPause={handleDemoPause}
+      onResume={handleDemoResume}
+      onSkip={handleDemoSkip}
+      onReplay={startDemo}
+      onManual={handleDemoManual}
+      onExit={handleDemoExit}
+    />
+  )
+
   return (
     <JourneyShell
       stage={stage}
-      auto={auto}
+      auto={auto && !demo.active}
       location={location}
       onNavigate={handleNavigate}
+      demoBar={demoBar}
       wide={contentWide}
       tools={
         <Suspense fallback={<p className="text-ink-muted text-sm">Preparing presenter controls…</p>}>
@@ -437,10 +660,7 @@ export default function App() {
         <LabIntro
           onEnter={() => setEntered(true)}
           onExploreLens={handleExploreLens}
-          onDemo={() => {
-            setAuto(true)
-            setEntered(true)
-          }}
+          onDemo={startDemo}
         />
       )}
       {stage === 'l1-predict' && (
@@ -448,7 +668,8 @@ export default function App() {
           challenge={L1}
           eyebrow="Predict · Light the bulb"
           coachLine="I'm your coach. Commit to a prediction first — I stay quiet until you've tested it."
-          onComplete={setL1Prediction}
+          onComplete={handleL1Predicted}
+          demo={l1Demo}
         />
       )}
       {stage === 'l1-build' && l1Prediction !== null && (
@@ -465,6 +686,10 @@ export default function App() {
             onEvidence={handleEvidence}
             prediction={l1Prediction}
             challenge={L1}
+            demoBuild={demo.active ? DEMO_SCRIPT.l1Build : null}
+            demoPaused={demo.paused}
+            demoSignal={demo.signal}
+            onDemoTakeover={endDemoToManual}
             gate={complete?.chapter === 'l1' ? gateNode : null}
           />
           </Suspense>
@@ -476,6 +701,7 @@ export default function App() {
           eyebrow="Reality Check · The open switch"
           coachLine="New circuit, same rule: predict first. If the model disagrees, I'll have one question for you."
           onComplete={handleRealityPredicted}
+          demo={realityDemo}
         />
       )}
       {stage === 'reality-build' && realityPrediction !== null && (
@@ -498,7 +724,11 @@ export default function App() {
             onEvidence={handleEvidence}
             prediction={realityPrediction}
             challenge={L1.twist}
-            autoDemonstrate={auto}
+            autoDemonstrate={auto && !demo.paused}
+            autoAsk={demo.active && !demo.paused}
+            demoSignal={demo.signal}
+            demoAutoUndo={demo.active && !demo.paused}
+            onDemoTakeover={endDemoToManual}
             gate={complete?.chapter === 'reality' ? gateNode : null}
           />
           </Suspense>
@@ -516,6 +746,7 @@ export default function App() {
             eyebrow="Solo · The second bulb"
             continueLabel="Continue to wire it"
             onComplete={setTransferPrediction}
+            demo={transferDemo}
           />
         </div>
       )}
@@ -542,6 +773,10 @@ export default function App() {
             prediction={transferPrediction}
             challenge={TRANSFER}
             solo
+            demoBuild={demo.active ? DEMO_SCRIPT.soloBuild : null}
+            demoPaused={demo.paused}
+            demoSignal={demo.signal}
+            onDemoTakeover={endDemoToManual}
             gate={complete?.chapter === 'transfer' ? gateNode : null}
           />
           </Suspense>
