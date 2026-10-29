@@ -161,6 +161,29 @@ pointer-only; palette buttons are keyboard-reachable but placement
 and wiring need a pointer. No keyboard trap was observed on the
 audited path.
 
+### Phase 1 shell verification — 2026-10-29 (uncommitted on 6632ad9)
+
+Backend 505, frontend 245 (9 new: shell location/nav, homepage
+copy), lint 0/0, build clean, committed browser smoke passed with
+no live calls. Homepage, lens page, and build stage inspected at
+1440×900, 1180×820, and 390×844 (`docs/demo/16–19`): two-column
+hero, one-line desktop nav, wrapped mobile nav, primary above the
+fold, 0px overflow everywhere. Keyboard reaches Hub → Guided Lab
+→ Lens (disabled Experiment skipped), `aria-current` marks Hub,
+all nav targets 44px, focus outline visible. Live example card
+shows pack-verified 0.6 A · 3.6 W; tab title, brand icon
+(200, 80 KB), and disabled Next badge asserted in smoke.
+
+Review corrections (same session): removed the duplicate LabNav
+strip (persistent nav is now the only in-lab nav; auto toggle
+lives in the drawer), fixed all 5 oxlint warnings to a true 0/0
+(homepage copy moved to `content/homepage.ts`, ladder memory
+writes via callback, dropped render-time netlist ref), and framed
+the header logo in an explicit badge with `object-contain`.
+Re-verified: backend 505, frontend 245, lint 0/0, build clean,
+full smoke passed including the mid-ladder excursion, 3 sizes
+re-shot (`16–19`).
+
 ### P1 final demo-path rehearsal — 2026-10-29 (same tree)
 
 Committed `scripts/smoke_browser.mjs`: PASSED on a deterministic
@@ -170,3 +193,33 @@ misconception path's R1 would attempt a live Meta call, spending
 credit and making the rehearsal nondeterministic. The judging
 environment has no key, so the fallback path rehearsed here is the
 exact demo path. No live coach calls were made in P1.
+
+## 8. Laboratory-phase acceptance (PRODUCT_PLAN §9)
+
+Phase 0 baseline (`6632ad9`, verified this session): backend 505,
+frontend 239, lint 0/0, production build clean, committed browser
+smoke passed with no live calls. Baseline screenshots in
+`docs/demo/` are current for the frozen tree.
+
+Phase 1 shell acceptance (all in the real browser unless noted):
+
+- Persistent shell on every view: logo + name, Laboratory/Hub,
+  Guided Lab, Experiment, Reality Lens entries, visible current
+  location, in-app back/forward, and a clear Return-to-laboratory
+  action — every major feature reachable without browser Back.
+- `document.title` is `Verityn Laboratory`; a site icon is served
+  and referenced (no 404 for the favicon request).
+- Exported logo assets exist at bounded sizes (nothing near the
+  1.7 MB source ships); header mark and homepage lockup render on
+  the dark UI without a raw white box.
+- 1440px, 1180px, and 390px: no major dead zones, no horizontal
+  overflow; mobile stacks; homepage two-column and lab workspace
+  use the wider frame.
+- Full existing journey still passes (`scripts/smoke_browser.mjs`
+  updated only for moved entries, never weakened): predict →
+  build → Reality Check → R1/R2/R4 → demo → solo → finale, zero
+  solo coach calls, benches hidden, lazy chunk loads.
+- Reality Lens page keeps its order (upload before samples),
+  confirm gate, and solver-backed proof values from a fresh run.
+- Headline `Make a prediction. Meet reality.` present; no
+  removed feature; unfinished shell work disabled or bypassable.

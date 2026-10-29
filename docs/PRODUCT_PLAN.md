@@ -188,3 +188,48 @@ a circuit, see deterministic evidence, understand the Meta AI contribution,
 complete one safe demonstration, finish a coach-free Solo transfer, and replay
 the journey. Every failure has a truthful recovery path, the exact build is
 committed, and the recorded demo matches the submitted build.
+
+## 9. Laboratory phase (headline: Make a prediction. Meet reality.)
+
+Verityn is an AI-guided STEM laboratory; circuits are the first complete
+laboratory, not the whole identity. This phase adds the product shell only —
+no new laboratories, no new AI capabilities, no solver changes.
+
+### Phase 0 — Baseline and protection (in progress)
+
+- [x] Freeze verified at `6632ad9`: backend 505, frontend 239, lint 0/0,
+  build clean, browser smoke passed, no live calls.
+- [x] Baseline screenshots current in `docs/demo/` (homepage shots
+  recaptured on the frozen tree; 12–15 cover the redesign).
+- [ ] Checkpoint commit for any Phase 0 doc updates (owner).
+- [x] Phase checklist recorded here; acceptance tests in TEST_PLAN §8.
+
+Phase 0 acceptance: the existing Predict → Build → Reality Check →
+Solo → Finale journey and Reality Lens keep working; nothing is
+deleted; unfinished Phase 1 work stays disabled or bypassable.
+
+### Phase 1 — Product shell and navigation (implemented, uncommitted)
+
+- [x] Persistent shell: logo + name, Laboratory/Hub, Guided Lab,
+  Experiment, Reality Lens, visible current location, in-app
+  back/forward, clear Return-to-laboratory action.
+- [x] Browser tab reads `Verityn Laboratory` (this supersedes the old
+  keep-`index.html`-separate rule).
+- [x] Logo assets exported from `VERITYN LOGO.jpeg` (untracked source
+  at repo root): header mark 81 KB, badged favicon + apple-touch
+  icon; no WebP (no encoder in the toolchain — PNG only).
+- [x] Responsive frame `max-w-7xl`: two-column homepage, full-width
+  lab workspace and lens page, stacked mobile. Canvas stages use
+  the wide frame with React Flow `fitView`; no separate side
+  column yet — evidence still stacks below the canvas.
+- [x] No major dead zones at 1440px, 1180px, and 390px; every major
+  feature reachable without browser Back.
+- [x] Existing feature components remain available; full gates +
+  smoke re-run and green before any further work.
+
+Phase 1 findings: leaving the journey unmounts its canvases, so
+shell/lens navigation clears any latched chapter gate — builds are
+re-verified on return while recorded predictions stand (smoke
+covers the rebuild-to-re-earn path). The M8 naming audit still
+bans bare `Meta AI` in shipped strings, so the homepage names the
+precise `Meta Muse Spark` component instead.

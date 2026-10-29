@@ -205,6 +205,7 @@ function CoachAsk({
   autoDemonstrate,
   contradicted,
   ladderMemory,
+  onLadderChange,
 }: {
   session: string | null
   /** Null only while no run has been judged; the ladder asks only when visible. */
@@ -223,6 +224,8 @@ function CoachAsk({
   contradicted: boolean
   /** Canvas-owned memory that rehydrates the ladder after a verdict-subtree remount. */
   ladderMemory: { current: LadderMemory }
+  /** Writes ladder progress back to canvas memory; the child never mutates the prop. */
+  onLadderChange: (memory: LadderMemory) => void
 }) {
   const [rungs, setRungs] = useState<LadderRung[]>(() => ladderMemory.current.rungs)
   const [status, setStatus] = useState<LadderStatus>({ phase: 'idle' })
@@ -238,8 +241,8 @@ function CoachAsk({
   useEffect(() => () => coachController.current?.abort(), [])
   useEffect(() => {
     rungsRef.current = rungs
-    ladderMemory.current = { rungs, drafts }
-  }, [rungs, drafts, ladderMemory])
+    onLadderChange({ rungs, drafts })
+  }, [rungs, drafts, onLadderChange])
   useEffect(() => {
     onActionsRef.current = onActions
     onDemonstrateRef.current = onDemonstrate
@@ -698,6 +701,7 @@ function ClaimVerdict({
   onActions,
   autoDemonstrate,
   ladderMemory,
+  onLadderChange,
 }: {
   state: VerdictState
   choice: Choice
@@ -713,13 +717,12 @@ function ClaimVerdict({
   onActions?: (actions: CoachServerAction[]) => void
   autoDemonstrate?: boolean
   ladderMemory: { current: LadderMemory }
+  onLadderChange: (memory: LadderMemory) => void
 }) {
   // The ladder stays mounted across idle/checking/done so served rungs survive
   // demonstration verdict flips; only the judged netlist is ever asked about.
-  const lastNetlist = useRef<Netlist | null>(null)
-  if (state.phase === 'done') {
-    lastNetlist.current = state.netlist
-  }
+  // The netlist is null while unjudged: the ladder can only ask when visible,
+  // and visibility implies a judged run, so no render-time memory is needed.
   const contradicted = state.phase === 'done' && state.verdict.status === 'CONTRADICTED'
   return (
     <>
@@ -755,7 +758,7 @@ function ClaimVerdict({
       {coachEnabled && (
         <CoachAsk
           session={session}
-          netlist={state.phase === 'done' ? state.netlist : lastNetlist.current}
+          netlist={state.phase === 'done' ? state.netlist : null}
           onResult={onCoached}
           onInteract={onCoachInteract}
           onActions={onActions}
@@ -764,6 +767,7 @@ function ClaimVerdict({
           autoDemonstrate={autoDemonstrate}
           contradicted={contradicted}
           ladderMemory={ladderMemory}
+          onLadderChange={onLadderChange}
         />
       )}
     </>
@@ -843,6 +847,9 @@ function CanvasInner({
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
   const ladderMemory = useRef<LadderMemory>({ rungs: [], drafts: {} })
+  const handleLadderChange = useCallback((memory: LadderMemory) => {
+    ladderMemory.current = memory
+  }, [])
   const [serverActions, setServerActions] = useState<CoachServerAction[]>([])
   const [demoEvents, setDemoEvents] = useState<DemoTraceEvent[]>([])
   const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
@@ -1412,6 +1419,8 @@ function CanvasInner({
             defaultEdgeOptions={{ type: 'smoothstep', style: FLOW_EDGE_STYLE }}
             snapToGrid
             snapGrid={[20, 20]}
+            fitView
+            fitViewOptions={{ padding: 0.2, maxZoom: 1.25 }}
             colorMode="dark"
             aria-label="Circuit canvas"
           >
@@ -1505,6 +1514,7 @@ function CanvasInner({
             onActions={setServerActions}
             autoDemonstrate={autoDemonstrate}
             ladderMemory={ladderMemory}
+            onLadderChange={handleLadderChange}
           />
         </div>
       )}

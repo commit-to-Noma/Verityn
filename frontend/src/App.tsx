@@ -23,7 +23,7 @@ import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
 import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
 import type { TraceInput } from './lessons/trace'
-import { stageFor, type Stage } from './journey/stages'
+import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
 
 /** Demo-mode auto-advance delays; manual mode shows the gate with no timer. */
 const ADVANCE_BEAT_MS = 4000
@@ -269,10 +269,36 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
-  /** Reality Lens is a first-class workspace, not a footer tool. */
+  /** Reality Lens is a first-class workspace, not a footer tool. Leaving the
+   * journey unmounts the canvases, so any latched gate is cleared: builds must
+   * be re-verified on return, while recorded predictions stand. */
   const jumpToLens = useCallback(() => {
+    cancelAdvance()
+    setComplete(null)
     setLensPage(true)
-  }, [])
+  }, [cancelAdvance])
+
+  const location = shellLocation(entered, lensPage)
+
+  /** Persistent shell navigation. Recorded predictions stand, but any latched
+   * gate is cleared: leaving unmounts the canvases, so builds are re-verified
+   * on return rather than advancing on unseen evidence. */
+  const handleNavigate = useCallback(
+    (target: ShellLocation) => {
+      cancelAdvance()
+      setComplete(null)
+      if (target === 'lens') {
+        setLensPage(true)
+      } else if (target === 'lab') {
+        setLensPage(false)
+        setEntered(true)
+      } else {
+        setLensPage(false)
+        setEntered(false)
+      }
+    },
+    [cancelAdvance],
+  )
 
   const handleExploreLens = useCallback(() => {
     jumpToLens()
@@ -343,7 +369,7 @@ export default function App() {
 
   if (lensPage) {
     return (
-      <JourneyShell stage="intro" auto={auto} tools={developerTools}>
+      <JourneyShell stage="intro" auto={auto} tools={developerTools} location="lens" onNavigate={handleNavigate} wide>
         <div className="flex flex-col gap-6">
           <button
             type="button"
@@ -388,30 +414,19 @@ export default function App() {
       />
     )
 
+  const contentWide =
+    stage === 'intro' ||
+    stage === 'l1-build' ||
+    stage === 'reality-build' ||
+    stage === 'transfer-build'
+
   return (
     <JourneyShell
       stage={stage}
       auto={auto}
-      nav={
-        <div className="border-glass-border flex flex-wrap items-center gap-x-5 gap-y-1 border-y py-1 text-sm">
-          <button
-            type="button"
-            onClick={jumpToLens}
-            className="text-flow min-h-[44px] font-medium underline-offset-4 hover:underline"
-          >
-            Reality Lens: turn a diagram into an experiment
-          </button>
-          <label className="text-ink-muted ml-auto flex min-h-[44px] cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={auto}
-              onChange={(event) => handleAutoToggle(event.target.checked)}
-              className="accent-flow h-5 w-5"
-            />
-            Auto-demo
-          </label>
-        </div>
-      }
+      location={location}
+      onNavigate={handleNavigate}
+      wide={contentWide}
       tools={
         <Suspense fallback={<p className="text-ink-muted text-sm">Preparing presenter controls…</p>}>
           {developerTools}

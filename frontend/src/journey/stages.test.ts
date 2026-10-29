@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JourneyState } from './stages'
-import { PROGRESS_STEPS, progressIndex, stageFor } from './stages'
+import { PROGRESS_STEPS, SHELL_NAV, progressIndex, shellLocation, stageFor } from './stages'
 
 const BASE: JourneyState = {
   entered: false,
@@ -74,6 +74,34 @@ describe('stageFor', () => {
     expect(
       stageFor({ ...BASE, entered: true, l1Prediction: true, transferStarted: true }),
     ).toBe('l1-build')
+  })
+})
+
+describe('shellLocation', () => {
+  it('maps entry and lens state onto hub, lab, and lens', () => {
+    expect(shellLocation(false, false)).toBe('hub')
+    expect(shellLocation(true, false)).toBe('lab')
+    expect(shellLocation(false, true)).toBe('lens')
+    expect(shellLocation(true, true)).toBe('lens')
+  })
+})
+
+describe('SHELL_NAV', () => {
+  it('exposes hub, lab, announced experiment, and lens in order', () => {
+    expect(SHELL_NAV.map((item) => item.label)).toEqual([
+      'Hub',
+      'Guided Lab',
+      'Experiment',
+      'Reality Lens',
+    ])
+    const experiment = SHELL_NAV.find((item) => item.id === 'experiment')
+    expect(experiment?.disabled).toBe(true)
+    expect(experiment?.badge).toBe('Next')
+    expect(SHELL_NAV.filter((item) => item.disabled !== true).map((item) => item.id)).toEqual([
+      'hub',
+      'lab',
+      'lens',
+    ])
   })
 })
 
