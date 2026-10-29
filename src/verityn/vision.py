@@ -155,7 +155,11 @@ _SYSTEM_PROMPT = (
     "parts use polarity null. Each connection must include "
     "evidence.region_id. Components use type battery|bulb|switch. "
     "Connections use from/to node plus terminal a|b and uncertain true "
-    "when unsure. Label each part's two terminals a and b consistently. "
+    "when unsure. Mark status ready only when every connection is "
+    "certain, every switch state is explicitly true or false, and "
+    "every battery polarity is determined. Otherwise mark the proposal "
+    "needs_review. Never invent missing information to obtain ready. "
+    "Label each part's two terminals a and b consistently. "
     "When the topology cannot be safely reconstructed, use unsupported "
     "with empty components and connections. Never invent parts that are not visible."
 )

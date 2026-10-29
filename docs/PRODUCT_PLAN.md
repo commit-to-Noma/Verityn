@@ -69,13 +69,13 @@ time to see the result.
 
 - [x] Complete a fresh live browser rehearsal against the current backend and
   frontend; record the result in [TEST_PLAN.md](./TEST_PLAN.md).
-- [ ] Run Reality Lens with the authorized network gate when available. If it
+- [x] Run Reality Lens with the authorized network gate when available. If it
   fails at transport, preserve the offline fixture and report that honestly.
 - [x] Check 1440×900, 1180×820, and narrow layouts; promote essential tools out
   of drawers that hide the first-run path.
 - [x] Verify every primary action has visible loading, empty, error, retry,
   disabled-reason, and success states.
-- [ ] Verify keyboard navigation, focus, reduced motion, contrast, and 44px
+- [x] Verify keyboard navigation, focus, reduced motion, contrast, and 44px
   touch targets in the actual browser.
 - [x] Capture prediction, contradiction, Reality Lens, demonstration, Solo, and
   finale screenshots.

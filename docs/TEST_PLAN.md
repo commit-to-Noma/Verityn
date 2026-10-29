@@ -91,7 +91,7 @@ measured; if P2/P4 ship, §4 defines their smaller replacements.
 
 ## 7. Rehearsal log
 
-### P0 judge-path rehearsal — 2026-10-29 (uncommitted tree on 2c81fae)
+### P0 judge-path rehearsal — 2026-10-29 (committed as 1da1665)
 
 Stack: current-tree Flask backend (:5050) + vite dev (:5174, proxy),
 fake coach only (no model key), headless Chrome over CDP.
@@ -124,6 +124,49 @@ Findings fixed in this round:
   honestly showed `Coach unavailable`). Restart it from the current
   tree before judging; nothing was changed to accommodate it.
 
-Not covered here: live vision upload (no key in this environment;
-lens verified via curated samples + the stubbed-proposal browser
-run), full keyboard/contrast audit, demo recording.
+Not covered here at P0 time: live vision upload (no key in this
+environment; lens verified via curated samples + the stubbed-proposal
+browser run), full keyboard/contrast audit, demo recording.
+
+### P1 live-vision upload — 2026-10-29 (same tree)
+
+One authorized `POST /api/vision/propose` with
+`tests/fixtures/sam_spike/05_textbook_simple..png` against the
+key-wired `:5001` backend. No retries.
+Result: HTTP 200, provider `meta-spark`, proposal `ready`: battery +
+bulb, polarity determined, 2 certain connections forming the loop,
+1 documented assumption (6 V). Matches the expected 05 structure.
+Two earlier attempts in this session returned `Vision unavailable`
+(key not wired into the backend process); both failed before any
+inference, so exactly one live vision request was spent here.
+
+### P1 accessibility audit — 2026-10-29 (same tree, throwaway `/tmp` driver)
+
+15/15 passed in headless Chrome against the current frontend:
+
+- Contrast (token pairs over `#0a0e1c`): body 16.44:1, muted
+  8.59:1, flow accents 10.95:1, on-accent button labels 10.95:1,
+  ok 10.00:1, bad 7.14:1 — all above WCAG AA.
+- Keyboard-only path hub → predict → answer (Space) → Why input →
+  Continue (Enter) → build works; every stop matches
+  `:focus-visible` with the 2px outline.
+- All visible build-stage buttons ≥ 44px; terminal handles ≥ 24px
+  (n=12, min=24, per the documented handle decision).
+- Emulated `prefers-reduced-motion` collapses the stage-enter
+  animation (1e-05s) and the app's global reduced-motion CSS
+  disables animated wire movement.
+
+Known limitation: dragging wires between terminals is
+pointer-only; palette buttons are keyboard-reachable but placement
+and wiring need a pointer. No keyboard trap was observed on the
+audited path.
+
+### P1 final demo-path rehearsal — 2026-10-29 (same tree)
+
+Committed `scripts/smoke_browser.mjs`: PASSED on a deterministic
+no-key stack (current tree, fake coach). Deliberately not run
+against the key-wired `:5001` backend: with a key present, the
+misconception path's R1 would attempt a live Meta call, spending
+credit and making the rehearsal nondeterministic. The judging
+environment has no key, so the fallback path rehearsed here is the
+exact demo path. No live coach calls were made in P1.

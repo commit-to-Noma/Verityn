@@ -552,3 +552,62 @@ def test_validate_proposal_rejects_unsupported_with_parts():
     proposal["status"] = "unsupported"
     with pytest.raises(coach.CoachProviderError):
         vision.validate_proposal(proposal)
+
+
+def test_validate_proposal_accepts_ready_open_switch():
+    proposal = copy.deepcopy(GOOD_PROPOSAL)
+    proposal["components"][1]["closed"] = False
+    for conn in proposal["connections"]:
+        conn["uncertain"] = False
+    proposal["status"] = "ready"
+    out = vision.validate_proposal(proposal)
+    assert out["components"][1]["closed"] is False
+    assert out["status"] == "ready"
+
+
+def test_system_prompt_states_readiness_rule():
+    prompt = vision._SYSTEM_PROMPT
+    for phrase in ("every connection is certain",
+                   "every switch state is explicitly true or false",
+                   "every battery polarity is determined",
+                   "Otherwise mark the proposal needs_review",
+                   "Never invent missing information to obtain ready"):
+        assert phrase in prompt, phrase
+
+
+def _switch_fixture():
+    from pathlib import Path
+    path = (Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+            / "vision_live" / "06_textbook_switch.proposal.json")
+    return json.loads(path.read_text())
+
+
+def test_switch_fixture_validates_needs_review():
+    doc = _switch_fixture()
+    assert doc["source"] == "live"
+    assert doc["model"] == "muse-spark-1.3"
+    assert doc["source_image"] == ("tests/fixtures/sam_spike/"
+                                   "06_textbook_switch.jpeg")
+    out = vision.validate_proposal(doc["proposal"])
+    assert out["status"] == "needs_review"
+    assert sorted(c["type"] for c in out["components"]) == [
+        "battery", "bulb", "switch"]
+    switch = next(c for c in out["components"]
+                  if c["type"] == "switch")
+    assert switch["closed"] is False
+    battery = next(c for c in out["components"]
+                   if c["type"] == "battery")
+    assert battery["polarity"] is None
+    assert len(out["connections"]) == 3
+
+
+def test_switch_fixture_topology_is_single_loop():
+    out = vision.validate_proposal(_switch_fixture()["proposal"])
+    endpoints = []
+    for conn in out["connections"]:
+        endpoints.append((conn["from"]["node"],
+                          conn["from"]["terminal"]))
+        endpoints.append((conn["to"]["node"], conn["to"]["terminal"]))
+    assert len(endpoints) == 6
+    assert len(set(endpoints)) == 6
+    assert len({node for node, _ in endpoints}) == 3
