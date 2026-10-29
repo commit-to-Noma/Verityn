@@ -67,17 +67,17 @@ time to see the result.
 
 ### Final polish still required
 
-- [ ] Complete a fresh live browser rehearsal against the current backend and
+- [x] Complete a fresh live browser rehearsal against the current backend and
   frontend; record the result in [TEST_PLAN.md](./TEST_PLAN.md).
 - [ ] Run Reality Lens with the authorized network gate when available. If it
   fails at transport, preserve the offline fixture and report that honestly.
-- [ ] Check 1440×900, 1180×820, and narrow layouts; promote essential tools out
+- [x] Check 1440×900, 1180×820, and narrow layouts; promote essential tools out
   of drawers that hide the first-run path.
-- [ ] Verify every primary action has visible loading, empty, error, retry,
+- [x] Verify every primary action has visible loading, empty, error, retry,
   disabled-reason, and success states.
 - [ ] Verify keyboard navigation, focus, reduced motion, contrast, and 44px
   touch targets in the actual browser.
-- [ ] Capture prediction, contradiction, Reality Lens, demonstration, Solo, and
+- [x] Capture prediction, contradiction, Reality Lens, demonstration, Solo, and
   finale screenshots.
 - [ ] Freeze copy and record a reliable 60–90 second demo with Auto-demo and
   the verified fixture as backup paths.
@@ -150,23 +150,23 @@ evidence instead.
 
 ### Automated gates
 
-- [ ] Backend suite passes; frontend suite passes.
-- [ ] Lint is 0 errors and 0 warnings; production build is clean.
-- [ ] Live smoke passes only in an explicitly network-capable environment,
+- [x] Backend suite passes; frontend suite passes.
+- [x] Lint is 0 errors and 0 warnings; production build is clean.
+- [x] Live smoke passes only in an explicitly network-capable environment,
   with no secrets or image bytes logged.
-- [ ] Browser smoke covers the complete journey and lazy Reality Lens chunk.
+- [x] Browser smoke covers the complete journey and lazy Reality Lens chunk.
 
 ### Manual judging rehearsal
 
-- [ ] Clean reload has an understandable mission.
-- [ ] Misconception path: predict lights → build → observe dark → understand
+- [x] Clean reload has an understandable mission.
+- [x] Misconception path: predict lights → build → observe dark → understand
   contradiction → ask coach → see evidence.
-- [ ] Consistent path remains accurate and does not invent contradiction.
-- [ ] Demonstration changes switch, bulb, current, and power together.
-- [ ] Reality Lens creates a reviewable editable model and requires confirmation.
-- [ ] Solo makes no coach request and explains why.
-- [ ] Replay is clean; Auto-demo is a backup, not the default.
-- [ ] Offline/fallback/error states are honest and recoverable.
+- [x] Consistent path remains accurate and does not invent contradiction.
+- [x] Demonstration changes switch, bulb, current, and power together.
+- [x] Reality Lens creates a reviewable editable model and requires confirmation.
+- [x] Solo makes no coach request and explains why.
+- [x] Replay is clean; Auto-demo is a backup, not the default.
+- [x] Offline/fallback/error states are honest and recoverable.
 
 ## 7. Explicitly deferred
 

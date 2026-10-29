@@ -268,7 +268,18 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
-  /** Homepage lens entry: enter the lab, open the tools, land on Snap & Build. */
+  /** Open the tools drawer and land on Snap & Build. Shared by homepage and lab nav. */
+  const jumpToLens = useCallback(() => {
+    const tools = document.querySelector('#lab-tools')
+    if (tools instanceof HTMLDetailsElement) {
+      tools.open = true
+    }
+    document
+      .querySelector('#snap-build-heading')
+      ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
+  }, [])
+
+  /** Homepage lens entry: enter the lab, then jump once the lab stage renders. */
   const handleExploreLens = useCallback(() => {
     lensJump.current = true
     setEntered(true)
@@ -279,14 +290,18 @@ export default function App() {
       return
     }
     lensJump.current = false
-    const tools = document.querySelector('#lab-tools')
-    if (tools instanceof HTMLDetailsElement) {
-      tools.open = true
-    }
-    document
-      .querySelector('#snap-build-heading')
-      ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' })
-  }, [stage])
+    jumpToLens()
+  }, [stage, jumpToLens])
+
+  const handleAutoToggle = useCallback(
+    (checked: boolean) => {
+      if (!checked) {
+        cancelAdvance()
+      }
+      setAuto(checked)
+    },
+    [cancelAdvance],
+  )
 
   const handleRealityPredicted = (prediction: Prediction) => {
     setRealityPrediction(prediction)
@@ -328,6 +343,26 @@ export default function App() {
     <JourneyShell
       stage={stage}
       auto={auto}
+      nav={
+        <div className="border-glass-border flex flex-wrap items-center gap-x-5 gap-y-1 border-y py-1 text-sm">
+          <button
+            type="button"
+            onClick={jumpToLens}
+            className="text-flow min-h-[44px] font-medium underline-offset-4 hover:underline"
+          >
+            Reality Lens: turn a diagram into an experiment
+          </button>
+          <label className="text-ink-muted ml-auto flex min-h-[44px] cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={auto}
+              onChange={(event) => handleAutoToggle(event.target.checked)}
+              className="accent-flow h-5 w-5"
+            />
+            Auto-demo
+          </label>
+        </div>
+      }
       tools={
         <Suspense fallback={<p className="text-ink-muted text-sm">Preparing optional lab tools…</p>}>
           <section aria-label="Learner tools" className="flex flex-col gap-2">
@@ -354,12 +389,7 @@ export default function App() {
               <input
                 type="checkbox"
                 checked={auto}
-                onChange={(event) => {
-                  if (!event.target.checked) {
-                    cancelAdvance()
-                  }
-                  setAuto(event.target.checked)
-                }}
+                onChange={(event) => handleAutoToggle(event.target.checked)}
                 className="h-5 w-5 accent-flow"
               />
               <span>

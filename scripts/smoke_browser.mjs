@@ -270,6 +270,17 @@ async function drive() {
   await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
   await clickButton('Show me the evidence (R2)')
   await waitFor(() => hasText('Evidence pointer'), 'r2', 20000)
+  check('listen button on coach card', await hasText('Listen'))
+
+  // Demo excursion mid-ladder: the served R1/R2 cards must survive the
+  // verdict flip, and R4 must still be the next rung after undo.
+  await clickButton('Show me')
+  await waitFor(() => hasText('Consistent with the model'), 'demo apply flips verdict', 25000)
+  check('demo apply shows fresh lit reading', await hasText('3.6 W'))
+  check('undo offered at canvas', await hasText('Undo demonstration'))
+  await clickButton('Undo demonstration')
+  await waitFor(() => hasText('Contradicted by the model'), 'demo undo restores', 25000)
+  check('undo restores dark reading', await hasText('0.0 W'))
   await clickButton('Confirm before solo (R4)')
   await waitFor(() => hasText('Confirmation check'), 'r4', 20000)
 
@@ -287,15 +298,6 @@ async function drive() {
   check('R2 cites 0.0 A discrepancy', typeof r2?.text === 'string' && r2.text.includes('0.0 A') && r2.text.includes('S1'))
   console.log('R2 text:', JSON.stringify(r2?.text))
   check('R2 carries validated actions', Array.isArray(r2?.actions) && r2.actions.some((a) => a.type === 'set_switch_state' && a.componentId === 'S1' && a.closed === true), JSON.stringify(r2?.actions))
-  check('listen button on coach card', await hasText('Listen'))
-
-  await clickButton('Show me')
-  await waitFor(() => hasText('Consistent with the model'), 'demo apply flips verdict', 25000)
-  check('demo apply shows fresh lit reading', await hasText('3.6 W'))
-  check('undo offered at canvas', await hasText('Undo demonstration'))
-  await clickButton('Undo demonstration')
-  await waitFor(() => hasText('Contradicted by the model'), 'demo undo restores', 25000)
-  check('undo restores dark reading', await hasText('0.0 W'))
 
   const coachCallsBeforeSolo = askRequestIds.length
   await clickButtonStarts('Continue to solo')

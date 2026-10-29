@@ -88,3 +88,42 @@ badges, second-opinion models, and any benchmark that requires live
 calls inside the suite. Slow-path rescue-rate and voice-accuracy
 benchmarks from earlier drafts are dropped with the features they
 measured; if P2/P4 ship, §4 defines their smaller replacements.
+
+## 7. Rehearsal log
+
+### P0 judge-path rehearsal — 2026-10-29 (uncommitted tree on 2c81fae)
+
+Stack: current-tree Flask backend (:5050) + vite dev (:5174, proxy),
+fake coach only (no model key), headless Chrome over CDP.
+Gates at rehearsal time: backend 505, frontend 239, lint 0/0, build clean.
+
+- Committed `scripts/smoke_browser.mjs`: PASSED — misconception path,
+  mid-ladder demo excursion (apply → Consistent 3.6 W → undo → dark)
+  with R1/R2 preserved, R4 served after undo, exactly 3 coach calls
+  in R1/R2/R4 order, zero solo coach calls, proof cards, drawer
+  sections, lazy lab chunk, 390px hub overflow 0px.
+- P0 rehearsal (throwaway `/tmp` driver): PASSED — LabNav lens link
+  and Auto-demo toggle visible in-lab; 12 screenshots in `docs/demo/`
+  (homepage, prediction, build-verified, contradiction,
+  demonstration, solo, finale, lens lab steps, lens sample overlay,
+  1180×820 tablet, 390×844 mobile); overflow 0px at 1180 and 390.
+- Replay ×2 + consistent path (throwaway driver): PASSED — replay
+  returns to a clean hub, prediction restarts unanswered
+  (Continue disabled), consistent reality verdict skips the coach.
+- Live `scripts/smoke_live.py`: SMOKE PASSED (ephemeral port).
+
+Findings fixed in this round:
+
+- Coach ladder reset to R1 when a demonstration flipped the verdict:
+  the verdict subtree remounts on every re-run. Served rungs and
+  reflection drafts now live in canvas-owned memory; the ladder keeps
+  a stable mount across idle/checking/done. The committed smoke runs
+  the demo excursion mid-ladder as the regression guard.
+- The long-running judging backend on :5000 was stale (R1 responses
+  lacked the `actions` key the current frontend requires; the UI
+  honestly showed `Coach unavailable`). Restart it from the current
+  tree before judging; nothing was changed to accommodate it.
+
+Not covered here: live vision upload (no key in this environment;
+lens verified via curated samples + the stubbed-proposal browser
+run), full keyboard/contrast audit, demo recording.

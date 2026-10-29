@@ -159,6 +159,13 @@ interface LadderRung {
   actions: CoachServerAction[]
 }
 
+/** Served ladder cards + reflection drafts, kept above the verdict subtree so a
+ * re-run (demonstration apply/undo, re-test) never wipes the learner's ladder. */
+interface LadderMemory {
+  rungs: LadderRung[]
+  drafts: Record<string, string>
+}
+
 type LadderStatus =
   | { phase: 'idle' }
   | { phase: 'asking'; rung: string }
@@ -196,9 +203,12 @@ function CoachAsk({
   demonstration,
   onDemonstrate,
   autoDemonstrate,
+  contradicted,
+  ladderMemory,
 }: {
   session: string | null
-  netlist: Netlist
+  /** Null only while no run has been judged; the ladder asks only when visible. */
+  netlist: Netlist | null
   onResult?: (outcome: CoachTraceOutcome) => void
   /** Fired when the learner starts reflecting, so demo mode holds. */
   onInteract?: () => void
@@ -209,14 +219,18 @@ function CoachAsk({
   onDemonstrate?: (demo: Demonstration) => void
   /** Presenter mode: auto-apply a valid demonstration after a preview beat. */
   autoDemonstrate?: boolean
+  /** False hides the ladder without unmounting, so served rungs survive verdict flips. */
+  contradicted: boolean
+  /** Canvas-owned memory that rehydrates the ladder after a verdict-subtree remount. */
+  ladderMemory: { current: LadderMemory }
 }) {
-  const [rungs, setRungs] = useState<LadderRung[]>([])
+  const [rungs, setRungs] = useState<LadderRung[]>(() => ladderMemory.current.rungs)
   const [status, setStatus] = useState<LadderStatus>({ phase: 'idle' })
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [drafts, setDrafts] = useState<Record<string, string>>(() => ladderMemory.current.drafts)
   const [demoDismissed, setDemoDismissed] = useState(false)
   const [demoDone, setDemoDone] = useState(false)
   const coachController = useRef<AbortController | null>(null)
-  const rungsRef = useRef<LadderRung[]>([])
+  const rungsRef = useRef<LadderRung[]>(ladderMemory.current.rungs)
   const onActionsRef = useRef(onActions)
   const onDemonstrateRef = useRef(onDemonstrate)
   const demonstratedRef = useRef<Demonstration | null | undefined>(demonstration)
@@ -224,7 +238,8 @@ function CoachAsk({
   useEffect(() => () => coachController.current?.abort(), [])
   useEffect(() => {
     rungsRef.current = rungs
-  }, [rungs])
+    ladderMemory.current = { rungs, drafts }
+  }, [rungs, drafts, ladderMemory])
   useEffect(() => {
     onActionsRef.current = onActions
     onDemonstrateRef.current = onDemonstrate
@@ -287,6 +302,9 @@ function CoachAsk({
       const message = 'The prediction was not recorded, so no coaching was served.'
       setStatus({ phase: 'error', rung, message })
       onResult?.({ phase: 'unavailable', message })
+      return
+    }
+    if (netlist === null) {
       return
     }
     coachController.current?.abort()
@@ -353,6 +371,10 @@ function CoachAsk({
 
   const served = new Set(rungs.map((card) => card.rung))
   const nextRung: string | null = RUNGS.find((rung) => !served.has(rung)) ?? null
+
+  if (!contradicted) {
+    return null
+  }
 
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
@@ -597,6 +619,71 @@ function StartVerdict({
   )
 }
 
+/** Prediction-vs-observed card for a judged run. Extracted so the coach ladder below
+ * it keeps its own mount across verdict re-checks. */
+function DoneVerdictCard({
+  state,
+  observed,
+}: {
+  state: Extract<VerdictState, { phase: 'done' }>
+  /** Solver measurement for the claimed component, when the run solved. */
+  observed?: { current: number; power: number }
+}) {
+  // Never headline the learner's claim on its own: after a failed
+  // prediction the claim text ("L1 lights") would contradict the
+  // observed evidence shown beside it. Both sides stay explicit.
+  const predictionText =
+    state.claim.type === 'lit'
+      ? state.claim.value
+        ? `${state.claim.component} lights`
+        : `${state.claim.component} stays dark`
+      : 'Prediction checked'
+  const observedText =
+    observed === undefined || state.claim.type !== 'lit'
+      ? null
+      : observed.power > LIT_POWER_W
+        ? `${state.claim.component} lights`
+        : `${state.claim.component} stays dark`
+  return (
+    <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
+      <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
+        Repaired setup evidence
+      </p>
+      <div className="flex items-center gap-3">
+        <VerdictIcon status={state.verdict.status} />
+        <div>
+          <p className="text-base font-medium text-ink">{VERDICT_LABELS[state.verdict.status]}</p>
+          <p className="text-ink-muted text-sm">
+            <span className="font-medium text-ink">Your prediction:</span> {predictionText}
+          </p>
+          {observed !== undefined && observedText !== null && (
+            <p className="text-ink-muted text-sm">
+              <span className="font-medium text-ink">Observed:</span> {observedText}
+              {' · '}
+              <ReadoutValue value={observed.current} unit="A" />
+              {' · '}
+              <ReadoutValue value={observed.power} unit="W" />
+            </p>
+          )}
+        </div>
+      </div>
+      {Object.entries(state.verdict.evidence).map(([key, power]) => {
+        const [cid] = key.split('.')
+        return (
+          <p key={key} className="text-ink-muted pl-9 text-sm">
+            <span className="font-mono">{cid}</span>
+            {' · '}
+            <ReadoutValue value={power} unit="W" />
+          </p>
+        )
+      })}
+      <p className="text-ink-muted pl-9 text-xs">
+        This tests your prediction against the model, not you.
+      </p>
+    </div>
+  )
+}
+
 function ClaimVerdict({
   state,
   choice,
@@ -610,6 +697,7 @@ function ClaimVerdict({
   onDemonstrate,
   onActions,
   autoDemonstrate,
+  ladderMemory,
 }: {
   state: VerdictState
   choice: Choice
@@ -624,109 +712,61 @@ function ClaimVerdict({
   onDemonstrate?: (demo: Demonstration) => void
   onActions?: (actions: CoachServerAction[]) => void
   autoDemonstrate?: boolean
+  ladderMemory: { current: LadderMemory }
 }) {
-  if (state.phase === 'idle') {
-    return (
-      <div className="glass-panel p-4" aria-live="polite">
-        <p className="text-ink-muted text-sm">
-          {choice === 'not_sure'
-            ? 'You chose Not sure, so there is no definite prediction to check.'
-            : 'This prediction cannot be checked yet.'}
-        </p>
-      </div>
-    )
-  }
-  if (state.phase === 'checking') {
-    return (
-      <div className="glass-panel flex items-center gap-3 p-4" aria-live="polite">
-        <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
-        <p className="text-ink-muted text-sm">Checking your prediction against the model…</p>
-      </div>
-    )
-  }
+  // The ladder stays mounted across idle/checking/done so served rungs survive
+  // demonstration verdict flips; only the judged netlist is ever asked about.
+  const lastNetlist = useRef<Netlist | null>(null)
   if (state.phase === 'done') {
-    // Never headline the learner's claim on its own: after a failed
-    // prediction the claim text ("L1 lights") would contradict the
-    // observed evidence shown beside it. Both sides stay explicit.
-    const predictionText =
-      state.claim.type === 'lit'
-        ? state.claim.value
-          ? `${state.claim.component} lights`
-          : `${state.claim.component} stays dark`
-        : 'Prediction checked'
-    const observedText =
-      observed === undefined || state.claim.type !== 'lit'
-        ? null
-        : observed.power > LIT_POWER_W
-          ? `${state.claim.component} lights`
-          : `${state.claim.component} stays dark`
-    return (
-      <>
-        <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
-          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
-            Repaired setup evidence
-          </p>
-          <div className="flex items-center gap-3">
-            <VerdictIcon status={state.verdict.status} />
-            <div>
-              <p className="text-base font-medium text-ink">
-                {VERDICT_LABELS[state.verdict.status]}
-              </p>
-              <p className="text-ink-muted text-sm">
-                <span className="font-medium text-ink">Your prediction:</span> {predictionText}
-              </p>
-              {observed !== undefined && observedText !== null && (
-                <p className="text-ink-muted text-sm">
-                  <span className="font-medium text-ink">Observed:</span> {observedText}
-                  {' · '}
-                  <ReadoutValue value={observed.current} unit="A" />
-                  {' · '}
-                  <ReadoutValue value={observed.power} unit="W" />
-                </p>
-              )}
-            </div>
-          </div>
-          {Object.entries(state.verdict.evidence).map(([key, power]) => {
-            const [cid] = key.split('.')
-            return (
-              <p key={key} className="text-ink-muted pl-9 text-sm">
-                <span className="font-mono">{cid}</span>
-                {' · '}
-                <ReadoutValue value={power} unit="W" />
-              </p>
-            )
-          })}
-          <p className="text-ink-muted pl-9 text-xs">
-            This tests your prediction against the model, not you.
+    lastNetlist.current = state.netlist
+  }
+  const contradicted = state.phase === 'done' && state.verdict.status === 'CONTRADICTED'
+  return (
+    <>
+      {state.phase === 'idle' && (
+        <div className="glass-panel p-4" aria-live="polite">
+          <p className="text-ink-muted text-sm">
+            {choice === 'not_sure'
+              ? 'You chose Not sure, so there is no definite prediction to check.'
+              : 'This prediction cannot be checked yet.'}
           </p>
         </div>
-        {coachEnabled && state.verdict.status === 'CONTRADICTED' && (
-          <CoachAsk
-            session={session}
-            netlist={state.netlist}
-            onResult={onCoached}
-            onInteract={onCoachInteract}
-            onActions={onActions}
-            demonstration={demonstration}
-            onDemonstrate={onDemonstrate}
-            autoDemonstrate={autoDemonstrate}
-          />
-        )}
-      </>
-    )
-  }
-  return (
-    <div className="glass-panel flex items-center gap-3 p-4" role="alert">
-      <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
-      <p className="min-w-0 flex-1 text-base">{state.message}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
-      >
-        Retry
-      </button>
-    </div>
+      )}
+      {state.phase === 'checking' && (
+        <div className="glass-panel flex items-center gap-3 p-4" aria-live="polite">
+          <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+          <p className="text-ink-muted text-sm">Checking your prediction against the model…</p>
+        </div>
+      )}
+      {state.phase === 'done' && <DoneVerdictCard state={state} observed={observed} />}
+      {state.phase === 'error' && (
+        <div className="glass-panel flex items-center gap-3 p-4" role="alert">
+          <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-base">{state.message}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {coachEnabled && (
+        <CoachAsk
+          session={session}
+          netlist={state.phase === 'done' ? state.netlist : lastNetlist.current}
+          onResult={onCoached}
+          onInteract={onCoachInteract}
+          onActions={onActions}
+          demonstration={demonstration}
+          onDemonstrate={onDemonstrate}
+          autoDemonstrate={autoDemonstrate}
+          contradicted={contradicted}
+          ladderMemory={ladderMemory}
+        />
+      )}
+    </>
   )
 }
 
@@ -802,6 +842,7 @@ function CanvasInner({
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
+  const ladderMemory = useRef<LadderMemory>({ rungs: [], drafts: {} })
   const [serverActions, setServerActions] = useState<CoachServerAction[]>([])
   const [demoEvents, setDemoEvents] = useState<DemoTraceEvent[]>([])
   const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
@@ -1383,6 +1424,11 @@ function CanvasInner({
           </div>
         )}
       </div>
+      {simulateLocked !== null && (
+        <p className="text-ink-muted text-sm" role="note">
+          {simulateLocked}
+        </p>
+      )}
       <div className="flex gap-2">
         <button
           type="button"
@@ -1444,7 +1490,7 @@ function CanvasInner({
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
       {choice && claim && runState.phase === 'done' && runState.result.ok && (
-        <div key={verdictState.phase} className="evidence-reveal flex flex-col gap-4">
+        <div className="evidence-reveal flex flex-col gap-4">
           <ClaimVerdict
             state={verdictState}
             choice={choice}
@@ -1458,6 +1504,7 @@ function CanvasInner({
             onDemonstrate={handleDemonstrate}
             onActions={setServerActions}
             autoDemonstrate={autoDemonstrate}
+            ladderMemory={ladderMemory}
           />
         </div>
       )}

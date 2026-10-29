@@ -10,11 +10,13 @@ export default function JourneyShell({
   auto,
   children,
   tools,
+  nav,
 }: {
   stage: Stage
   auto: boolean
   children: ReactNode
   tools: ReactNode
+  nav?: ReactNode
 }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-8 px-4 pb-12">
@@ -30,6 +32,7 @@ export default function JourneyShell({
           <HealthStatus compact />
         </div>
       </header>
+      {stage !== 'intro' && nav != null && <nav aria-label="Lab sections">{nav}</nav>}
       <main key={stage} className="stage-enter flex flex-col">
         {children}
       </main>

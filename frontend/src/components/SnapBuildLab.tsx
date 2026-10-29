@@ -19,6 +19,7 @@ import {
   reviewSummary,
   type RevealStep,
 } from '../vision/review'
+import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
 
 /** Lens overlay splits out: only loaded when a sample opens. */
@@ -56,19 +57,24 @@ function ReviewPanels({
   size,
   result,
   nonce,
+  confirmed,
+  onConfirm,
+  onTested,
   onReset,
 }: {
   image: string
   size: ImageGeometry
   result: VisionProposeResult
   nonce: number
+  confirmed: boolean
+  onConfirm: () => void
+  onTested: () => void
   onReset: () => void
 }) {
   const proposal = result.proposal
   const [view, setView] = useState<ViewMode>('compare')
   const [selection, setSelection] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
-  const [confirmed, setConfirmed] = useState(false)
   const [corrected, setCorrected] = useState(false)
   const [reveal, setReveal] = useState<RevealStep>(() => (reducedMotion() ? 'review' : 'image'))
   const replicaRef = useRef<HTMLDivElement | null>(null)
@@ -331,6 +337,7 @@ function ReviewPanels({
                 peerSelection={selection}
                 onPeerSelect={setSelection}
                 onDirty={() => setCorrected(true)}
+                onSolved={() => onTested()}
               />
             )}
           </div>
@@ -347,7 +354,7 @@ function ReviewPanels({
             type="button"
             onClick={() => {
               interrupt()
-              setConfirmed(true)
+              onConfirm()
             }}
             className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
           >
@@ -385,6 +392,8 @@ function ReviewPanels({
 export default function SnapBuildLab() {
   const [lensSample, setLensSample] = useState<LensSample | null>(null)
   const [state, setState] = useState<LabState>({ phase: 'idle' })
+  const [confirmed, setConfirmed] = useState(false)
+  const [tested, setTested] = useState(false)
   const controller = useRef<AbortController | null>(null)
   const nonce = useRef(0)
 
@@ -442,6 +451,8 @@ export default function SnapBuildLab() {
           return
         }
         nonce.current += 1
+        setConfirmed(false)
+        setTested(false)
         setState({ phase: 'proposed', image, size, result, nonce: nonce.current })
       } catch (err) {
         if (next.signal.aborted) {
@@ -463,8 +474,12 @@ export default function SnapBuildLab() {
 
   const reset = () => {
     controller.current?.abort()
+    setConfirmed(false)
+    setTested(false)
     setState({ phase: 'idle' })
   }
+
+  const steps = lensSteps(state.phase === 'proposed', confirmed, tested)
 
   return (
     <section aria-labelledby="snap-build-heading" className="flex flex-col gap-4">
@@ -482,10 +497,29 @@ export default function SnapBuildLab() {
           Photograph a schematic, inspect what the vision model proposes, and load it to the
           canvas only when you confirm. Nothing proposed is simulated until you test it.
         </p>
-        <p className="mt-1 text-sm font-medium">
-          Upload diagram <span aria-hidden="true">→</span> Review detected circuit{' '}
-          <span aria-hidden="true">→</span> Confirm and simulate
-        </p>
+        <ol aria-label="Reality Lens progress" className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          {LENS_STEP_LABELS.map((label, index) => {
+            const stepState = steps[index] ?? 'todo'
+            return (
+              <li
+                key={label}
+                aria-current={stepState === 'current' ? 'step' : undefined}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  stepState === 'done'
+                    ? 'border-ok/60 text-ink'
+                    : stepState === 'current'
+                      ? 'border-flow/60 text-ink'
+                      : 'border-glass-border text-ink-muted'
+                }`}
+              >
+                <span aria-hidden="true">
+                  {stepState === 'done' ? '✓' : `${index + 1}`}
+                </span>
+                {label}
+              </li>
+            )
+          })}
+        </ol>
       </div>
       <div className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
@@ -581,6 +615,9 @@ export default function SnapBuildLab() {
             size={state.size}
             result={state.result}
             nonce={state.nonce}
+            confirmed={confirmed}
+            onConfirm={() => setConfirmed(true)}
+            onTested={() => setTested(true)}
             onReset={reset}
           />
         </div>
