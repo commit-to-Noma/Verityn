@@ -1,5 +1,6 @@
 import type { ChapterRecap } from '../journey/story'
 import { learningProgress, MISSING_CHAPTER } from '../journey/story'
+import { L1 } from '../lessons/l1'
 import { netlistPreviewSeed } from '../canvas/netlistPreview'
 import CircuitPreview from './CircuitPreview'
 import EvidenceTrace from './EvidenceTrace'
@@ -9,11 +10,13 @@ import JourneyStory from './JourneyStory'
 export default function JourneyFinale({
   chapters,
   onTryLab,
+  onReplayDemo,
   onReturnHub,
   onExploreLens,
 }: {
   chapters: ChapterRecap[]
   onTryLab: () => void
+  onReplayDemo: () => void
   onReturnHub: () => void
   onExploreLens: () => void
 }) {
@@ -45,28 +48,45 @@ export default function JourneyFinale({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
         <article className="glass-panel flex min-w-0 flex-col gap-3 p-4">
           <div>
-            <h3 className="font-semibold">Your solo circuit</h3>
+            <h3 className="font-semibold">See what changed</h3>
             <p className="text-ink-muted mt-1 text-sm">
-              {verifiedTransfer
-                ? 'Both bulbs lit in the simulator, with the coach off.'
-                : 'The completed circuit diagram appears after a verified solo run.'}
+              Compare the first open gap with the circuit you built independently.
             </p>
           </div>
-          {verifiedTransfer ? (
-            <CircuitPreview
-              seed={previewSeed}
-              label="Reconstructed solo circuit from the tested wiring"
-              result={transfer.result}
-              className="h-[300px] sm:h-[380px]"
-            />
-          ) : (
-            <div
-              aria-label="Verified solo circuit unavailable"
-              className="canvas-grid flex min-h-56 items-center justify-center rounded-2xl border border-glass-border p-6 text-center text-sm text-ink-muted"
-            >
-              {MISSING_CHAPTER}
-            </div>
-          )}
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+            <section className="min-w-0" aria-label="Starting circuit">
+              <h4 className="mb-1 text-sm font-semibold">Start · open gap</h4>
+              <p className="mb-2 text-xs text-ink-muted">One bulb, with a loose terminal.</p>
+              <CircuitPreview
+                seed={L1.seed}
+                label="Starting circuit with one bulb and an open gap"
+                className="h-[190px] sm:h-[230px]"
+              />
+            </section>
+            <section className="min-w-0" aria-label="Independent solo circuit">
+              <h4 className="mb-1 text-sm font-semibold">Your solo test · complete loop</h4>
+              <p className="mb-2 text-xs text-ink-muted">
+                {verifiedTransfer
+                  ? 'Your tested two-bulb circuit, with the coach off.'
+                  : 'Available after a verified solo run.'}
+              </p>
+              {verifiedTransfer ? (
+                <CircuitPreview
+                  seed={previewSeed}
+                  label="Reconstructed solo circuit from the tested wiring"
+                  result={transfer.result}
+                  className="h-[190px] sm:h-[230px]"
+                />
+              ) : (
+                <div
+                  aria-label="Verified solo circuit unavailable"
+                  className="canvas-grid flex h-[190px] items-center justify-center rounded-2xl border border-glass-border p-6 text-center text-sm text-ink-muted sm:h-[230px]"
+                >
+                  {MISSING_CHAPTER}
+                </div>
+              )}
+            </section>
+          </div>
           {verifiedTransfer && transfer?.result !== null && transfer?.result !== undefined && (
             <div className="flex flex-wrap gap-2" aria-label="Final circuit measurements">
               {Object.entries(transfer.result.components)
@@ -81,9 +101,12 @@ export default function JourneyFinale({
                 ))}
             </div>
           )}
+          <p className="rounded-xl border border-flow/30 bg-flow/5 p-3 text-sm text-ink">
+            Reflection: Which connection brought the second bulb into the complete path, and what readings support your conclusion?
+          </p>
           {verifiedTransfer && (
             <p className="text-ink-muted text-xs">
-              Circuit layout is rearranged for readability. Its parts and connections come from your tested run.
+              Circuit layout is rearranged for readability. The solo diagram’s parts and connections come from your tested run.
             </p>
           )}
         </article>
@@ -132,14 +155,14 @@ export default function JourneyFinale({
               onClick={onTryLab}
               className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
             >
-              Try another guided lab
+              Start a new guided run
             </button>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={onReplayDemo}
               className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
             >
-              Replay journey
+              Replay guided demo
             </button>
             <button
               type="button"

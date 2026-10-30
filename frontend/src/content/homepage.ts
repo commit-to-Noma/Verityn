@@ -6,7 +6,8 @@ export const HOMEPAGE_SUBHEAD =
   'Explore four STEM disciplines through interactive labs. Circuits are our first live Engineering module.'
 
 export const HOMEPAGE_ENTRIES = {
-  demo: 'Play the guided demo',
+  demo: 'Watch the guided walkthrough',
+  startLab: 'Start your own lab',
   laboratory: 'Explore the laboratory',
   tools: 'Explore the five tools',
   realityLens: 'Open Reality Lens',
@@ -37,7 +38,7 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
       'Predict, build, and test a circuit against measured results.',
     evidence: 'Predict → Build → Reality Check → Solo',
     details: ['Engineering · Module 1', 'Solver-verified'],
-    actionLabel: 'Enter Guided Lab',
+    actionLabel: HOMEPAGE_ENTRIES.startLab,
     action: 'lab',
   },
   {

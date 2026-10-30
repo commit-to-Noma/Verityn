@@ -400,7 +400,7 @@ function STEMOrbit({
             onClick={onEnterEngineering}
             className="bg-flow text-on-accent min-h-[44px] shrink-0 rounded-[10px] px-4 text-sm font-semibold"
           >
-            Start circuit lab <span aria-hidden="true">→</span>
+            {HOMEPAGE_ENTRIES.startLab} <span aria-hidden="true">→</span>
           </button>
         )}
       </div>
@@ -419,11 +419,17 @@ export default function LabIntro({
   onExperiment,
   onExploreLens,
   onDemo,
+  resumeAvailable = false,
+  onResume,
+  storageNotice,
 }: {
   onEnter: () => void
   onExperiment: () => void
   onExploreLens: () => void
   onDemo: () => void
+  resumeAvailable?: boolean
+  onResume?: () => void
+  storageNotice?: string | null
 }) {
   const handleStation = (station: LaboratoryStation) => {
     if (station.action === 'lab') {
@@ -449,10 +455,26 @@ export default function LabIntro({
           </h2>
           <p className="max-w-md text-base text-ink-muted">{HOMEPAGE_SUBHEAD}</p>
           <div className="flex flex-wrap gap-3">
+            {resumeAvailable && onResume !== undefined && (
+              <button
+                type="button"
+                onClick={onResume}
+                className="border-glass-border flex min-h-[48px] items-center rounded-[12px] border px-5 text-sm font-semibold text-ink transition-colors hover:bg-glass/60 focus-visible:outline-2 focus-visible:outline-flow"
+              >
+                Resume saved lab
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onEnter}
+              className="bg-flow text-on-accent flex min-h-[48px] items-center rounded-[12px] px-5 text-sm font-semibold shadow-[0_0_24px_rgb(56_214_233/0.18)]"
+            >
+              {HOMEPAGE_ENTRIES.startLab}
+            </button>
             <button
               type="button"
               onClick={onDemo}
-              className="bg-flow text-on-accent flex min-h-[48px] items-center gap-2 rounded-[12px] px-6 text-sm font-semibold shadow-[0_0_24px_rgb(56_214_233/0.18)]"
+              className="border-glass-border flex min-h-[48px] items-center gap-2 rounded-[12px] border px-5 text-sm font-semibold text-ink transition-colors hover:bg-glass/60 focus-visible:outline-2 focus-visible:outline-flow"
             >
               <Play className="h-4 w-4" aria-hidden="true" />
               {HOMEPAGE_ENTRIES.demo}
@@ -465,6 +487,19 @@ export default function LabIntro({
               {HOMEPAGE_ENTRIES.tools}
             </button>
           </div>
+          {resumeAvailable && (
+            <p className="max-w-md text-sm text-ink-muted">
+              Progress is saved only in this browser. Resume the last step, or start a fresh run; unfinished circuits restart from their lesson setup.
+            </p>
+          )}
+          <p className="max-w-md text-sm text-ink-muted">
+            The walkthrough runs through a sample journey automatically. Start your own lab to make predictions and build each circuit yourself.
+          </p>
+          {storageNotice && (
+            <p className="max-w-md text-sm text-unsure" role="status">
+              {storageNotice}
+            </p>
+          )}
         </div>
         <STEMOrbit onEnterEngineering={onEnter} />
       </div>

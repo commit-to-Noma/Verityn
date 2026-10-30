@@ -29,6 +29,14 @@ import type { Prediction } from './lessons/lesson'
 import { matchesExpected } from './lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
+import {
+  JOURNEY_PROGRESS_VERSION,
+  clearJourneyCheckpoint,
+  readJourneyCheckpoint,
+  saveJourneyCheckpoint,
+  type CheckpointRead,
+  type JourneyCheckpoint,
+} from './journey/progressStorage'
 
 /** Demo-mode auto-advance delays; manual mode shows the gate with no timer. */
 const ADVANCE_BEAT_MS = 4000
@@ -48,6 +56,33 @@ interface ChapterGate {
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+function readBrowserCheckpoint(): CheckpointRead {
+  try {
+    return readJourneyCheckpoint(window.localStorage)
+  } catch {
+    return { status: 'unavailable', checkpoint: null }
+  }
+}
+
+function saveBrowserCheckpoint(checkpoint: CheckpointRead['checkpoint']): boolean {
+  if (checkpoint === null) {
+    return false
+  }
+  try {
+    return saveJourneyCheckpoint(window.localStorage, checkpoint)
+  } catch {
+    return false
+  }
+}
+
+function clearBrowserCheckpoint(): boolean {
+  try {
+    return clearJourneyCheckpoint(window.localStorage)
+  } catch {
+    return false
+  }
 }
 
 const STAGE_CONTENT: Record<Stage, null> = {
@@ -72,6 +107,8 @@ export default function App() {
   const [transferPrediction, setTransferPrediction] = useState<Prediction | null>(null)
   const [transferDone, setTransferDone] = useState(false)
   const [snapshots, setSnapshots] = useState<Record<string, TraceInput>>({})
+  const [checkpointRead, setCheckpointRead] = useState(readBrowserCheckpoint)
+  const [resumedCheckpoint, setResumedCheckpoint] = useState(false)
   const [complete, setComplete] = useState<ChapterGate | null>(null)
   const [auto, setAuto] = useState(() => new URLSearchParams(window.location.search).has('auto'))
   const [autoPending, setAutoPending] = useState(false)
@@ -85,6 +122,7 @@ export default function App() {
   const autoRef = useRef(auto)
   const demoRef = useRef(demo)
   const completeRef = useRef(complete)
+  const checkpointSaveFailed = useRef(false)
   /** Pre-demo auto switch, restored when the demo ends or hands over. */
   const autoBeforeDemo = useRef(false)
   /** The demo gate waits for R4; the presenter fallback keeps its old beat. */
@@ -94,6 +132,46 @@ export default function App() {
     demoRef.current = demo
     completeRef.current = complete
   })
+
+  useEffect(() => {
+    if (demo.active) {
+      checkpointSaveFailed.current = !clearBrowserCheckpoint()
+      return
+    }
+    const hasJourney =
+      entered ||
+      l1Prediction !== null ||
+      realityPrediction !== null ||
+      transferPrediction !== null ||
+      Object.keys(snapshots).length > 0
+    if (!hasJourney) {
+      return
+    }
+    const checkpoint: JourneyCheckpoint = {
+      version: JOURNEY_PROGRESS_VERSION,
+      savedAt: Date.now(),
+      l1Prediction,
+      realityStarted,
+      realityPrediction,
+      realitySession,
+      transferStarted,
+      transferPrediction,
+      transferDone,
+      snapshots,
+    }
+    checkpointSaveFailed.current = !saveBrowserCheckpoint(checkpoint)
+  }, [
+    demo.active,
+    entered,
+    l1Prediction,
+    realityStarted,
+    realityPrediction,
+    realitySession,
+    transferStarted,
+    transferPrediction,
+    transferDone,
+    snapshots,
+  ])
 
   const cancelAdvance = useCallback(() => {
     if (advanceTimer.current !== null) {
@@ -314,6 +392,26 @@ export default function App() {
     cancelAdvance()
   }, [cancelAdvance])
 
+  const handleResumeJourney = useCallback(() => {
+    const checkpoint = checkpointRead.checkpoint
+    if (checkpoint === null) {
+      return
+    }
+    setL1Prediction(checkpoint.l1Prediction)
+    setRealityStarted(checkpoint.realityStarted)
+    setRealityPrediction(checkpoint.realityPrediction)
+    setRealitySession(checkpoint.realitySession)
+    setTransferStarted(checkpoint.transferStarted)
+    setTransferPrediction(checkpoint.transferPrediction)
+    setTransferDone(checkpoint.transferDone)
+    setSnapshots(checkpoint.snapshots)
+    setComplete(null)
+    setEntered(true)
+    setLensPage(false)
+    setExperimentPage(false)
+    setResumedCheckpoint(true)
+  }, [checkpointRead.checkpoint])
+
   /** Reflection typing cancels a pending demo timer, like any edit. */
   const handleInteract = useCallback(() => {
     cancelAdvance()
@@ -321,6 +419,12 @@ export default function App() {
 
   const resetJourney = useCallback(() => {
     cancelAdvance()
+    checkpointSaveFailed.current = !clearBrowserCheckpoint()
+    setCheckpointRead({
+      status: checkpointSaveFailed.current ? 'unavailable' : 'empty',
+      checkpoint: null,
+    })
+    setResumedCheckpoint(false)
     setL1Prediction(null)
     setRealityStarted(false)
     setRealityPrediction(null)
@@ -332,6 +436,13 @@ export default function App() {
     setComplete(null)
     realityR4.current = false
   }, [cancelAdvance])
+
+  const handleStartJourney = useCallback(() => {
+    resetJourney()
+    setLensPage(false)
+    setExperimentPage(false)
+    setEntered(true)
+  }, [resetJourney])
 
   /** Enter the guided demo: a clean journey that performs itself. */
   const startDemo = useCallback(() => {
@@ -444,6 +555,13 @@ export default function App() {
       endDemoToManual()
       cancelAdvance()
       setComplete(null)
+      if (target === 'hub') {
+        setCheckpointRead(
+          checkpointSaveFailed.current
+            ? { status: 'unavailable', checkpoint: null }
+            : readBrowserCheckpoint(),
+        )
+      }
       if (target === 'lens') {
         setExperimentPage(false)
         setLensPage(true)
@@ -451,6 +569,10 @@ export default function App() {
         setLensPage(false)
         setExperimentPage(true)
       } else if (target === 'lab') {
+        if (!entered && checkpointRead.checkpoint !== null) {
+          handleResumeJourney()
+          return
+        }
         setLensPage(false)
         setExperimentPage(false)
         setEntered(true)
@@ -460,7 +582,7 @@ export default function App() {
         setEntered(false)
       }
     },
-    [cancelAdvance, endDemoToManual],
+    [cancelAdvance, checkpointRead.checkpoint, endDemoToManual, entered, handleResumeJourney],
   )
 
   const handleExploreLens = useCallback(() => {
@@ -670,6 +792,14 @@ export default function App() {
       onNavigate={handleNavigate}
       demoBar={demoBar}
       demoActive={demo.active}
+      notice={
+        resumedCheckpoint && entered ? (
+          <p className="glass-panel mb-4 border-flow/30 p-3 text-sm text-ink" role="status">
+            Saved predictions and completed measurements are restored. An unfinished circuit, if any,
+            starts from its lesson setup.
+          </p>
+        ) : undefined
+      }
       wide
       tools={
         <Suspense fallback={<p className="text-ink-muted text-sm">Preparing presenter controls…</p>}>
@@ -679,10 +809,19 @@ export default function App() {
     >
       {stage === 'intro' && (
         <LabIntro
-          onEnter={() => setEntered(true)}
+          onEnter={handleStartJourney}
           onExperiment={() => handleNavigate('experiment')}
           onExploreLens={handleExploreLens}
           onDemo={startDemo}
+          resumeAvailable={checkpointRead.checkpoint !== null}
+          onResume={handleResumeJourney}
+          storageNotice={
+            checkpointRead.status === 'invalid'
+              ? 'Saved progress is expired or unreadable. Start a new guided run to continue.'
+              : checkpointRead.status === 'unavailable'
+                ? 'This browser could not access saved progress. Keep the tab open to retain your place.'
+                : null
+          }
         />
       )}
       {stage === 'l1-predict' && (
@@ -808,9 +947,8 @@ export default function App() {
         <JourneyFinale
           chapters={finaleChapters}
           onTryLab={handleDemoManual}
-          onReturnHub={() => {
-            window.location.href = window.location.pathname
-          }}
+          onReplayDemo={startDemo}
+          onReturnHub={() => handleNavigate('hub')}
           onExploreLens={() => {
             jumpToLens()
           }}

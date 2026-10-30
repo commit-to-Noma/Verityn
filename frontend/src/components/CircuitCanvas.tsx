@@ -20,6 +20,7 @@ import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
+import { openTerminals } from '../canvas/openTerminals'
 import type { CoachServerAction } from '../api/client'
 import type { Demonstration } from '../coach/actions'
 import {
@@ -1333,6 +1334,29 @@ function CanvasInner({
   }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode])
 
   const loopClosed = isClosedLoop(nodes, edges)
+  const unwiredTerminals = openTerminals(
+    nodes,
+    edges.map((edge) => ({
+      source: edge.source,
+      sourceHandle: edge.sourceHandle ?? null,
+      target: edge.target,
+      targetHandle: edge.targetHandle ?? null,
+    })),
+  )
+  const nextBuildStep =
+    mode === 'experiment'
+      ? null
+      : nodes.length === 0
+        ? 'Start by placing a battery on the canvas.'
+        : !nodes.some((node) => node.data.kind === 'bulb')
+          ? 'Add a bulb, then connect its terminals into the circuit.'
+          : unwiredTerminals.length === 2
+            ? `Next, connect ${unwiredTerminals[0]} to ${unwiredTerminals[1]}.`
+            : unwiredTerminals.length > 0
+              ? `Open terminals: ${unwiredTerminals.join(', ')}. Connect the appropriate terminals to complete the path.`
+              : loopClosed
+                ? 'All parts are connected. Test the circuit to see what the simulator measures.'
+                : 'All terminals have wires, but the parts are not in one complete path. Check for disconnected components.'
 
   /** Preset Test: a runRequest change runs once through the normal path.
    * The timer clears StrictMode's simulated unmount (whose abort cleanup
@@ -1759,9 +1783,11 @@ function CanvasInner({
           </button>
         ))}
       </div>
-      <p className="text-ink-muted text-sm">
-        {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
-      </p>
+      {challenge === undefined && (
+        <p className="text-ink-muted text-sm">
+          {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
+        </p>
+      )}
       {demoBuild !== null &&
         demoBuild.connections.some(
           (connection) =>
@@ -1785,7 +1811,17 @@ function CanvasInner({
             </p>
           </div>
         )}
-      <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border">
+      {nextBuildStep !== null && runState.phase === 'idle' && (
+        <p
+          className="glass-panel border-flow/30 p-3 text-sm text-ink"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="mr-2 font-semibold text-flow">Next step</span>
+          {nextBuildStep}
+        </p>
+      )}
+      <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
             nodes={nodes}
@@ -1895,7 +1931,8 @@ function CanvasInner({
           {simulateLocked}
         </p>
       )}
-      {runState.phase === 'idle' && (
+      {runState.phase === 'idle' &&
+        !(challenge !== undefined && nextBuildStep !== null) && (
         <div className={`flow-status ${loopClosed ? 'flow-status-ready' : ''}`} role="status">
           <span className="flow-status-dot" aria-hidden="true" />
           <span>
@@ -1921,7 +1958,9 @@ function CanvasInner({
   const insightPane = (
     <>
       {prediction && challenge && (
-        <PredictionSummary prediction={prediction} hint={challenge.fix.hint} />
+        <div className="lg:sticky lg:top-36 lg:z-20 lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl lg:backdrop-blur-xl">
+          <PredictionSummary prediction={prediction} hint={challenge.fix.hint} />
+        </div>
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
       {choice && claim && runState.phase === 'done' && runState.result.ok && (
