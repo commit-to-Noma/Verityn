@@ -1667,7 +1667,7 @@ function CanvasInner({
     demoObserve.current = null
     const reading = describeReading(pending.demo)
     setDemoEvents((prev) => [...prev, { phase: 'observed', label: `Solver observed ${reading}` }])
-    if (pending.show) {
+    if (pending.show && !demoAutoUndo) {
       document
         .querySelector('[aria-label="Simulation result"]')
         ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
@@ -1709,12 +1709,82 @@ function CanvasInner({
     { id: 'delete', label: 'Delete', Icon: Eraser },
   ] as const
 
-  // Experiment pane (canvas + controls + live result banner) and insight pane
+  // Experiment pane (tools, canvas, controls, live result) and insight pane
   // (prediction recap + readings + verdicts + next action): side by side on
   // wide lab stages, stacked in the narrow lens replica. Plain element
   // variables, not components, so React Flow keeps its state across renders.
   const experimentPane = (
     <>
+      <div className="flex gap-2" role="group" aria-label="Palette">
+        {tools.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={tool === id}
+            onClick={() => toggleTool(id)}
+            draggable={id !== 'delete'}
+            onDragStart={(event) => {
+              if (id !== 'delete') {
+                handlePaletteDragStart(event, id)
+              }
+            }}
+            className={`flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border text-ink transition hover:-translate-y-0.5 hover:shadow-lg ${
+              tool === id
+                ? id === 'delete'
+                  ? 'border-bad bg-glass-strong shadow-md'
+                  : 'border-flow bg-glass-strong shadow-md'
+                : 'border-glass-border bg-glass'
+            }`}
+          >
+            {id === 'battery' ? (
+              <svg className="palette-part palette-battery" viewBox="0 0 42 32" aria-hidden="true">
+                <rect x="4" y="4" width="29" height="24" rx="5" />
+                <path d="M33 10h5v12h-5M13 8v16M25 8v16M17 16h6M20 13v6" />
+              </svg>
+            ) : id === 'bulb' ? (
+              <svg className="palette-part palette-bulb" viewBox="0 0 42 32" aria-hidden="true">
+                <path d="M21 3c-7 0-12 5-12 11 0 5 3 8 6 10v3h12v-3c3-2 6-5 6-10 0-6-5-11-12-11Z" />
+                <path d="M15 27h12M17 30h8M16 13l5 5 5-5" />
+              </svg>
+            ) : id === 'switch' ? (
+              <svg className="palette-part" viewBox="0 0 42 32" aria-hidden="true">
+                <path d="M4 24h6M32 24h6M10 24L28 8" />
+                <circle cx="10" cy="24" r="2.5" />
+                <circle cx="32" cy="24" r="2.5" />
+              </svg>
+            ) : (
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            )}
+            <span className="text-xs font-medium">{label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="text-ink-muted text-sm">
+        {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
+      </p>
+      {demoBuild !== null &&
+        demoBuild.connections.some(
+          (connection) =>
+            !edges.some(
+              (edge) =>
+                edge.source === connection.source &&
+                edge.sourceHandle === connection.sourceTerminal &&
+                edge.target === connection.target &&
+                edge.targetHandle === connection.targetTerminal,
+            ),
+        ) && (
+          <div className="glass-panel p-3" aria-live="polite">
+            <p className="text-sm font-medium">Demo: repairing the open connection</p>
+            <p className="text-ink-muted text-sm">
+              {demoBuild.connections
+                .map(
+                  (connection) =>
+                    `${connection.source}.${connection.sourceTerminal} → ${connection.target}.${connection.targetTerminal}`,
+                )
+                .join(', ')}
+            </p>
+          </div>
+        )}
       <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
@@ -1920,103 +1990,6 @@ function CanvasInner({
         </div>
       )}
       {gate}
-    </>
-  )
-
-  return (
-    <section aria-labelledby="canvas-heading" className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
-          <h2 id="canvas-heading" className="text-xl font-semibold">
-            {title}
-          </h2>
-        </div>
-        <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-          {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
-        </span>
-      </div>
-      <div className="flex gap-2" role="group" aria-label="Palette">
-        {tools.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={tool === id}
-            onClick={() => toggleTool(id)}
-            draggable={id !== 'delete'}
-            onDragStart={(event) => {
-              if (id !== 'delete') {
-                handlePaletteDragStart(event, id)
-              }
-            }}
-            className={`flex h-14 w-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border text-ink transition hover:-translate-y-0.5 hover:shadow-lg ${
-              tool === id
-                ? id === 'delete'
-                  ? 'border-bad bg-glass-strong shadow-md'
-                  : 'border-flow bg-glass-strong shadow-md'
-                : 'border-glass-border bg-glass'
-            }`}
-          >
-            {id === 'battery' ? (
-              <svg className="palette-part palette-battery" viewBox="0 0 42 32" aria-hidden="true">
-                <rect x="4" y="4" width="29" height="24" rx="5" />
-                <path d="M33 10h5v12h-5M13 8v16M25 8v16M17 16h6M20 13v6" />
-              </svg>
-            ) : id === 'bulb' ? (
-              <svg className="palette-part palette-bulb" viewBox="0 0 42 32" aria-hidden="true">
-                <path d="M21 3c-7 0-12 5-12 11 0 5 3 8 6 10v3h12v-3c3-2 6-5 6-10 0-6-5-11-12-11Z" />
-                <path d="M15 27h12M17 30h8M16 13l5 5 5-5" />
-              </svg>
-            ) : id === 'switch' ? (
-              <svg className="palette-part" viewBox="0 0 42 32" aria-hidden="true">
-                <path d="M4 24h6M32 24h6M10 24L28 8" />
-                <circle cx="10" cy="24" r="2.5" />
-                <circle cx="32" cy="24" r="2.5" />
-              </svg>
-            ) : (
-              <Icon className="h-5 w-5" aria-hidden="true" />
-            )}
-            <span className="text-xs font-medium">{label}</span>
-          </button>
-        ))}
-      </div>
-      <p className="text-ink-muted text-sm">
-        {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
-      </p>
-      {demoBuild !== null &&
-        demoBuild.connections.some(
-          (connection) =>
-            !edges.some(
-              (edge) =>
-                edge.source === connection.source &&
-                edge.sourceHandle === connection.sourceTerminal &&
-                edge.target === connection.target &&
-                edge.targetHandle === connection.targetTerminal,
-            ),
-        ) && (
-          <div className="glass-panel p-3" aria-live="polite">
-            <p className="text-sm font-medium">Demo: repairing the open connection</p>
-            <p className="text-ink-muted text-sm">
-              {demoBuild.connections
-                .map(
-                  (connection) =>
-                    `${connection.source}.${connection.sourceTerminal} → ${connection.target}.${connection.targetTerminal}`,
-                )
-                .join(', ')}
-            </p>
-          </div>
-        )}
-      {layout === 'split' ? (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-          <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
-          <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
-        </div>
-      ) : (
-        <>
-          {experimentPane}
-          {insightPane}
-        </>
-      )}
       {runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
           <EvidenceTrace
@@ -2037,6 +2010,33 @@ function CanvasInner({
             }}
           />
         </div>
+      )}
+    </>
+  )
+
+  return (
+    <section aria-labelledby="canvas-heading" className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
+          <h2 id="canvas-heading" className="text-xl font-semibold">
+            {title}
+          </h2>
+        </div>
+        <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
+          {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+        </span>
+      </div>
+      {layout === 'split' ? (
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
+          <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
+        </div>
+      ) : (
+        <>
+          {experimentPane}
+          {insightPane}
+        </>
       )}
     </section>
   )

@@ -13,6 +13,7 @@ export default function JourneyShell({
   location,
   onNavigate,
   demoBar,
+  demoActive = false,
   wide = false,
 }: {
   stage: Stage
@@ -23,13 +24,15 @@ export default function JourneyShell({
   onNavigate: (target: ShellLocation) => void
   /** Guided-demo controls; rendered in the shell, never in dev tools. */
   demoBar?: ReactNode
+  /** While demo controls are sticky, let the brand header scroll out of the way. */
+  demoActive?: boolean
   /** Wide views (homepage, lens, canvas) use the full frame; reading views stay narrow. */
   wide?: boolean
 }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 px-4 pb-12 sm:px-6">
       <header
-        className="sticky top-0 z-50 w-screen max-w-[100vw] border-y border-glass-border bg-[rgb(10_14_28/0.82)] shadow-[0_10px_28px_rgb(10_14_28/0.22)] backdrop-blur-xl"
+        className={`${demoActive ? '' : 'sticky top-0 z-50'} w-screen max-w-[100vw] border-y border-glass-border bg-[rgb(10_14_28/0.82)] shadow-[0_10px_28px_rgb(10_14_28/0.22)] backdrop-blur-xl`}
         style={{ marginInline: 'calc(50% - 50vw)' }}
       >
         <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">

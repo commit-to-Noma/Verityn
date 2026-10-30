@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SimulateResult } from '../api/client'
 import type { TraceInput } from '../lessons/trace'
 import type { ChapterRecap } from './story'
-import { evidenceCards, finaleNarrative, storyNodes } from './story'
+import { evidenceCards, finaleNarrative, learningProgress, storyNodes } from './story'
 
 function solved(power: Record<string, number>): SimulateResult {
   const components: SimulateResult['components'] = {}
@@ -141,6 +141,45 @@ describe('storyNodes', () => {
     expect(nodes[0].detail).toBe('Not reached')
     expect(nodes[1].detail).toBe('No verdict recorded')
     expect(nodes[4].detail).toBe('No verdict recorded')
+  })
+})
+
+describe('learningProgress', () => {
+  it('explains the measured transition from building to independent transfer', () => {
+    const progress = learningProgress([
+      chapter('L1', {
+        ...L1_INPUT,
+        netlist: {
+          components: [{ id: 'L1', type: 'bulb', a: 'm', b: 'n1' }],
+        },
+      }),
+      chapter('L1T1', {
+        ...TWIST_INPUT,
+        netlist: {
+          components: [
+            { id: 'S1', type: 'switch', closed: false, a: 'p', b: 'm' },
+            { id: 'L1', type: 'bulb', a: 'm', b: 'n1' },
+          ],
+        },
+      }),
+      chapter('L1T2', TRANSFER_INPUT),
+    ])
+
+    expect(progress).toHaveLength(3)
+    expect(progress.every((step) => step.complete)).toBe(true)
+    expect(progress[0]?.evidence).toContain('L1: 0.6 A, 3.6 W')
+    expect(progress[0]?.learning).toContain('repaired circuit carried current')
+    expect(progress[1]?.evidence).toContain('S1 open')
+    expect(progress[1]?.learning).toContain('complete conducting path')
+    expect(progress[2]?.evidence).toContain('Coach off')
+    expect(progress[2]?.learning).toContain('not a measure of overall mastery')
+  })
+
+  it('does not claim progress when solver evidence is missing', () => {
+    const progress = learningProgress([])
+    expect(progress.every((step) => !step.complete)).toBe(true)
+    expect(progress[0]?.evidence).toContain('No completed-circuit measurement')
+    expect(progress[2]?.learning).toContain('with the coach off')
   })
 })
 

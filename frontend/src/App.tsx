@@ -117,9 +117,11 @@ export default function App() {
     (gate: ChapterGate, delay: number) => {
       cancelAdvance()
       setComplete(gate)
-      document
-        .querySelector('[aria-label="Evidence trace"]')
-        ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+      if (!demoRef.current.active) {
+        document
+          .querySelector('[aria-label="Evidence trace"]')
+          ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+      }
       // A paused demo latches the gate but arms nothing; resume re-arms it.
       if (autoRef.current && !demoRef.current.paused) {
         setAutoPending(true)
@@ -648,12 +650,6 @@ export default function App() {
       />
     )
 
-  const contentWide =
-    stage === 'intro' ||
-    stage === 'l1-build' ||
-    stage === 'reality-build' ||
-    stage === 'transfer-build'
-
   const demoBar = (
     <DemoBar
       demo={demo}
@@ -673,7 +669,8 @@ export default function App() {
       location={location}
       onNavigate={handleNavigate}
       demoBar={demoBar}
-      wide={contentWide}
+      demoActive={demo.active}
+      wide
       tools={
         <Suspense fallback={<p className="text-ink-muted text-sm">Preparing presenter controls…</p>}>
           {developerTools}
@@ -708,6 +705,7 @@ export default function App() {
             onSolved={handleL1Solved}
             onDirty={handleDirty}
             onEvidence={handleEvidence}
+            layout="split"
             prediction={l1Prediction}
             challenge={L1}
             demoBuild={demo.active ? DEMO_SCRIPT.l1Build : null}
@@ -745,6 +743,7 @@ export default function App() {
             onCoachDone={handleRealityCoached}
             onCoachInteract={handleInteract}
             onEvidence={handleEvidence}
+            layout="split"
             prediction={realityPrediction}
             challenge={L1.twist}
             autoDemonstrate={auto && !demo.paused}
@@ -792,6 +791,7 @@ export default function App() {
             onSolved={handleTransferSolved}
             onDirty={handleDirty}
             onEvidence={handleEvidence}
+            layout="split"
             prediction={transferPrediction}
             challenge={TRANSFER}
             solo

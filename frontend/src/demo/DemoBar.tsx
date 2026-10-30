@@ -26,10 +26,9 @@ export default function DemoBar({
   return (
     <div
       aria-label="Guided demo controls"
-      aria-live="polite"
-      className="glass-panel flex flex-wrap items-center gap-x-4 gap-y-2 p-3"
+      className="glass-panel sticky top-0 z-[60] flex flex-wrap items-center gap-x-4 gap-y-2 border border-glass-border bg-[rgb(20_25_42/0.96)] p-3 shadow-xl backdrop-blur-xl"
     >
-      <p className="text-sm font-medium">
+      <p className="text-sm font-medium" role="status" aria-live="polite">
         {status} · {demoBeatLabel(demo.beat)}
       </p>
       <p className="text-ink-muted text-sm">{demoStepLabel(demo)}</p>

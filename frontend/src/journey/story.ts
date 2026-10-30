@@ -16,6 +16,13 @@ export interface StoryNode {
   detail: string
 }
 
+export interface LearningMilestone {
+  title: string
+  evidence: string
+  learning: string
+  complete: boolean
+}
+
 function choiceDetail(chapter: ChapterRecap | undefined): string {
   const prediction = chapter?.input?.prediction
   if (!prediction) {
@@ -142,6 +149,118 @@ export function evidenceCards(chapters: ChapterRecap[]): StoryNode[] {
     { title: 'Prediction', detail: l1?.input ? choiceDetail(l1) : MISSING_CHAPTER },
     { title: 'Simulator evidence', detail: reality?.input ? realityDetail(reality) : MISSING_CHAPTER },
     { title: 'Independent transfer', detail: transfer?.input ? transferDetail(transfer) : MISSING_CHAPTER },
+  ]
+}
+
+function bulbMeasurements(input: TraceInput | null | undefined): {
+  id: string
+  current: number
+  power: number
+}[] {
+  const result = input?.result
+  if (input?.netlist == null || result?.ok !== true) {
+    return []
+  }
+  return input.netlist.components
+    .filter((component) => component.type === 'bulb')
+    .map((bulb) => ({
+      id: bulb.id,
+      current: result.components[bulb.id]?.current ?? 0,
+      power: result.components[bulb.id]?.power ?? 0,
+    }))
+}
+
+function measuredBulbText(
+  bulbs: ReturnType<typeof bulbMeasurements>,
+): string {
+  return bulbs
+    .map(
+      (bulb) =>
+        `${bulb.id}: ${formatReading(bulb.current)} A, ${formatReading(bulb.power)} W`,
+    )
+    .join('; ')
+}
+
+/** Explain what each completed part of the journey demonstrated, using saved solver evidence. */
+export function learningProgress(chapters: ChapterRecap[]): LearningMilestone[] {
+  const [first, reality, solo] = chapters
+  const firstInput = first?.input
+  const firstBulbs = bulbMeasurements(firstInput)
+  const firstLit = firstBulbs.some((bulb) => bulb.power > LIT_POWER_W)
+
+  const realityInput = reality?.input
+  const realityBulbs = bulbMeasurements(realityInput)
+  const openSwitch = realityInput?.netlist?.components.find(
+    (component) => component.type === 'switch' && component.closed === false,
+  )
+  const realityVerdict = realityInput?.verdict?.status
+  const verdictReflection =
+    realityVerdict === 'CONSISTENT'
+      ? ' Your prediction matched the measurement.'
+      : realityVerdict === 'CONTRADICTED'
+        ? ' The measurement challenged your prediction.'
+        : ''
+
+  const soloInput = solo?.input
+  const soloBulbs = bulbMeasurements(soloInput)
+  const soloVerified =
+    soloInput?.verdict?.status === 'CONSISTENT' && soloInput.result?.ok === true
+
+  return [
+    {
+      title: 'Build a complete path',
+      evidence:
+        firstInput?.result?.ok === true
+          ? `Your starting prediction was ${firstInput.prediction === null ? 'not recorded' : `“${CHOICE_LABELS[firstInput.prediction.choice]}”`}. After the repair, the simulator measured ${measuredBulbText(firstBulbs) || 'no bulb readings'}.`
+          : firstInput?.prediction !== null && firstInput?.prediction !== undefined
+            ? 'Your prediction was recorded; a completed-circuit measurement was not.'
+            : 'No completed-circuit measurement was recorded.',
+      learning:
+        firstInput?.result?.ok !== true
+          ? 'Complete and test the circuit to see what the measurements show.'
+          : firstBulbs.length === 0
+            ? 'The solver did not return a bulb reading to interpret.'
+          : firstLit
+            ? 'The repaired circuit carried current and lit the bulb in this run. This reading is for the repaired loop, not the original open gap.'
+            : 'The tested repaired circuit did not light a bulb. Use the readings to decide what to inspect next.',
+      complete: firstInput?.result?.ok === true,
+    },
+    {
+      title: 'Test the idea against reality',
+      evidence:
+        realityInput?.result?.ok === true
+          ? `${openSwitch?.id ?? 'The open switch'} open: ${measuredBulbText(realityBulbs) || 'no bulb readings were returned'}.${verdictReflection}`
+          : realityInput?.prediction !== null && realityInput?.prediction !== undefined
+            ? 'Your reality-check prediction was recorded; its solver measurement is not available.'
+            : 'No reality-check measurement was recorded.',
+      learning:
+        realityInput?.result?.ok !== true
+          ? 'Run the wired circuit to compare your prediction with measured current and power.'
+          : realityBulbs.length === 0
+            ? 'The solver did not return a bulb reading to interpret.'
+            : realityBulbs.every((bulb) => bulb.current === 0)
+            ? openSwitch === undefined
+              ? 'The tested bulbs had zero current in this run. Inspect the wiring and switch state before drawing a conclusion.'
+              : `With ${openSwitch.id} open, the bulbs had zero current in this run. This circuit did not provide a complete conducting path.`
+            : 'The tested bulbs carried current in this run. Compare the switch state and wiring with your prediction.',
+      complete: realityInput?.result?.ok === true,
+    },
+    {
+      title: 'Transfer the idea independently',
+      evidence:
+        soloInput?.result?.ok === true
+          ? `${measuredBulbText(soloBulbs) || 'The solver returned no bulb readings'}. Coach off.${soloVerified ? ' Prediction matched.' : ''}`
+          : soloInput?.prediction !== null && soloInput?.prediction !== undefined
+            ? 'Your solo prediction was recorded; an independent solver result is not available.'
+            : 'No independent solo result was recorded.',
+      learning:
+        soloInput?.result?.ok !== true
+          ? 'Build and test the new circuit with the coach off to show what you can transfer.'
+          : soloVerified
+            ? 'Your prediction matched this simulator run on a new circuit without coach prompts. That is evidence from this task, not a measure of overall mastery.'
+            : 'You tested a new circuit without coach prompts. Compare its readings with your prediction to decide what to try next.',
+      complete: soloInput?.result?.ok === true,
+    },
   ]
 }
 

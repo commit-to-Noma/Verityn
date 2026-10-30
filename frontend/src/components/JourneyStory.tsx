@@ -1,7 +1,7 @@
 import type { ChapterRecap } from '../journey/story'
 import { storyNodes } from '../journey/story'
 
-/** Horizontal story strip plus honest closing copy for the finale. */
+/** Responsive story grid plus honest closing copy for the finale. */
 export default function JourneyStory({ chapters }: { chapters: ChapterRecap[] }) {
   const nodes = storyNodes(chapters)
   const beganWithMisconception = chapters[0]?.input?.prediction?.choice === 'yes'
@@ -9,16 +9,11 @@ export default function JourneyStory({ chapters }: { chapters: ChapterRecap[] })
     <div className="flex flex-col gap-3">
       <ol
         aria-label="Journey story"
-        className="flex items-stretch gap-2 overflow-x-auto pb-1"
+        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
       >
-        {nodes.map((node, index) => (
+        {nodes.map((node) => (
           <li key={node.title} className="flex items-stretch gap-2">
-            {index > 0 && (
-              <span className="text-ink-muted self-center" aria-hidden="true">
-                →
-              </span>
-            )}
-            <div className="glass-panel w-40 shrink-0 p-3">
+            <div className="glass-panel h-full p-3">
               <p className="text-flow text-[11px] font-semibold uppercase tracking-[0.14em]">
                 {node.title}
               </p>
