@@ -11,89 +11,78 @@ proposals and pass grounded evidence verification — schema checks, leak
 checks, and numbers allowed only from solver facts — before reaching the
 learner. See `docs/` for the architecture, UI spec, and test plan.
 
-## Implemented (Milestones 1–8, M9a Meta coach, Evidence Trace, solo transfer)
+## Implemented (submission state)
 
-- React + Vite + TypeScript frontend with Tailwind CSS 4.
-- Flask backend with `GET /api/health` returning `{"status": "ok"}`.
-- Frontend health indicator: loading, connected, and error states.
-- Frontend integration: a typed API client calls `POST /api/simulate`
-  and `POST /api/evaluate` through the Vite proxy. Example circuits can
-  be simulated (measurements or an invalid-circuit banner with offender
-  IDs) and example predictions checked (verdict rows with deciding
-  numbers). Network, HTTP, and malformed-payload failures render as
-  error rows with retry; aborted requests stay silent.
-- Prediction screen + fixed L1 lesson pack (`src/verityn/lessons/l1.json`):
-  the learner sees the broken starting circuit, must choose Yes, No,
-  or Not sure plus an optional one-line Why, then proceeds to the
-  canvas to fix the circuit with one wire. The broken start's outcome
-  lives in the pack; the evaluator is never asked to judge it.
-- L1 Twist (open switch): unlocked after the L1 circuit simulates at the
-  expected 0.6 A / 3.6 W. Fresh prediction on the repaired-but-open
-  circuit, independent rebuild on a fresh canvas, verdict from the
-  existing evaluator against the learner's own built netlist.
-- Coach interface with Meta Spark primary + template fallback (M8/M9a):
-  after a contradicted Twist verdict the learner can ask for one R1
-  guiding question. Eligibility is derived server-side from the recorded
-  prediction and a fresh solve; model output must match a constrained
-  JSON schema and pass leak/number guards or the template serves instead.
-  Sessions are in-memory only, so a backend restart clears them.
-- Evidence Trace: per-challenge timeline of prediction, built circuit,
-  solver outcome, comparison, and coaching, derived from existing
-  client state. It shows observed simulation evidence, not proof of
-  mastery.
-- Solo transfer (second bulb): unlocked after the Twist circuit meets its
-  pack values. A new parallel-branch prediction and build with the AI
-  coach fully off — no session is recorded and the backend rejects the
-  transfer challenge id.
-- Buildable circuit canvas (React Flow): place batteries, bulbs, and
-  switches (each switch toggles open/closed), drag between terminals
-  to add wires, delete parts, and run the circuit. Results show
-  measurements with lit-bulb glow, or name the
-  problem with the offending parts outlined. Canvas circuits convert
-  to netlists client-side; all physics stays server-side.
-- Deterministic circuit solver + validator (`src/verityn/solver.py`):
-  battery, resistor, bulb (fixed 10 Ω), switch, and wire circuits solved
-  with modified nodal analysis; rejected circuits return an error code,
-  a message, and the offending component ids instead of numbers.
-- Deterministic prediction evaluator (`src/verityn/evaluator.py`):
-  judges `lit` and `compare_brightness` claims against solver output as
-  CONSISTENT, CONTRADICTED, or UNASSESSABLE, with model-derived evidence.
-- Flask API: `POST /api/simulate` takes a bare netlist and returns the
-  solver result; `POST /api/evaluate` takes `{"claim", "netlist"}`,
-  solves server-side, and returns both result and verdict. Judged
-  outcomes return HTTP 200; malformed requests return HTTP 400
-  `MALFORMED_REQUEST`; unknown routes and methods return JSON errors.
-- Backend tests for the health endpoint, solver, evaluator, and API.
+- Guided lab: Predict → Build → Reality Check → Solo → Finale.
+  The learner commits to a Yes / No / Not sure prediction with a
+  one-line Why, repairs the open-gap circuit (0.6 A / 3.6 W lit),
+  meets the open-switch contradiction (0.0 A dark), climbs the
+  R1 → R2 → R4 coach ladder, and proves transfer on a fresh
+  second-bulb circuit with the coach fully off.
+- Socratic coach ladder: one R1 guiding question grounded in the
+  measured numbers, an R2 evidence pointer citing the 0.0 A
+  open-switch discrepancy, and an R4 confirmation check. Served
+  by Meta Muse Spark when a key is configured, otherwise by the
+  labeled deterministic fallback. Eligibility is derived
+  server-side; Solo makes zero coach calls, enforced by the
+  backend as well as the UI.
+- Validated AI demonstrations: the coach may propose closing S1
+  from a closed action vocabulary; the app validates, previews,
+  applies, re-solves, and offers Undo. Invalid actions never
+  mutate state.
+- Reality Lens: upload a schematic or photo (or use a verified
+  sample); Meta Spark Vision proposes components, connections,
+  polarity, and provenance; the learner reviews the original
+  beside the editable replica in Compare mode and must confirm
+  before the solver runs. `needs_review` and `unsupported`
+  diagrams are refused honestly — nothing is guessed.
+- Experiment bench: free-form canvas with five starter presets,
+  explicit runs, session-local history with current-vs-previous
+  comparison, and an optional solver-first explanation.
+- Overload physics (simplified classroom model): rated bulbs
+  (6 V / 6 W defaults), assessed intact/overloaded/damaged
+  conditions, per-battery voltage controls, and a session
+  damage latch — 12 V measures 1.2 A / 14.4 W overloaded, the
+  next run latches damaged at 0.0 A, reset restores intact.
+- Guided demo: `Watch the guided demo` performs the whole
+  journey through the real UI in ~40 seconds (pause, resume,
+  skip, exit, replay, manual takeover). This is the recording
+  path for the 60–90 second video.
+- Voice (optional, never required): browser speech synthesis
+  reads coach messages with captions and replay; microphone
+  dictation fills the Why field as editable text with honest
+  unsupported/denied states.
+- Deterministic MNA solver (`src/verityn/solver.py`): battery,
+  resistor, bulb (fixed 10 Ω), switch, and wire circuits;
+  rejected circuits return an error code plus offender ids,
+  never invented numbers. The evaluator (`evaluator.py`) judges
+  `lit` / `compare_brightness` claims as CONSISTENT,
+  CONTRADICTED, or UNASSESSABLE with model-derived evidence.
+- Flask API: `POST /api/simulate`, `POST /api/evaluate`,
+  `POST /api/coach/predict`, `POST /api/coach/ask`,
+  `POST /api/coach/explain`, `POST /api/vision/propose`.
+  Judged outcomes return HTTP 200; malformed requests return
+  HTTP 400 `MALFORMED_REQUEST`; errors are JSON, never
+  tracebacks; keys stay server-side in an untracked `.env`.
+- Test suites (mocked model HTTP, zero live calls in tests):
+  564 backend tests, 337 frontend tests, lint clean,
+  production build clean, plus `scripts/smoke_live.py` and
+  `scripts/smoke_browser.mjs` end-to-end checks.
 - Pinned backend dependencies (`backend/requirements.txt`).
 
-## Roadmap (hackathon submission: Nov 4, 9:00 PM ET)
+## Deliberately out of scope
 
-Locked-in priorities, in order. Nothing below outranks a reliable demo.
-
-1. **Priority 1 — Reliable demo & framing (essential).**
-   L1 → Twist → Transfer end-to-end browser loop verified; solver vs. AI
-   responsibilities made explicit in the UI; Evidence Trace framed as
-   proof of observed simulation, never proof of mastery; existing
-   defects fixed before any new complexity.
-2. **Priority 2 — Multimodal "Snap & Build" (high-value stretch).**
-   Learner uploads a schematic or hand-drawn photo; Muse Spark Vision
-   extracts a candidate netlist shown as a JSON preview. Guardrail: the
-   learner must review and confirm before it ever reaches the solver —
-   the model never directly controls solver state.
-3. **Priority 3 — Physics brought to life (visual polish).**
-   Bulb glow scaled continuously by solver-computed power (P = I²R);
-   wire current animation (SVG stroke-dash) active only when the solver
-   calculates current > 0, freezing the moment a switch opens;
-   component highlights restricted to IDs grounded in validated solver
-   evidence — no speculative smoke or broken-node effects.
-4. **Priority 4 — Voice & visual coaching (optional).**
-   Muse Voice Transcribe for voice explanations of learner predictions;
-   coach-requested component highlights validated strictly against the
-   canvas netlist.
-
-Infrastructure: the Meta Model API (Muse Spark) stays the primary
-integration. External open-weight hosting (Baseten/Modal) is deferred
-until the primary browser demo is rock-solid.
+- No login, accounts, persistence, or analytics; history is
+  session-local.
+- No open chat: predictions are constrained choices and the
+  model never touches physics.
+- No mastery/dependency scores: the finale shows observed
+  session evidence only.
+- No resistor canvas node (the solver accepts resistors but
+  the palette does not place them).
+- Biology/Chemistry/Engineering labs are honest `Planned`
+  labels, not lessons.
+- External open-weight hosting (Baseten/Modal) deferred.
 
 ## Prerequisites
 
@@ -120,12 +109,15 @@ npm install
 ## Coach providers
 
 Coaching defaults to fixed fake templates (no network, no key needed).
-To use Meta Spark with template fallback, set `MODEL_API_KEY` in an
-untracked `.env` file at the repo root, then start the backend normally;
-recorded predictions and Why text are sent to the Meta Model API only
-in that mode. `VERITYN_COACH_FAIL=1` forces the provider-failure path
-for local testing. The automated suites mock all model HTTP and never
-spend credits.
+To use Meta Spark with template fallback, export `MODEL_API_KEY` in the
+backend's shell (e.g. `export MODEL_API_KEY=...`), then start the
+backend normally; recorded predictions and Why text are sent to the
+Meta Model API only in that mode. The backend does not auto-load
+`.env` files — if you keep the key in an untracked root `.env`, source
+it into the environment first, and never commit it. The same key also
+enables Meta vision proposals. `VERITYN_COACH_FAIL=1` forces the
+provider-failure path for local testing. The automated suites mock all
+model HTTP and never spend credits.
 
 ## Launch
 

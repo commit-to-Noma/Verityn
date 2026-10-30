@@ -221,7 +221,7 @@ describe('buildTrace', () => {
     expect(steps[4]?.body).toEqual({
       kind: 'coach',
       outcome: null,
-      hint: 'Your prediction matched the model, so no coaching was offered.',
+      hint: 'Your prediction matched the circuit result, so no coaching was offered.',
     })
   })
 

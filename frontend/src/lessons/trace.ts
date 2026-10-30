@@ -218,9 +218,9 @@ export function buildTrace(input: TraceInput): TraceStep[] {
       input.coach !== null
         ? ''
         : input.verdict?.status === 'CONTRADICTED'
-          ? 'Your prediction was contradicted — you have not asked the coach yet.'
+          ? 'Your prediction did not match the circuit result — you have not asked the coach yet.'
           : input.verdict?.status === 'CONSISTENT'
-            ? 'Your prediction matched the model, so no coaching was offered.'
+            ? 'Your prediction matched the circuit result, so no coaching was offered.'
             : 'No coaching is available for this outcome yet.'
     steps.push({ id: 'coach', title: 'Coach', body: { kind: 'coach', outcome: input.coach, hint } })
   }

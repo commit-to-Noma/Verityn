@@ -12,4 +12,10 @@ export default defineConfig({
       '/api': process.env.VERITYN_API ?? 'http://127.0.0.1:5000',
     },
   },
+  preview: {
+    // Same proxy for exact-build verification (`npm run preview`).
+    proxy: {
+      '/api': process.env.VERITYN_API ?? 'http://127.0.0.1:5000',
+    },
+  },
 })
