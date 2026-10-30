@@ -4,7 +4,7 @@
  * Each component terminal is a junction named `<componentId>.<a|b>`; each
  * wire edge becomes a `wire` component spanning its two junctions. Loose
  * terminals, shorts, and empty canvases pass through untouched so the
- * solver — never this module — judges them. Ground stays the solver's
+ * solver  -  never this module  -  judges them. Ground stays the solver's
  * convention (first battery's b terminal).
  */
 

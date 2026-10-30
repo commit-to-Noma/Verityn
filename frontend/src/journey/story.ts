@@ -27,7 +27,7 @@ function choiceDetail(chapter: ChapterRecap | undefined): string {
     return `Predicted “${label}”`
   }
   const short = why.length > 48 ? `${why.slice(0, 47)}…` : why
-  return `Predicted “${label}” — “${short}”`
+  return `Predicted “${label}”  -  “${short}”`
 }
 
 function realityDetail(chapter: ChapterRecap | undefined): string {
@@ -69,7 +69,7 @@ function transferDetail(chapter: ChapterRecap | undefined): string {
     (bulb) => (input.result?.components[bulb.id]?.power ?? 0) > LIT_POWER_W,
   ).length
   if (input.verdict.status !== 'CONSISTENT') {
-    return `${input.verdict.status === 'CONTRADICTED' ? 'Did not match' : "Couldn't assess"} — see trace`
+    return `${input.verdict.status === 'CONTRADICTED' ? 'Did not match' : "Couldn't assess"}  -  see trace`
   }
   return lit === 1 ? 'Verified: 1 bulb lit' : `Verified: ${lit} bulbs lit`
 }
@@ -128,7 +128,7 @@ export function finaleNarrative(chapters: ChapterRecap[]): string[] {
       )
     } else {
       lines.push(
-        'Your independent circuit did not match your prediction — the trace above shows what the simulator measured.',
+        'Your independent circuit did not match your prediction  -  the trace above shows what the simulator measured.',
       )
     }
   }

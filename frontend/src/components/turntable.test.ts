@@ -33,7 +33,7 @@ describe('laboratory stations', () => {
 
   it('keeps the solver copy deterministic, never AI-like', () => {
     const solver = LABORATORY_STATIONS.find((station) => station.id === 'solver')
-    expect(solver?.description).toContain('Calculates')
+    expect(solver?.description).toContain('deterministic engine')
     expect(solver?.evidence).toBe('Measured, not guessed')
   })
 })
@@ -61,7 +61,7 @@ describe('turntable rotation', () => {
 
   it('announces the selected station accessibly', () => {
     expect(stationAnnouncement(2)).toBe(
-      'Reality Lens selected. Bring a real circuit diagram into the laboratory, review the proposed model, and test it.',
+      'Reality Lens selected. Turn a circuit image into a model you can review and test.',
     )
   })
 })

@@ -88,7 +88,7 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     title: 'Overload the bulb',
     tagline: 'Add a second battery → watch the bulb exceed its safe limit',
     prompt:
-      'Run it with one battery first. Then place a second battery in series and run again — what happens to L1?',
+      'Run it with one battery first. Then place a second battery in series and run again  -  what happens to L1?',
     seed: {
       nodes: [
         { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },

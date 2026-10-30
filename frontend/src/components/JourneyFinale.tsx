@@ -3,7 +3,7 @@ import { MISSING_CHAPTER, evidenceCards, finaleNarrative } from '../journey/stor
 import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
 
-/** Finale: what the learner thought, tested, and learned — evidence first,
+/** Finale: what the learner thought, tested, and learned  -  evidence first,
  * capstone after, and no dead end. */
 export default function JourneyFinale({
   chapters,
@@ -51,7 +51,7 @@ export default function JourneyFinale({
           You did not memorize the answer. You tested it, explained it, and proved it.
         </p>
         <p className="mt-2 text-sm text-ink-muted">
-          Every step below is observed simulation evidence — what you predicted and what the
+          Every step below is observed simulation evidence  -  what you predicted and what the
           simulator measured, not a grade.
         </p>
       </div>
@@ -61,10 +61,10 @@ export default function JourneyFinale({
           How the system works
         </summary>
         <ul className="text-ink-muted mt-2 flex flex-col gap-1 text-sm">
-          <li>Meta Muse Spark — asks coaching questions and proposes diagram interpretations.</li>
-          <li>Reality Lens — turns a diagram into a circuit proposal you review.</li>
-          <li>Verityn Solver — calculates current, power, validity, and verdicts.</li>
-          <li>Verityn — runs the learning journey and records the evidence.</li>
+          <li>Meta Muse Spark  -  asks coaching questions and proposes diagram interpretations.</li>
+          <li>Reality Lens  -  turns a diagram into a circuit proposal you review.</li>
+          <li>Verityn Solver  -  calculates current, power, validity, and verdicts.</li>
+          <li>Verityn  -  runs the learning journey and records the evidence.</li>
         </ul>
       </details>
       <div className="flex flex-wrap gap-2">
@@ -103,7 +103,7 @@ export default function JourneyFinale({
             <h3 className="text-lg font-semibold">{chapter.title}</h3>
             {chapter.solo && (
               <span className="rounded-full border border-glass-border px-3 py-1 text-xs font-medium text-ink">
-                Coach off — independent
+                Coach off  -  independent
               </span>
             )}
           </div>

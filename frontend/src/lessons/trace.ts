@@ -66,7 +66,7 @@ export interface TraceStep {
 }
 
 /** Fixed trace copy for solo challenges, where the coach stays off. */
-export const SOLO_COACH_MESSAGE = 'Solo mode — the AI coach is off. Your reasoning and the simulator are enough.'
+export const SOLO_COACH_MESSAGE = 'Solo mode  -  the AI coach is off. Your reasoning and the simulator are enough.'
 
 export interface TraceInput {
   prediction: Prediction | null
@@ -207,7 +207,7 @@ export function buildTrace(input: TraceInput): TraceStep[] {
         status: 'UNASSESSABLE',
         note: noDefinitePrediction
           ? 'No definite prediction was recorded, so there is nothing to check.'
-          : 'Test a complete circuit first — there is nothing to check yet.',
+          : 'Test a complete circuit first  -  there is nothing to check yet.',
         evidence: [],
       },
     })
@@ -218,7 +218,7 @@ export function buildTrace(input: TraceInput): TraceStep[] {
       input.coach !== null
         ? ''
         : input.verdict?.status === 'CONTRADICTED'
-          ? 'Your prediction did not match the circuit result — you have not asked the coach yet.'
+          ? 'Your prediction did not match the circuit result  -  you have not asked the coach yet.'
           : input.verdict?.status === 'CONSISTENT'
             ? 'Your prediction matched the circuit result, so no coaching was offered.'
             : 'No coaching is available for this outcome yet.'

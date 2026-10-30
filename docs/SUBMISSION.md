@@ -1,4 +1,4 @@
-# Verityn — Submission Checklist
+# Verityn  -  Submission Checklist
 
 Deadline: Nov 4, 9:00 PM ET. Checked items are verified on the final
 tree; unchecked items need the human owner (recording, upload).
@@ -33,16 +33,16 @@ tree; unchecked items need the human owner (recording, upload).
 How the production build was tested (not just the dev server):
 
 ```sh
-# Terminal 1 — backend
+# Terminal 1  -  backend
 source .venv/bin/activate
 python backend/app.py            # :5000, fake providers
 
-# Terminal 2 — production frontend
+# Terminal 2  -  production frontend
 cd frontend
 npm run build
 npm run preview -- --host 127.0.0.1 --port 5173   # serves dist/
 
-# Terminal 3 — browser smoke against the exact build
+# Terminal 3  -  browser smoke against the exact build
 BASE=http://127.0.0.1:5173 node scripts/smoke_browser.mjs
 ```
 

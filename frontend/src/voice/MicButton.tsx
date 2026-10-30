@@ -28,7 +28,7 @@ export default function MicButton({ onTranscript }: { onTranscript: (text: strin
       <button
         type="button"
         disabled
-        title="Voice input is not supported in this browser — type instead."
+        title="Voice input is not supported in this browser  -  type instead."
         aria-label="Voice input not supported"
         className="text-ink-muted absolute top-1/2 right-2 -translate-y-1/2 cursor-not-allowed rounded-[8px] p-2 opacity-40"
       >
@@ -41,7 +41,7 @@ export default function MicButton({ onTranscript }: { onTranscript: (text: strin
       <button
         type="button"
         disabled
-        title="Microphone blocked — type instead, or allow access and reload."
+        title="Microphone blocked  -  type instead, or allow access and reload."
         aria-label="Microphone blocked"
         className="text-ink-muted absolute top-1/2 right-2 -translate-y-1/2 cursor-not-allowed rounded-[8px] p-2 opacity-40"
       >
@@ -59,7 +59,7 @@ export default function MicButton({ onTranscript }: { onTranscript: (text: strin
           type="button"
           onClick={() => recognizer.stop()}
           aria-label="Stop dictation"
-          title="Listening — select to stop"
+          title="Listening  -  select to stop"
           className="text-bad absolute top-1/2 right-2 -translate-y-1/2 rounded-[8px] p-2"
         >
           <Square className="h-4 w-4" aria-hidden="true" />
@@ -71,12 +71,12 @@ export default function MicButton({ onTranscript }: { onTranscript: (text: strin
     <button
       type="button"
       onClick={() => recognizer.start()}
-      aria-label={state === 'no-speech' ? 'Heard nothing — try dictation again' : 'Dictate your reason'}
+      aria-label={state === 'no-speech' ? 'Heard nothing  -  try dictation again' : 'Dictate your reason'}
       title={
         state === 'no-speech'
-          ? 'Heard nothing — try again, or type instead.'
+          ? 'Heard nothing  -  try again, or type instead.'
           : state === 'unavailable'
-            ? 'Dictation hit a glitch — try again, or type instead.'
+            ? 'Dictation hit a glitch  -  try again, or type instead.'
             : 'Dictate your reason (optional)'
       }
       className="text-ink-muted absolute top-1/2 right-2 -translate-y-1/2 rounded-[8px] p-2 hover:text-ink"

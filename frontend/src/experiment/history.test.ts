@@ -69,16 +69,16 @@ describe('describeRun', () => {
 describe('summarizeRun', () => {
   it('renders the one-line run format', () => {
     expect(summarizeRun(describeRun(3, 'Switch opened', solved(0, 0), LOOP))).toBe(
-      'Run 3 — Switch opened — 0.0 A — bulb dark',
+      'Run 3  -  Switch opened  -  0.0 A  -  bulb dark',
     )
     expect(summarizeRun(describeRun(1, 'Light a bulb', solved(3.6, 0.6), LOOP))).toBe(
-      'Run 1 — Light a bulb — 0.6 A — 1 bulb lit',
+      'Run 1  -  Light a bulb  -  0.6 A  -  1 bulb lit',
     )
   })
 
   it('renders rejections honestly', () => {
     expect(summarizeRun(describeRun(2, 'Shorted battery', REJECTED, LOOP))).toBe(
-      'Run 2 — Shorted battery — not testable (SHORTED_BATTERY)',
+      'Run 2  -  Shorted battery  -  not testable (SHORTED_BATTERY)',
     )
   })
 
@@ -90,7 +90,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(overloaded)).toBe(
-      'Run 2 — Overload the bulb — 1.2 A — 1 bulb lit — L1 overloaded',
+      'Run 2  -  Overload the bulb  -  1.2 A  -  1 bulb lit  -  L1 overloaded',
     )
     const damaged = describeRun(
       3,
@@ -99,7 +99,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(damaged)).toBe(
-      'Run 3 — Overload the bulb — 0.0 A — bulb dark — L1 damaged',
+      'Run 3  -  Overload the bulb  -  0.0 A  -  bulb dark  -  L1 damaged',
     )
   })
 })

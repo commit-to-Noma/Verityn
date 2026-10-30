@@ -187,6 +187,19 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .stem-orbit-flow,
+  .stem-field-button:hover .stem-icon-scale > svg,
+  .stem-field-button:focus-visible .stem-icon-scale > svg,
+  .stem-icon-jiggle .stem-icon-scale > svg {
+    animation: none !important;
+  }
+
+  .stem-orbit-plane,
+  .stem-icon-scale,
+  .stem-icon-scale > svg {
+    transition: none !important;
+  }
+
   .react-flow__edge.animated path {
     animation: none !important;
   }
@@ -367,6 +380,41 @@ body {
   fill: var(--color-flow);
   font-family: var(--font-sans);
   font-weight: 600;
+}
+
+@keyframes stem-orbit-flow {
+  to {
+    stroke-dashoffset: -88;
+  }
+}
+
+.stem-orbit-flow {
+  animation: stem-orbit-flow 2.4s linear infinite;
+}
+
+.stem-icon-scale {
+  transition: transform 160ms ease;
+}
+
+.stem-icon-scale > svg {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: filter 180ms ease;
+}
+
+.stem-field-button:hover .stem-icon-scale > svg,
+.stem-field-button:focus-visible .stem-icon-scale > svg,
+.stem-icon-jiggle .stem-icon-scale > svg {
+  filter: drop-shadow(0 0 16px rgb(99 232 244 / 0.62));
+  animation: stem-icon-jiggle 680ms ease-in-out;
+}
+
+@keyframes stem-icon-jiggle {
+  0%, 100% { transform: rotate(0) scale(1); }
+  20% { transform: rotate(-7deg) scale(1.04); }
+  42% { transform: rotate(5deg) scale(1.06); }
+  64% { transform: rotate(-3deg) scale(1.03); }
+  82% { transform: rotate(2deg) scale(1.01); }
 }
 
 @keyframes lens-dash {

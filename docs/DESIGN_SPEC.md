@@ -147,7 +147,7 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
   Simulation, Comparison, Coach. Comparison notes name their basis
   ("Judged by the deterministic evaluator…", "Compared with the
   expected outcome…"). Coach content repeats the received question
-  with the footnote "A prompt to reconsider — not a diagnosis."
+  with the footnote "A prompt to reconsider  -  not a diagnosis."
 - Forbidden UI claims: mastery, learning gains, intelligence scores,
   "zero hallucinations", prototype output presented as Meta AI.
 
@@ -181,8 +181,11 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
 
 - The learner-facing stage sequence is **Predict → Build → Reality Check → Solo**.
   “Twist” is not a user-facing label.
-- The home screen has three entry points: circuit lab, Reality Lens, and guided
-  demo. Future subjects are labelled as future work.
+- The home screen frames Verityn as a STEM platform with a selectable four-field
+  orbital map; Engineering circuits are the first live module, while other
+  subject labs are clearly marked as future pathways. A five-station feature
+  turntable lists today's tools; the hero offers the guided demo without
+  duplicate Explore/Enter buttons.
 - Reality Lens is a two-panel review: source image, detections/model view,
   proposed battery/bulb/switch/wire layout, component and connection review
   states, provenance, and Confirm/Discard.

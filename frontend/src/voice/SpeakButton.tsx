@@ -32,7 +32,7 @@ export default function SpeakButton({ text }: { text: string }) {
           type="button"
           onClick={() => speaker.speak(text)}
           aria-label="Listen to this message"
-          title="Listen — browser speech synthesis"
+          title="Listen  -  browser speech synthesis"
           className="border-glass-border inline-flex min-h-[44px] items-center gap-1 rounded-[10px] border px-3 text-xs font-medium"
         >
           <Volume2 className="h-4 w-4" aria-hidden="true" />

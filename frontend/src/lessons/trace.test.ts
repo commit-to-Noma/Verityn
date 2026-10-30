@@ -287,7 +287,7 @@ describe('buildTrace', () => {
     expect(steps[3]?.body).toEqual({
       kind: 'comparison',
       status: 'UNASSESSABLE',
-      note: 'Test a complete circuit first — there is nothing to check yet.',
+      note: 'Test a complete circuit first  -  there is nothing to check yet.',
       evidence: [],
     })
   })

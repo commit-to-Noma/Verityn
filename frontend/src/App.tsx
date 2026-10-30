@@ -361,7 +361,7 @@ export default function App() {
 
   const handleDemoResume = useCallback(() => {
     setDemo((current) => demoTransition(current, { type: 'resume' }))
-    // Re-arm a gate timer the pause cancelled — but never one the coach
+    // Re-arm a gate timer the pause cancelled  -  but never one the coach
     // invite legitimately holds for the ladder.
     const gate = completeRef.current
     if (demoRef.current.active && gate !== null && gate.coach !== 'invited') {
@@ -559,7 +559,7 @@ export default function App() {
         />
         <span>
           Auto-advance chapters
-          <span className="text-ink-muted"> — demo mode (also `?auto=1`)</span>
+          <span className="text-ink-muted">  -  demo mode (also `?auto=1`)</span>
         </span>
       </label>
       <p className="text-ink-muted text-sm">
@@ -692,7 +692,7 @@ export default function App() {
         <PredictionScreen
           challenge={L1}
           eyebrow="Predict · Light the bulb"
-          coachLine="I'm your coach. Commit to a prediction first — I stay quiet until you've tested it."
+          coachLine="I'm your coach. Commit to a prediction first  -  I stay quiet until you've tested it."
           onComplete={handleL1Predicted}
           demo={l1Demo}
         />
@@ -735,7 +735,7 @@ export default function App() {
             key="reality"
             seed={L1.twist.seed}
             eyebrow="Reality Check · The open switch"
-            instructions="The loop is fully wired and the switch is open. We will test it right away — don't change the switch."
+            instructions="The loop is fully wired and the switch is open. We will test it right away  -  don't change the switch."
             choice={realityPrediction.choice}
             claim={L1.twist.claim}
             coachSession={realitySession}
@@ -761,7 +761,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode — the AI coach is off for this challenge. Trust your reasoning.
+              Solo mode  -  the AI coach is off for this challenge. Trust your reasoning.
             </p>
           </div>
           <PredictionScreen
@@ -777,7 +777,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode — the AI coach is off for this challenge. Predict, build, and check
+              Solo mode  -  the AI coach is off for this challenge. Predict, build, and check
               against the simulator.
             </p>
           </div>

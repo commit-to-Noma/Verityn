@@ -9,21 +9,24 @@ coverage are present.
 
 ## 1. Product promise
 
-Verityn helps learners practise scientific reasoning by making a claim,
-building or interpreting a model, testing it, and explaining what the evidence
-shows.
+Verityn is a STEM learning platform for Science, Technology, Engineering, and
+Mathematics. It helps learners practise scientific reasoning by making a
+claim, building or interpreting a model, testing it, and explaining what the
+evidence shows.
 
 > Meta AI guides the question. The learner makes the meaning. The deterministic
 > simulator supplies the evidence.
 
-Circuits are the complete shipped experience. Other sciences are expansion
-directions, not capabilities we imply are already built.
+Engineering circuits are the first live module and the current complete
+subject-specific lab. They demonstrate the learning method; they are not the
+boundary of the Verityn platform. Science, Technology, and Mathematics are
+future pathways and must be represented honestly as not-yet-built labs.
 
 ## 2. Complete learner journey
 
 | Stage | Learner action | System responsibility | Evidence |
 |---|---|---|---|
-| Welcome | Choose the circuit lab or Reality Lens | Explain the mission and AI role | Clear primary CTA |
+| Welcome | Explore the STEM pathways or choose a current tool | Explain the wider platform and the live Engineering module | Clear, honest scope |
 | Predict | Choose or write an expected outcome | Lock and preserve the claim | Prediction snapshot |
 | Build | Place components and connect the circuit | Validate topology and invalid states | Confirmed netlist |
 | Reality Check | Run the solver and reconsider | Show current, voltage, power, and verdict | Solver-backed comparison |
@@ -40,8 +43,8 @@ time to see the result.
 
 ### Shipped and required to protect
 
-- [x] Focused homepage with circuit mission, method cards, future subjects, and
-  three entry points: lab, Reality Lens, guided demo.
+- [x] STEM homepage with a four-discipline orbital map, Engineering circuits
+  marked as the first live module, and a five-station feature turntable.
 - [x] Predict → Build → Reality Check → Solo stage model and prediction gate.
 - [x] Deterministic circuit solver/evaluator owns measurements, verdicts,
   invalid-circuit errors, and expected outcomes.
@@ -90,14 +93,18 @@ time to see the result.
 
 ### Home and lab shell
 
-The first screen answers what Verityn does, why prediction comes first, and what
-Meta AI does. The hero names the transformation (diagram → Meta interpretation
-→ editable circuit → solver evidence); primary entry is `Start with a diagram`,
-secondary is `Learn through the guided circuit lab`, and `Watch the guided
-demo` is a quiet link. A `What does what` strip credits Meta Muse Spark,
-Reality Lens, and the Verityn Solver. The lab shell exposes stage, simulator
-readiness, backend health, replay, and the next action. Reality Lens is a
-first-class page; developer controls stay in their own drawer.
+The first screen presents Verityn as a STEM learning platform, not a circuit
+product. A selectable orbital map shows Science, Technology, Engineering, and
+Mathematics, with Engineering circuits marked as the first live module and the
+other subjects identified as future pathways. The hero has one primary
+`Play the guided demo` action rather than duplicate guided-lab and explore
+buttons. Below it, the existing five-station turntable remains the index of
+current tools: Guided Lab, Experiment Bay, Reality Lens, Meta Muse Spark, and
+Verityn Solver. Each selected station has concise copy and a small relevant
+illustration; side arrows, direct selection, and keyboard navigation remain.
+The lab shell exposes stage, simulator readiness, backend health, replay, and
+the next action. Reality Lens is a first-class page; developer controls stay
+in their own drawer.
 
 ### Prediction and build
 
@@ -141,8 +148,8 @@ reset, and Solo coach-off.
 
 Free canvas with battery, bulb, switch, and wire (no resistor node yet:
 the solver accepts resistors but the canvas cannot place them).
-`Run experiment` is explicit — never auto-run — and any edit returns
-the bench to `Circuit changed — run the experiment again.` Five
+`Run experiment` is explicit  -  never auto-run  -  and any edit returns
+the bench to `Circuit changed  -  run the experiment again.` Five
 presets (closed loop, open switch, series pair, shorted battery,
 overload the bulb) load real seeds through the shared converter;
 `Test` runs through the normal solver path. `Ask Muse Spark about
@@ -214,10 +221,10 @@ committed, and the recorded demo matches the submitted build.
 ## 9. Laboratory phase (headline: Make a prediction. Meet reality.)
 
 Verityn is an AI-guided STEM laboratory; circuits are the first complete
-laboratory, not the whole identity. This phase adds the product shell only —
+laboratory, not the whole identity. This phase adds the product shell only  - 
 no new laboratories, no new AI capabilities, no solver changes.
 
-### Phase 0 — Baseline and protection (in progress)
+### Phase 0  -  Baseline and protection (in progress)
 
 - [x] Freeze verified at `6632ad9`: backend 505, frontend 239, lint 0/0,
   build clean, browser smoke passed, no live calls.
@@ -230,7 +237,7 @@ Phase 0 acceptance: the existing Predict → Build → Reality Check →
 Solo → Finale journey and Reality Lens keep working; nothing is
 deleted; unfinished Phase 1 work stays disabled or bypassable.
 
-### Phase 1 — Product shell and navigation (implemented, uncommitted)
+### Phase 1  -  Product shell and navigation (implemented, uncommitted)
 
 - [x] Persistent shell: logo + name, Laboratory/Hub, Guided Lab,
   Experiment, Reality Lens, visible current location, in-app
@@ -239,24 +246,24 @@ deleted; unfinished Phase 1 work stays disabled or bypassable.
   keep-`index.html`-separate rule).
 - [x] Logo assets exported from `VERITYN LOGO.jpeg` (untracked source
   at repo root): header mark 81 KB, badged favicon + apple-touch
-  icon; no WebP (no encoder in the toolchain — PNG only).
+  icon; no WebP (no encoder in the toolchain  -  PNG only).
 - [x] Responsive frame `max-w-7xl`: two-column homepage, full-width
   lab workspace and lens page, stacked mobile. Canvas stages use
   the wide frame with React Flow `fitView`; no separate side
-  column yet — evidence still stacks below the canvas.
+  column yet  -  evidence still stacks below the canvas.
 - [x] No major dead zones at 1440px, 1180px, and 390px; every major
   feature reachable without browser Back.
 - [x] Existing feature components remain available; full gates +
   smoke re-run and green before any further work.
 
 Phase 1 findings: leaving the journey unmounts its canvases, so
-shell/lens navigation clears any latched chapter gate — builds are
+shell/lens navigation clears any latched chapter gate  -  builds are
 re-verified on return while recorded predictions stand (smoke
 covers the rebuild-to-re-earn path). The M8 naming audit still
 bans bare `Meta AI` in shipped strings, so the homepage names the
 precise `Meta Muse Spark` component instead.
 
-### Phase 2 — Reality Lens flagship (implemented, uncommitted)
+### Phase 2  -  Reality Lens flagship (implemented, uncommitted)
 
 - [x] Learner-facing name is `Reality Lens` (no `Experimental`
   badge, no `Snap & Build` heading); supporting copy attributes
@@ -288,7 +295,7 @@ Honest coverage is unchanged from `vision-breadth.md`: 05 ready,
 06 needs_review, 08 next, hand-drawn needs_review,
 resistor/AC unsupported.
 
-### Phase 3 — Guided demo (implemented, uncommitted)
+### Phase 3  -  Guided demo (implemented, uncommitted)
 
 - [x] `Watch the guided demo` performs the real journey (same
   screens, solver, ladder, finale): Predict → Build → Reality
@@ -313,13 +320,13 @@ resistor/AC unsupported.
 
 Phase 3 findings: verdict-subtree remounts reset the card-local
 demo flags, so auto-apply and the R4 wait are keyed on the
-mount-stable demonstration trace — otherwise the demo re-applies
+mount-stable demonstration trace  -  otherwise the demo re-applies
 in a loop and the pending undo never lands. L1's StartVerdict
 rendered a matching headline at the time, so the smoke keys the
 apply check on the Undo button instead (wording replaced in
 Phase 4; the Undo keying stays).
 
-### Phase 4 — Learning result + voice (implemented, uncommitted)
+### Phase 4  -  Learning result + voice (implemented, uncommitted)
 
 - [x] Two-column lab layout: the canvas renders experiment
   (canvas + controls + result banner) and insight (prediction
@@ -361,11 +368,11 @@ with the switch open, …`. Banner screenshots need a ~1 s
 settle: `AnimatedReadout` counts 0 → value (reduced-motion
 users see the final value immediately). Canvases fit at a
 fresh 390 px mount; narrowing a live page can clip until the
-learner pans — a pre-existing React Flow trait, not a seed
+learner pans  -  a pre-existing React Flow trait, not a seed
 defect. `aria-label` text is not `innerText`, so probes must
 assert visible strings instead.
 
-### Phase 5 — Experiment workspace (implemented, uncommitted)
+### Phase 5  -  Experiment workspace (implemented, uncommitted)
 
 - [x] Experiment is a first-class shell destination with its own
   route, current-location state, and return path; guided lab,
@@ -374,7 +381,7 @@ assert visible strings instead.
   same palette, wiring, switches, solver path, and
   invalid-circuit explanations; no second circuit model.
 - [x] Runs are explicit (`Run experiment`); edits invalidate to
-  `Circuit changed — run the experiment again.` No auto-run.
+  `Circuit changed  -  run the experiment again.` No auto-run.
 - [x] Four presets load real seeds and verify against the live
   solver through the shared converter: closed loop 0.6 A /
   3.6 W lit, open switch valid 0/0 dark, series pair 0.3 A /
@@ -392,7 +399,7 @@ assert visible strings instead.
 
 Phase 5 findings: StrictMode's simulated unmount aborts a fetch
 started mid-mount, which stranded preset Test in `Simulating…`
-— the run request now schedules past mount with the guard set
+ -  the run request now schedules past mount with the guard set
 inside the callback. The blank-bench instructions initially
 showed the lesson auto-test copy; experiment mode always uses
 its own instructions. Resistor stays out: the solver accepts
@@ -400,7 +407,7 @@ its own instructions. Resistor stays out: the solver accepts
 entry, or converter support. One transient `lens lock` smoke
 timeout appeared mid-HMR and passed on the immediate re-run.
 
-### Phase 6 — Solver-backed overload physics (implemented, uncommitted)
+### Phase 6  -  Solver-backed overload physics (implemented, uncommitted)
 
 - [x] Bulbs carry optional safety metadata (`rated_volts`,
   `max_safe_watts`; defaults 6 V / 6 W) and an input-only
@@ -439,7 +446,7 @@ timeout appeared mid-HMR and passed on the immediate re-run.
   `23-damaged-mobile.png` captured on this tree in `docs/demo/`
   (1440, 1180, and 390 px, zero overflow).
 
-Phase 6 findings: Verityn uses a simplified classroom model —
+Phase 6 findings: Verityn uses a simplified classroom model  - 
 excess simulated power fails the bulb; this is not a claim
 about real-world electrical safety. The latch must never bump
 the bench nonce, or applying it would wipe the overload result
@@ -447,10 +454,10 @@ that caused it. Strict `SimulateResult` typing broke five older
 test fixtures at build time (vitest had passed them); they now
 carry empty `conditions`/`ratings`. Damaged bulbs still show
 full voltage across the open branch, so the card reads `12.0 V
-· 0.0 A · 0.0 W — Damaged`, which is the honest open-branch
+· 0.0 A · 0.0 W  -  Damaged`, which is the honest open-branch
 measurement.
 
-### Phase 7A — Homepage Lazy Susan (implemented, uncommitted)
+### Phase 7A  -  Homepage Lazy Susan (implemented)
 
 - [x] New hero: `Turn questions into experiments.` with the
   predict-build-evidence subhead, `Enter the Guided Lab`
@@ -486,6 +493,28 @@ Phase 7A findings: `innerText` reflects the CSS uppercase
 transform, so smoke asserts `STATION 1 OF 5`; shell nav and
 station tabs share labels (`Guided Lab`, `Reality Lens`), so
 smoke clicks tabs through a tablist-scoped helper. The phase
-brief listed 4 starter benches, but Phase 6 shipped a fifth —
+brief listed 4 starter benches, but Phase 6 shipped a fifth  - 
 the station truthfully reads 5. The browser tab title keeps
 the Phase 1 headline; only the hero changed.
+
+### Phase 7B  -  STEM platform framing and orbital map
+
+- [x] Reframe Verityn consistently as a STEM learning platform;
+  circuits are explicitly Engineering's first live module, not
+  the platform's full scope.
+- [x] Add an interactive four-discipline orbit for Science,
+  Technology, Engineering, and Mathematics. Engineering opens
+  the live circuit lab; the other fields are labelled as future
+  pathways rather than unfinished or already-shipped labs.
+- [x] Preserve the five-stop product turntable and its side-arrow
+  navigation. Shorten station descriptions, add a relevant
+  miniature illustration per station, and keep real routes for
+  every action.
+- [x] Remove duplicate guided-lab/explore hero buttons; the
+  orbital map, feature turntable, and guided demo remain clear
+  ways to enter.
+- [x] Make the sticky laboratory header span the viewport while
+  keeping its contents aligned to the product frame.
+- [x] Update README and product framing to state the difference
+  between the broader STEM vision and the currently live
+  Engineering circuit module.

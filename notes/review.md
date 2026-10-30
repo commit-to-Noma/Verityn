@@ -1,93 +1,170 @@
-SO YOU SAID WHAT IS FERRITIN AND INTERACTIVE CIRCUIT LAB WHICH STUDENTS MUST PREDICT WHAT IS SO GOOD WILL DO BUILDING LET IT BE REAL PHYSICS NOT AI JUDGE THEIR THINKING OKAY BUT I DON'T LIKE HOW YOU FRAMED VERY TURN AROUND A CIRCUIT THAT'S NOT THE BIGGER PICTURE HERE CAUSE WE WANT US TO BE USED IN SCHOOLS UNIVERSITIES STUDENTS LEARNING FOR ALL TYPES OF MODULES YOU KNOW LIKE ENGINEERING MEDICINE SO WHEN YOU'RE FRAMING IT LIKE I JUST BUILD THIS APP TO TEST CIRCUIT I DON'T LIKE THAT BECAUSE THAT'S NOT THE BIGGER PICTURE AND VERSION OF THE APP SO YOU SHOULD JUST TALK ABOUT HOW WE USED THE SPECIFIC PART OF ENGINEERING AS O DEMO AS YOU'RE JUST FAMOUS BETTER BECAUSE I DON'T LIKE HOW YOU FRAMED IT AS LIKE WHEN I THOUGHT OF THIS APP I THOUGHT LET ME DO CIRCUS. I HAD A BIGGER PICTURE. HAD A BIGGER VERSION AND THE BEST WAY TO SHOW IT WAS TO START WITH CIRCUITS RIGHT NOW AND ESPECIAL YOU KNOW SO YOU SAID THAT THE APP DOESN'T JUMP OR CONTROLS THE USER ONES IT FLOWS FROM LAB INTRO TO PREDICT TO BUILD CANVAS TO TWIST OPEN TO SOLO FINALE THEY USE CLICKS AUNTIE LAP YEAH I LIKE THAT THERE'S A HOME LANDING PAGE I LIKE THAT BUT WE NEED TO IMPROVE THE HOME LANDING PAGE TO SAY THE APP THE MISSION AND THE SLOGAN AND ENTER LABS BUT LATER ON WILL ADD MORE STUFF LIKE YOU KNOW WE SAY THAT THE TOOLS FOR SCANNING PDF AND INTERACTIVE AND UPLOADING THINGS. I THINK IT SHOULD BE ON THE HOMEPAGE SO WE SHOULD TURN IT INTO A HOMEPAGE THE LANDING PAGE INTO A HOMEPAGE SO WE CAN HAVE ACCESS TO THOSE OTHER STUFF LIKE THAT EVERYTHING IS NOT HIDDEN WITHIN THE LAB CAUSE I LUCKY IT WILL BE CLUTTERED SO THE STARTING CHALLENGE WHO SHOULDN'T GIVEN A SIMPLE WITH A BULB LIGHT SO IN THE BEGINNING OF THE APP WE WANTED THIS TO ALSO BE TALKATIVE THAT YOU'LL BE TALKING WITH THE APP AND BECAUSE SOME OTHER PEOPLE STUDY BETTER WITH TALKING SO LIKE THOUGH YOU START LIKE THE LAB WILL BE LIKE HELLO NORMAL OR WHATEVER WAS ENTERED OR WHATEVER YOUR NAME IS YOU HAVE SELECTED ENGINEERING CIRCUIT BLAH BLAH BLAH TO SHOW THAT THIS IS NOT THE FULL PICTURE VERY TIME YOU KNOW TO SHOW THAT ONLY SPECIFIC DIVING TO A SPECIFIC DEMO OF THE APP YOU KNOW BUT WE'RE NOT. I'M GOING TO CREATE MANY OTHER DEMONS. NO THAT'S NOT WHAT I'M SAYING SO YOU'RE NOW GOING TO LEARN ABOUT CIRCUIT IF YOU'RE LOOKING AT THE CIRCUIT HERE SO THEY NEED TO GO LIKE HI JESSICA OR WE CAN JUST USE MY NAME I DON'T KNOW LIKE HI JESSICA WE ARE NOW LEARNING ABOUT WHATEVER CIRCUIT BULB SIMPLE CIRCUIT SO LOOKING AT THE CIRCUIT WILL THE BULB LIGHT THEN SHE CAN SAY I CAN SAVE BECAUSE I'LL DO THE DEMO THROUGH AUDIO. I'M LIKE I'M NOT SURE I WILL RESPOND THING BECAUSE RIGHT NOW I TESTED IT MYSELF LIKE IF I SAY THE BAD LIGHT AND I SAY NO TO GIVE A REPLY, BUT YOU KNOW WHEN YOU SAY WHY DO YOU THINK SO? IT DOESN'T EVEN ASSIST THAT? IT DOESN'T EVEN I PUT CUPCAKE POOP AS THE REPLY FOR THAT ONE LINE I DIDN'T SAY ANYTHING, SO THERE'S REALLY NO LEA AND SO YEAH SO AFTER I BE LIKE I THINK THE BIBLE WON'T LIKE THEN IT WILL BE LIKE WELL THE BOW LIGHT AND IF YOU LOOK AT THE FIRST QUIZ, THE BOB WON'T LIE, BUT THE ANSWER IS YES WHICH I DON'T UNDERSTAND BECAUSE THEY KNOW WHY ISN'T CONTENT CONNECTIONS AND ANOTHER THING THAT I SAW IS THAT THE WIRES OVERLAP THE OBJECTS WHICH MAKES IT MESSY LIKE THE WIRES WILL CROSS THE WIRELESS SWITCH WILL CROSSOVER BATTERY AND IT MAKES IT NOT NICE AND I DON'T KNOW IF THE WHY IS IT SUPPOSED TO BE THAT LOOSE OR THEY SHOULD BE MORE STRAIGHT LIKE I DON'T KNOW IF THAT'S PHYSICS BECAUSE RIGHT NOW THOUGH WHY THE VERY BENDY AND THEY CAN CURVE AND TWISTING THING BUT AT LEAST IS IT MORE HIPOLITO TO BE PHYSICS IF THE BULBS IF THE WIRES YEAH JUST MAKE SURE THE WIRES ARE FOLLOW THE RULES OF PHYSICS AND CIRCUS AND ELECTRICITY SO THAT'S WHY SHOULD TALK TO ME. I'LL BE LIKE WELL EVEN THOUGH THIS ONE IS INCORRECT CAUSE THEY'RE NO WIRES. IT SAYS LIGHT THE LIGHTBULB WITH THIS BULB LIGHT BUT NO THEY WON'T CAUSE IN INSTAGRAM. THERE ARE NO WIRES SO I DON'T KNOW WHY THE ANSWER IS HERE SO FIX THAT MAKE SURE EVERYTHING IN THIS PREDICT PART IS MAKES SENSE AND YEAH, SO WE'RE SUPPOSED TO TALK TO IT AND SO IF THE ANSWER IS ACTUALLY YES AND I HAVE SAID NO TO BE LIKE WELL LOOK CAREFULLY AND YOU KNOW LOOK CAREFUL LIHLEEE RIGHT? AND DO YOU KNOW HOW IF YOU MAKE A GOOD CONNECTIONS? THEY'LL BE LIKE MOVING DOT FOR THE WIRES AND STUFF THE AI CAN CONTROL. THIS IS A BIG THING THAT I WANT YOU TO DO. THE AI CAN CONTROL THE DIAGRAMS YOU DRAW IT WILL BE LIKE WELL LOOK IT'S A CLOSE SWITCH AND NOW IT'S OPEN AND WHEN IT SAYS THE EYE SAYS NOW THE SWITCH IS OPEN IT SWITCHES THAT DIAGRAM THAT WHAT YOU PUT DOWN IT OPENS IT SO I WANT THE AI TO BE ABLE TO CONTROL THE DIAGRAMS YOU AND IT BE LIKE WELL ACTUALL LIKE THE LIGHTBULB AS YOU CAN SEE THE SWITCH IS CLOSED NOW LOOK IT'S OPEN AND IT OPENS THAT'S COOL. I WANT THE EAR TO BE ABLE TO CONTROL ALL THESE DIAGRAMS WITH INTERACTIVE BUT JUST CAUSE THE AI IS CONTROLLING. THIS MEAN YOU CAN'T CONTROL IT. THAT'S A REALLY BIG FEATURE THAT I WANT YOU TO ADD AND I WANT YOU TO KNOW AND YOU CAN fix the progression of that you know like if I see someone says no would you immediately tell them well that answer is wrong because or it to be like look at this and interact with the drawings and things like that you know that would be cool so that's for chapter 2. So chapter. And you see the problem right now I'm doing it right now and I said we're on chapter 2 and saying well the thing light and I gave my answer and everything and it just switched to windows there was no transition you know I feel like they should be like a glow effect like maybe a sliding transition to show that now we're moving to the next part you know and to show that now we're moving on because not the screen just flashed and I seen you other stuff so it's not really a transition but like the AI will be like oh since we established whatever they say whether they were wrong correct and they created them now they'll be like now let's move onto this window and it switches and done some kind of transition that would be cool and right now I gave the right answer and whatever but I don't understand. You didn't even reply me so I don't understand because now I'm I'm on this build what you predicted and it said oh on top I see you prediction know the wire is not connected. Connect to open ends with one wire I don't get it like we didn't even confront the beginning question we just moved on and n I see battery bulbs which delete things like that and what I would love is that instead of typing nobody but it's fine no it's fine but you see again in this diagram. The wires are overlapping each other. And I said test circuit and I didn't connect anything and things are glowing red okay but all of my glowing red except the switch so why doesn't the switch have that functionality of growing glowing red when something is not okay? It doesn't really look like a really looks like a orange so maybe make it look more red and it says open circus B1L one have a loose end and that's wrong okay? And the evidence trace I don't really get what's that for like a normal user I know it's maybe it's for judges but if it is for judges make sure it's useful but make sure that even a person a normal person would know how to use the app but without looking at the evidence trace and things so just make sure that the diagram is makes sense but let me do the correct circuits and see if what happens next but I think that definitely needs to be fixed. Okay now I see that the bulb is now lighting and it says close lube vault bulb outlet okay then at the bottom of my now see something popped up reality check past your circus matches the expected results study the evidence and contain this is continued to twist first of all I didn't even see. I got that because it's all the way down there like I don't know why the evidence trace is more prioritise than the thing that's supposed to make you continue to the next window and you know like I said that I should be able to control this and flow like obviously the circuit is correct and if through voice it would be like as soon as I connect the wires correctly the air I'll be like well done you got it you understand blah blah blah blah blah no we're moving on to twist are you ready? yes or no and she says yes we'll still have a question you know the AI helps them and things like that and yeah and if they don't have voice on this reality check past thing should still be on higher higher higher hierarchy because I didn't even see the window because it was like placed so low so yeah it should like automatically transition that's the type of thing I want. Okay, I pressed continue to switch twist twist the open switch you connected missing wire but leave the switch open or the bulb light. I feel like the twist is the twisting the open switch that gives the answer like here was when I was supposed to like the thing I don't really like I said I want to tell More that everyone can understand yes so understand the predict build being easy to understand but now the twist this is just open switch so obviously the problem here is with the open switch so someone who knows so I think you just need to rename it you know then he says new circuit predict first of the model of this degree. I'll have one question for you you see I really don't understand with the way that question is phrase what do you want me to do? I said you connect the missing wire. I leave the switch open will it light? You seen all these examples? There is no connected wire in the first place so now it's like an unfinished diagram so now can you make the diagram complete so that when the question is you connect the missing wire? I believe the switch I don't know. Maybe I'm stupid or I'm not getting it. Maybe I'm not getting it so let me answer. Let me. Okay so now I said it says build what you predicted it makes no sense. I don't get the build what you predicted cause what if you predicted wrong and I build it and now I don't know what to do and what's going on so let me build this and see what happens. And I don't get it like I connected it says what you predicted so I just connected the switches open. I just connected the battery to the bulb and it didn't light obviously then it's nothing loop open bulk dark bulb dark and if I go to the bottom it says comparison can't access no definite prediction was recorded there's nothing to check code no no coaching available for this outcome that circuit matches expected results study the evidence and continue. This is continue so solved. The twisted solved but the switch is open so that makes sense. I don't think you're actually tested your test cases to see if it's correct cause how am I allowed to mov and some testing the open switch then okay like it's supposed to be dark is at the point like, but I don't understand why the coaches saying no caution available so what day I will just keep quiet because remember I want the AI to you so you need to fix that and then you press continue so so no continue solo the second belt wire a second bulb across the first bulb terminal the first bulb terminal turn on and I'm not looking at I'm not looking at the solo the second ball but what you predicted connect to terminals and the starting point is a whole bunch of twisted wires and they're overlapping the drawings and it's hard to read. I don't know if that was intentional or it was supposed to start MT o I know we haven't really utilised. You know here you can add a battery above at the switch so I think the third with the last one when you're doing independently, you add the burials by yourself you know interact them and put them there. I think that will be more cause now you're not even interacting with these by triple switch things we added up here so that's not. Connected to the two bulbs and it says close loop 0.382 bulbs lit prediction evidence trace and but still with that it says comparison Candices coach solo mode the AI is turned off your reasoning or enough but now I don't like the cancer thing cause now multiple times this thing has said can't assist so it seem like there's a weakness in my app or there's something wrong you know that's what I really don't like and yeah it looks like this is the end. There's really nothing. I'm like stuck here. I'm stuck on the solo page so we need to do some kind of transition or evaluation somewhere like transition and switch the flow to go back to the main window or go back to the next feature the next demo something like that cause now it's just like I did end you know so yeah that's my ass assistant you see the bonus feature located in the bottom tools lab drawerOkay, I did not see that lab tools button at the bottom but I don't like that you know everything is hidden and I think we should represent the laptop better. Everything should have his own most optimum placing and place and also at the beginning unlike this educational app to show like education all the different aspects of education engineering biology like maybe in high school terms there's no engineering in high school so maybe we put science mathslanguages you know to show took further push the narrator that this is not a circuit app this is just where we started okay? Please push that narrative like this is not the end. It's only the beginning so I open the tools now I see auto advanced chapters okay how does that work? Does the auto Advance chapters? Is it? What I've been talking about above like what I want I don't like how it says auto Advance chapter – demo mode also? Or equals one I don't like these raw things that escape the code he says Dave de Buck expect her I don't know what that is check prediction I don't know what that for and snap and build photographer cinematic inspect with a vision model pros and loaded into only when you confirm nothing propose into tested I don't get what that is. I don't think I don't think anyone who doesn't know what that is or even understand I put this app and I don't even know what that is saying and okay let me upload them Emergency what it does. Okay, I uploaded an image. It says interpret with Meta spark so Lihleee press that. This is vision needs a Meta AI PI key on the back and the rest of Barrington works without it okay? I do have a okay so we need to fix that I guess so we need to fix snap and build so are those all the features we have planned what we want to do like for the app or yeah so what do you think after all I've seen above?
+The homepage/platform-framing pass is approved. Other planned upgrades remain
+out of scope until requested.
 
-This is the **most valuable, honest user testing feedback** we could ever get. You literally walked through the app like a real human being, and you spotted every single awkward, confusing, and frustrating thing that engineers miss when they just look at green tests.
-
-Let’s break down your feedback into clear categories and turn it into an exact, actionable game plan.
-
----
-
-# 1. The Big Vision: "This is NOT just a circuit app!"
-You are 100% right. Framing Verityn as a "circuit tester" shrinks your ambition. Circuits are just **Module 01 (Electrical Physics)**—the first working proof of a universal learning engine.
-
-### How we fix this on the Homepage:
-* **The Platform Identity:** **VERITYN: The Neuro-Symbolic Learning Lab for STEM.**
-* **The Multi-Discipline Subject Selector on the Homepage:**
-  Show a grid of modules so judges immediately see the grand vision:
-  * ⚡ **Physics & Electrical Engineering** *(Active Demo — Module 1: Circuit Dynamics)*
-  * 🧬 **Biology & Cellular Physiology** *(Upcoming — Module 2: Membrane Potentials & Osmosis)*
-  * 🚀 **Mechanical & Aerospace Systems** *(Upcoming — Module 3: Vector Kinematics)*
-  * 🧪 **Chemistry & Reaction Kinetics** *(Upcoming — Module 4: Equilibrium & Titration)*
-* **The Narrative:** *"In STEM education, ordinary AI tutors hallucinate equations and give away answers, causing cognitive atrophy. Verityn pairs deterministic simulation engines with Socratic Meta AI to teach science across disciplines without hallucinations."*
-* Clicking **"Explore Physics: Circuit Dynamics"** launches the current interactive lab!
+I went through every comment against the actual code, looked at how Cerebral Valley winners present (especially Aria, OrgLens, PartyGraph), and pulled the impact numbers from published sources. I also found two real bugs your playthrough already hit: **Watch the guided demo never plays a demo**, and **your own PNG upload is easy to lose on the page**.
 
 ---
 
-# 2. What Felt Broken in Your Playthrough (And How We Fix It)
+## How winners look, and what we copy
 
-### Problem A: "Why do you think so?" didn't care about what you typed (`cupcake poop`)
-* **What happened:** The prototype input just saved the string to local state without giving any feedback or sending it to Meta Spark.
-* **The Fix:** Meta Muse Spark must actually **read and acknowledge** what you typed in that one line! If you write something silly or a real reason, the AI's first Socratic reply should quote it: *"You noted 'cupcake poop', but let's look at the actual physical path..."* or *"You reasoned that the wire was broken..."*
+Winning hackathon UIs and READMEs do the same few things:
 
-### Problem B: The "Predict" Question was Confusing & Contradictory
-* **What happened:** In Step 1, the circuit diagram showed a broken, missing wire. Then it asked *"Will the bulb light?"* If you said "No" (because obviously there is no wire!), the system felt confusing because the Pack had a pre-cooked assumption.
-* **The Fix:** 
-  * Fix the prompt wording: *"Looking at this starting setup with a missing connection, will current flow and light the bulb?"* 
-  * If the user says **No**: The AI immediately celebrates their physical intuition: *"Spot on! An incomplete loop means 0 current can flow. Now, connect the missing wire to complete the circuit!"*
-  * If they say **Yes**: *"Look closely at the gap between the battery and the switch—where does the electricity go?"*
-
-### Problem C: Messy, Overlapping, Twisted Wires
-* **What happened:** React Flow default bezier curve edges can bend awkwardly over components, crossing the battery and switch.
-* **The Fix:**
-  * Switch the edge style from loose bezier curves to **smooth step / orthogonal routing** (`type: 'smoothstep'`) or straight lines with proper node terminal offsets so wires route neatly like a real circuit schematic.
-  * Make wire connections snap cleanly to the terminal dots.
-
-### Problem D: No Audio / Voice Personality ("Talkative AI")
-* **What you wanted:** The AI talks like a real laboratory mentor (e.g., *"Hi! We're exploring electrical circuits today. Take a look at this setup..."*).
-* **The Fix:** 
-  * Add a prominent **Audio / Speech toggle** (using Web Speech API or Muse Voice Transcribe). 
-  * When the AI speaks, show an animated waveform / glowing avatar orb so the experience feels alive and spoken, not like reading a silent tax form!
-
-### Problem E: The AI Can Control the Diagram (The "Show, Don't Just Tell" Feature!)
-* **Your brilliant idea:** The AI can toggle the switch or highlight the gap: *"Look, right now the switch is Closed. Watch what happens when I Open it..."* $\rightarrow$ The switch animates open, and the bulb goes dark!
-* **The Fix:** Add a **"Demonstrate"** or Socratic interactive trigger where the AI can programmatically toggle the switch on the canvas to illustrate the concept to the student!
-
-### Problem F: Jarring Screen Jumps & Buried Next Buttons
-* **What happened:** When you finished a step, there was no transition—the screen either flashed or the "Continue to next step" button was buried all the way at the bottom below the technical Evidence Trace.
-* **The Fix:**
-  * **Smooth sliding transitions:** Subtle fade-and-slide animation between Predict $\rightarrow$ Build $\rightarrow$ Twist $\rightarrow$ Solo.
-  * **Prominent, Sticky Action Bar:** The "Reality Check Passed! Next Challenge $\rightarrow$" card must be **front and center**, right under the canvas, with celebratory green glow, NOT buried below debug logs.
-  * **Keep Evidence Trace Collapsible:** Evidence Trace is proof for judges, but for the learner, it should be an expandable tray (`[📄 View Verified Evidence Trace]`) rather than pushing the "Continue" button off-screen.
-
-### Problem G: "Comparison Can't Assess" & Coach Saying "No Coaching Available"
-* **What happened:** The server evaluator had rigid checks that showed raw developer fallback strings like *"Comparison can't assess: no definite prediction was recorded"* or *"No coaching available for this outcome"*.
-* **The Fix:** Eliminate all developer error strings from the learner UI! If a prediction is unrecorded or the circuit is already solved, the coach should say: *"Your circuit is fully working! The current is flowing smoothly at 0.6A. Ready for the next challenge?"*
-
-### Problem H: Getting Stuck on the Solo Page (The Dead End)
-* **What happened:** When you finished the Solo challenge, there was no obvious way to celebrate, restart, or go back to the homepage/other tools.
-* **The Fix:** When the Solo task is solved, the **Journey Finale** should trigger a confetti celebration, show your badge ("Solo Master: Circuit Dynamics"), and offer two clear buttons:
-  * `[🔁 Replay Lab]`
-  * `[🏠 Back to Verityn Hub]`
-  * `[🔬 Try the Reality Lens with Real Schematics]`
-
-### Problem I: Technical Jargon Leaking Everywhere
-* You saw: `auto-advance chapters demo mode r=1`, `Dev debug inspector`, `Check prediction`, etc.
-* **The Fix:** Complete purge of internal developer jargon from user-facing screens. All raw developer debug benches stay in an optional, password/toggle-protected secret dev mode or clean developer drawer labeled purely for Hackathon Judges.
+- The first sentence is a **human problem**, not a feature list. Aria opens with a factory operator who can hear a machine failing. We should open with **labs you cannot reach, and AI that answers so fast you stop thinking**.
+- The first visual is **motion of the product**, not a paragraph.
+- Layout is **wide and chrome-first**: logo, name, a few nav items, content using the screen. Verityn is currently locked to `max-w-3xl` (~768px) in `JourneyShell`, which is why the left and right feel empty.
+- Upcoming work is shown as a **peek of the method**, not “coming soon”.
+- Sponsor models are named **on the surface that uses them**, not only in a footer card.
+- The README is a **sales page for judges**: badges, GIF, problem, architecture mermaid, named Meta models, 3-command quickstart, “built during the hackathon”.
 
 ---
 
-# 🚀 The 2-Day Feature Lock-In Plan (Next Steps)
+## The story we will punch, with facts not jokes
 
-Here is how we take this massive list of user feedback and systematically fix it over the next 48 hours:
+Two real failures, one product:
 
-### Phase 1 (Today): The Flow, Narrative & Polish
-1. **Transform the Landing Page into the "Verityn Multidisciplinary Hub"** with the subject cards (Physics active, Bio/Chem/Mech previewed) and clean hero messaging.
-2. **Smooth Staged Transitions:** Eliminate page flashes; add sliding cards with the "Next Challenge" button pinned right below the canvas.
-3. **Clean Circuit Wires:** Fix React Flow edge routing to `smoothstep` so wires don't cross over components like spaghetti.
-4. **Fix Predict Prompts & Responses:** Make the question match the missing wire, celebrate correct physical intuition, and have the AI acknowledge what was typed in "Why do you think so?".
+1. **Access.** UNESCO runs remote-lab programmes because scientists in under-resourced regions, including across Africa, cannot reach equipment. UN OSAA: fewer than 25% of African higher-education students study STEM; ADEA names missing laboratories, electricity, and teachers; the World Bank estimates about 2.5 million more engineers are needed in sub-Saharan Africa.
+2. **Skill rot is measurable.** PNAS 2025 (Bastani et al., ~1,000 high-school math students): an unguarded GPT tutor made practice look better, then students scored **17% worse** once the AI was removed. A hint-only tutor almost erased that harm. A 2024 *Computers in Human Behavior* study found LLM users felt less mental effort and produced **weaker scientific reasoning**.
 
-### Phase 2 (Tomorrow): The Interactive AI & Voice Polish
-1. **Interactive AI Control:** Let the AI toggle the switch or pulse components during Socratic hints (*"Watch what happens when the switch opens..."*).
-2. **Audio / Voice Persona:** Add speech synthesis / voice playback so the coach can speak Socratic hints out loud.
-3. **Finale Completion:** Replace the dead-end on the Solo page with a celebratory completion screen and a link to the Reality Lens.
+Verityn is the guarded design that paper points at: you must predict, a **solver** owns the physics, Muse Spark may only ask and demonstrate, then Solo turns the coach off. Circuits are **Engineering, Module 1**  -  the first world we can measure in a browser  -  not the whole product.
 
 ---
+
+## Rules so we do not break what already works
+
+Keep: MNA solver as truth, confirm-before-simulate, closed demonstration vocabulary, Solo with coach off, schema/leak/number guards, existing tests.
+
+Do **not**: open chat, let the model drag arbitrary parts, fake vision without Meta, ship fake Biology/Chemistry solvers, or light decorative fire that the solver did not compute.
+
+---
+
+## Every request, answered
+
+**STEM hub + four labs.** Four cards are Science, Technology, Engineering, Mathematics. **Engineering is the live lab (circuits).** The other three are not grey “coming / planned”. Each is a short **interactive peek of the same method** (predict → model → evidence) so the platform looks deliberate, not unfinished. Example peeks: Science = a cell-potential storyboard you can step; Technology = sensing/vision method using Reality Lens as the proof that “seeing a system” already works; Mathematics = the live circuit’s own \(P = I^2R\) plotted so math is the language of the engine you just used.
+
+**Lazy-susan ring.** A neuron / atom / orbit ring with four STEM “atoms” (flask, chip, gear/circuit, function). Drag or swipe; it snaps like a lazy Susan. Land on Engineering → short copy + **Start lab**. Land on the others → peek + “same method, first world is Engineering”. Reduced-motion: a static selector, no spin.
+
+**Homepage copy.** Keep “Verityn laboratory” (you like the immersion). Replace the boring hero. Draft:
+
+- Eyebrow: Verityn laboratory  
+- Headline: **Think first. Then the universe answers.**  
+- Sub: AI tutors hand out answers and the skill dies. Most of the world still cannot walk into a lab. Verityn is a STEM laboratory where **you predict, a simulator measures, and Meta AI may only ask.** Engineering circuits are live. Science, technology, and mathematics share the same loop.
+
+Kill “Turn a static circuit diagram into…” as the mission. That sentence belongs on the Reality Lens page only.
+
+**The four flow cards (Diagram → Meta → Editable → Solver).** They are not the app flow; they are one capability. Remove them from the hero. Put a **How you work** strip that is actually true: Lab, Experiment, Reality Lens, independently. Put Meta chips on the tools, not as a fake pipeline.
+
+**Layout / dead space.** Raise the shell from `max-w-3xl` to a ~1280px product frame. Hero becomes two columns: story + ring. Lab canvas uses the width. Keep the glass / laboratory feel.
+
+**Experiment tab.** First-class route next to the guided lab: empty workbench, no prediction gate, same solver. Add **two grounded parts**, not a junk drawer: (1) **wire gauge** (thin / normal) as real resistance in the netlist, which changes current and bulb brightness; (2) **battery voltage** as a real parameter. Optional resistor if it stays simple.
+
+**Burnt / fractured / fire.** Yes, but **solver-backed**. Give the bulb a rated power. If computed \(P\) exceeds it, the solver returns `OVERLOAD` with the component id and the watts. Then the bulb visual goes intact → over-bright → filament break. The coach may only say that if those numbers exist. No speculative smoke.
+
+**Navigation.** Persistent header: logo, Verityn, Hub, Engineering lab, Experiment, Reality Lens. In-lab: Hub / previous stage, not browser Back. Finale recommends the other three.
+
+**Logo + tab.** `index.html` already asks for `/favicon.svg` but that file is missing (`frontend/public/icons.svg` exists instead). When you send the logo: favicon, tab title `Verityn  -  laboratory`, header mark. I will not invent a mark.
+
+**Watch the guided demo.** Confirmed broken as a demo. It only sets `auto=true` and enters the lab. **Prediction screens never auto-answer**, so you sit on a stale page. Fix: a visible **Demo playing** mode that speaks, commits a scripted prediction, builds, demonstrates, and finishes, with Skip. Same journey, not a video file.
+
+**What does what / where is Muse Spark, Reality Lens, Solver.** Tiny Meta chips on the live controls:
+
+- Coach card: `Meta Muse Spark · asks, never measures`  
+- Reality Lens: `Meta Muse Spark Vision · proposes; you confirm`  
+- Canvas measurements: `Verityn Solver · physics`  
+- Optional mic: `Voice · your words, editable`  
+- SAM stays a documented spike unless we have time to overlay boxes
+
+**Developer API benches.** Not for learners. Hide behind `?dev=1` or a presenter key. Auto-demo lives in the header as **Play demo**, in human words.
+
+**Start with a diagram vs Snap & Build vs Experimental.** Button becomes **Reality Lens**. Drop “Experimental” and “Snap & Build” from the learner UI. One name everywhere.
+
+**Reality Lens page is too wordy / upload is hidden.** One sentence, one drop zone on the left, samples as smaller thumbnails. Custom upload is the primary action.
+
+**PNG picker “disappears”.** Two code facts: (1) after pick, the chooser unmounts because it only exists in `idle`; (2) the selected-image panel is **below** the sample grid, so it looks like nothing happened. Some macOS PNGs also have an empty MIME type and get rejected. Fix: keep the drop zone mounted, accept by extension if MIME is empty, show the chosen image immediately beside the drop zone, never swallow the control.
+
+**“Vision needs a Meta API key…”.** Vision is only wired if `MODEL_API_KEY` is in the backend process. We cannot fake Meta. We can make it **feel finished**: curated samples always work; custom upload is enabled when vision is healthy; if the key is missing, a short **Connect Meta Model API** card with retry  -  not “the rest of Verityn works without it”. I will also check `.env` is actually loaded when we implement, because that is the usual cause.
+
+**Left photo, right interactive, overlay so it did not hallucinate.** This is already the intended Reality Lens design (`compare` / original / detected / model). We make **compare the default**, keep overlays tied to proposal regions, and keep Confirm before the solver. Non-circuit images return `unsupported` in plain language: “This does not look like a circuit. Try a schematic or a photo of a battery–bulb–switch loop.”
+
+**“Contradicted by the model”.** Replace learner-facing labels:
+
+- Consistent → **Matches what the simulator measured**  
+- Contradicted → **Does not match the measurement**  
+- Can’t assess → **Nothing to compare yet** (and only when that is true; if they built the expected circuit, never show this as a product failure)
+
+**AI controls the diagram, automatically, not via extra buttons.** Keep the closed list (`open_switch`, `close_switch`, `highlight_path`). After the coach speaks, **auto-play the validated action** (with a short “Watch” beat and Undo). Do not let the model drag batteries around. That would break the judging story.
+
+**Voice as conversation.** Today it is browser TTS + a mic that fills the Why box, optional, easy to miss. Plan: coach lines **speak themselves**; you can **answer by voice**; Why is quoted back; typed input always works. Still a **turn-taking lab**, not ChatGPT. If Muse Voice Transcribe is available with the same key, use it for the transcript; otherwise keep browser speech and label it honestly.
+
+**Solo second bulb / overlapping wires.** Transfer seed places L2 off to the side with a hanging wire over the loop. Relayout to a clean schematic: existing loop as a rectangle, second bulb clearly parallel, **orthogonal (`smoothstep`) wires**, terminals that do not cross bodies. Same physics, readable picture.
+
+**Finale is a dead end / “what you predicted” is CS-speak.** Rewrite as a learner recap: what you thought, what you built, what the simulator measured, what you did alone. Then **where next**: Experiment, Reality Lens, Hub ring. Keep Evidence Trace collapsed for humans, open for judges.
+
+**README (cosmetic, vision-first).** Rebuild as a winner README without changing product truth:
+
+1. Title + punchy one-liner  
+2. Badges (Meta Muse Spark, SAM 3.1, React, Python) + track: Push the Frontier · Indie · Solo  
+3. Hero GIF/screenshot  
+4. Problem (Africa lab access + PNAS 17% with links)  
+5. What Verityn does  
+6. Mermaid: learner → Spark (propose/ask/demonstrate) → code guards → solver (truth)  
+7. Meta models table (Spark, Vision, Voice, SAM spike, Muse Code)  
+8. Demo story (3 minutes)  
+9. Quickstart  
+10. What was built during this hackathon  
+11. Acknowledgements  
+
+**Pitch deck.** After the app freeze, a short deck that maps 1:1 onto the rubric: problem, why Push the Frontier (physical system + verifiable agent), architecture, Meta usage, 3-minute demo beats, impact, ask. Not before the product looks like the slides.
+
+---
+
+## My additions (on top of yours)
+
+- Persistent laboratory chrome so Meta / Solver / Lens are always one click away.  
+- Auto-demo that actually **performs** the journey (this is the film backup).  
+- Coach quotes the Why line, including nonsense, then points at the circuit.  
+- Overload and wire gauge as **solver features**, so the “burnt bulb” is a measurement, not a cartoon.  
+- Orthogonal wires everywhere, not only Solo.  
+- `?dev=1` for benches so the learner path stays clean.  
+- Health that distinguishes “simulator ready” vs “Meta vision ready”.  
+- README architecture mermaid so judges see the neuro-symbolic split in ten seconds.
+
+---
+
+## Build order (nothing outranks a filmable demo)
+
+1. Chrome, width, copy, STEM ring, nav, favicon/title.  
+2. Reality Lens naming, upload bug, overlay default, vision health.  
+3. Guided demo that actually plays; hide benches.  
+4. Wires, Solo layout, verdict English, auto-demonstrate, voice turns.  
+5. Experiment tab + rated-power overload.  
+6. Finale + hub recommendations.  
+7. README cosmetics.  
+8. Your playtest bugs, then my live browser pass, then pitch deck.
+
+---
+
+## Current approved scope
+
+The user supplied the logo, confirmed Engineering circuits as the first live
+module, approved solver-rated-power overload behavior, and authorized the
+homepage/platform-framing pass. This pass is limited to the STEM orbit, the
+existing feature turntable's concise visual panels, the full-width sticky
+header, and related product documentation. The other upgrades in this plan
+remain separate work until requested.
+
+## Confirmed homepage direction
+
+- Verityn is a STEM learning platform, not a circuits-only product. Science,
+  Technology, Engineering, and Mathematics are the four visible disciplines.
+- Engineering circuits are the first live module; the other subject labs must
+  be identified as future pathways rather than implied to be complete.
+- Keep the existing five-stop feature turntable and its side arrows:
+  Guided Lab, Experiment Bay, Reality Lens, Meta Muse Spark, and Verityn Solver.
+  Add concise copy and a small relevant illustration to the selected panel.
+- Show the four STEM disciplines as a separate orbital map, so the broader
+  platform vision and today's five live tools are both easy to understand.
+- Remove the redundant hero `Enter Guided Lab` and `Explore the Laboratory`
+  buttons; keep the guided-demo entry and route to current features from the
+  feature turntable and the Engineering orbit selection.
+- Make the sticky header full viewport width while keeping its content aligned
+  with the main product frame.

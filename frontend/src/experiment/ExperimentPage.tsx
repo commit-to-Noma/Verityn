@@ -25,7 +25,7 @@ function explainCaption(provider: string): string {
     return 'Guided by Meta Muse Spark · Grounded in simulator evidence.'
   }
   if (provider === 'prototype-fake') {
-    return 'Deterministic prototype — no model call.'
+    return 'Deterministic prototype  -  no model call.'
   }
   return `Served by ${provider}.`
 }
@@ -148,7 +148,7 @@ function LatestResult({
                 <p className="text-sm font-medium">
                   {bulb.id}
                   {condition !== undefined && (
-                    <span className={CONDITION_CLASS[condition]}> — {CONDITION_LABEL[condition]}</span>
+                    <span className={CONDITION_CLASS[condition]}>  -  {CONDITION_LABEL[condition]}</span>
                   )}
                 </p>
                 <p className="text-sm">
@@ -365,7 +365,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           runRequest={runRequest}
           eyebrow="Experiment · Free build"
           title="Free bench"
-          instructions="Place parts, wire terminals, toggle switches — then run the experiment."
+          instructions="Place parts, wire terminals, toggle switches  -  then run the experiment."
           benchConditions={benchConditions}
           batteryVolts={batteryVolts}
           benchNonce={benchNonce}
@@ -424,7 +424,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           <h3 className="text-base font-semibold">Ask Muse Spark about this result</h3>
           {fresh === null ? (
             <p className="text-ink-muted text-sm">
-              Run the experiment first — explanations cover fresh solver results only.
+              Run the experiment first  -  explanations cover fresh solver results only.
             </p>
           ) : (
             <p className="text-ink-muted text-sm">
@@ -451,7 +451,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           )}
           {ask.phase === 'error' && (
             <div className="flex flex-col gap-2" role="alert">
-              <p className="text-sm">The coach is unavailable right now — your bench still works.</p>
+              <p className="text-sm">The coach is unavailable right now  -  your bench still works.</p>
               <p className="text-ink-muted text-sm">{ask.message}</p>
               <div>
                 <button

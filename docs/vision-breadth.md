@@ -37,9 +37,9 @@ solver values already pinned in `lens_samples.json` as `workbench-switch`).
 
 ## Recommended live-call order (if authorized)
 
-1. 08 — expect `ready` or `needs_review`; confirms clean-digital breadth.
-2. 02 — expect `needs_review`; confirms honest uncertainty on hand-drawn gaps.
-3. 07 or 10 — expect `unsupported`; confirms refusal outside the vocabulary.
+1. 08  -  expect `ready` or `needs_review`; confirms clean-digital breadth.
+2. 02  -  expect `needs_review`; confirms honest uncertainty on hand-drawn gaps.
+3. 07 or 10  -  expect `unsupported`; confirms refusal outside the vocabulary.
 
 Each result must be validated by production `validate_proposal`, preserved
 as a labeled fixture on success, and never sent to the solver unconfirmed.

@@ -379,13 +379,13 @@ def test_routing_picks_relevant_template():
 
 
 DARK_R2 = ("Evidence: L1 reads 0.0 A and 0.0 W. S1 is open with "
-           "0.0 A through it — no complete loop, so no current "
+           "0.0 A through it  -  no complete loop, so no current "
            "reaches L1.")
-DARK_R4 = ("Confirmation check — in your own words, why does L1 "
+DARK_R4 = ("Confirmation check  -  in your own words, why does L1 "
            "stay dark? The evidence says S1 is open with 0.0 A.")
-LIT_R2 = ("Evidence: L1 reads 0.6 A and 3.6 W — the loop is "
+LIT_R2 = ("Evidence: L1 reads 0.6 A and 3.6 W  -  the loop is "
           "complete.")
-LIT_R4 = ("Confirmation check — in your own words, why does L1 "
+LIT_R4 = ("Confirmation check  -  in your own words, why does L1 "
           "light? The evidence says the loop is complete at 0.6 A.")
 
 
@@ -505,7 +505,7 @@ def test_r2_pointer_unit_shapes():
          "b": "n"}]}
     assert coach.r2_pointer(claim_component="L1", facts=DARK_FACTS,
                             netlist=two) == \
-        ("Evidence: L1 reads 0.0 A and 0.0 W. S1 and S2 are open — "
+        ("Evidence: L1 reads 0.0 A and 0.0 W. S1 and S2 are open  -  "
          "no complete loop, so no current reaches L1.")
 
 
@@ -527,7 +527,7 @@ def test_r2_pointer_never_crashes(facts, netlist):
 def test_r4_prompt_unit_shapes():
     assert coach.r4_prompt(claim_component="L1", facts=DARK_FACTS,
                            netlist={"components": []}) == \
-        ("Confirmation check — in your own words, why does L1 stay "
+        ("Confirmation check  -  in your own words, why does L1 stay "
          "dark? The evidence says L1 reads 0.0 A and 0.0 W.")
     assert coach.r4_prompt(claim_component="L1", facts=None,
                            netlist=OPEN_NET) == \

@@ -59,8 +59,8 @@ const MAP_MARGIN = 80
  *
  * The source image aspect (width/height) sets the work-area shape; uniform
  * scale fits it inside the max box and centers it. Deterministic: the same
- * proposal and geometry always land identically. Rotation is not mapped —
- * canvas parts are axis-aligned — and wire routes are reconstructed
+ * proposal and geometry always land identically. Rotation is not mapped  - 
+ * canvas parts are axis-aligned  -  and wire routes are reconstructed
  * orthogonal edges between the established terminals, never traced paths.
  */
 export function geometryPositions(

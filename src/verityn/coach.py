@@ -303,7 +303,7 @@ def r2_pointer(*, claim_component, facts, netlist):
     amps, watts = numbers
     if watts > evaluator.ZERO_POWER:
         return (f"Evidence: {claim_component} reads {amps:.1f} A and "
-                f"{watts:.1f} W — the loop is complete.")
+                f"{watts:.1f} W  -  the loop is complete.")
     switches = _open_switches(netlist)
     if not switches:
         return (f"Evidence: {claim_component} reads {amps:.1f} A and "
@@ -318,7 +318,7 @@ def r2_pointer(*, claim_component, facts, netlist):
     else:
         clause = f"{' and '.join(switches)} are open"
     return (f"Evidence: {claim_component} reads {amps:.1f} A and "
-            f"{watts:.1f} W. {clause} — no complete loop, so no "
+            f"{watts:.1f} W. {clause}  -  no complete loop, so no "
             f"current reaches {claim_component}.")
 
 
@@ -335,7 +335,7 @@ def r4_prompt(*, claim_component, facts, netlist):
                 "circuit disagree with your prediction?")
     amps, watts = numbers
     if watts > evaluator.ZERO_POWER:
-        return (f"Confirmation check — in your own words, why does "
+        return (f"Confirmation check  -  in your own words, why does "
                 f"{claim_component} light? The evidence says the loop "
                 f"is complete at {amps:.1f} A.")
     switches = _open_switches(netlist)
@@ -348,7 +348,7 @@ def r4_prompt(*, claim_component, facts, netlist):
     else:
         evidence = (f"{claim_component} reads {amps:.1f} A and "
                     f"{watts:.1f} W")
-    return (f"Confirmation check — in your own words, why does "
+    return (f"Confirmation check  -  in your own words, why does "
             f"{claim_component} stay dark? The evidence says {evidence}.")
 
 
@@ -407,7 +407,7 @@ def suggest_actions(*, netlist, facts, claim_component):
     Deterministic over the submitted circuit and solver facts: a dark
     bulb behind an open switch offers a highlight plus a consented
     switch flip toward the completed loop; a lit claim offers a path
-    pulse and its measurement. No model call, nothing invented — the
+    pulse and its measurement. No model call, nothing invented  -  the
     numbers always come from the next solver run.
     """
     parts = _netlist_parts(netlist)

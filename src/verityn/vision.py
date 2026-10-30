@@ -32,7 +32,7 @@ MAX_CONNECTIONS = 24
 
 ASSUMED_BATTERY_VOLTS = 6
 ASSUMPTIONS = (
-    "Battery voltage assumed 6 V — photos rarely state it.",
+    "Battery voltage assumed 6 V  -  photos rarely state it.",
 )
 
 _ID = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,15}")

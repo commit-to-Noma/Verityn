@@ -189,13 +189,13 @@ const NEXT_LABEL: Record<string, string> = {
 
 function rungCaption(provider: string): string | null {
   if (provider === 'prototype-fake') {
-    return 'Deterministic prototype — no model call.'
+    return 'Deterministic prototype  -  no model call.'
   }
   if (provider === 'meta-spark') {
     return 'Guided by Meta Muse Spark · Grounded in simulator evidence.'
   }
   if (provider === 'deterministic') {
-    return 'Built from solver measurements — no model call.'
+    return 'Built from solver measurements  -  no model call.'
   }
   return null
 }
@@ -507,7 +507,7 @@ function CoachAsk({
               )}
             {card.rung === 'R2' && demoDone && (
               <p className="text-ink-muted text-xs">
-                Demonstrated on your canvas — the simulator judges the result. Undo is beside
+                Demonstrated on your canvas  -  the simulator judges the result. Undo is beside
                 the canvas controls.
               </p>
             )}
@@ -618,7 +618,7 @@ function CoachAsk({
       )}
       {nextRung === null && status.phase === 'idle' && (
         <p className="text-ink-muted text-xs">
-          Ladder complete — the solo stage runs with the coach off.
+          Ladder complete  -  the solo stage runs with the coach off.
         </p>
       )}
     </div>
@@ -630,7 +630,7 @@ function CoachAsk({
  * Used where the evaluator correctly refuses to judge (the broken
  * start, e.g. L1): the comparison runs against the pack's
  * solver-verified expected outcome. Repair measurements come only
- * from a solved result — a rejected circuit shows no repair block,
+ * from a solved result  -  a rejected circuit shows no repair block,
  * since inventing amps or watts would fabricate evidence. */
 function StartVerdict({
   prediction,
@@ -1833,10 +1833,10 @@ function CanvasInner({
               ? 'Drag a battery into the workspace to begin.'
               : mode === 'experiment'
                 ? ranOnceRef.current
-                  ? 'Circuit changed — run the experiment again.'
+                  ? 'Circuit changed  -  run the experiment again.'
                   : 'Ready to test your circuit.'
                 : loopClosed
-                  ? 'Loop closed — checking your circuit…'
+                  ? 'Loop closed  -  checking your circuit…'
                   : 'Connect the open terminal dots to complete the loop.'}
           </span>
         </div>

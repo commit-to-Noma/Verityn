@@ -4,15 +4,15 @@ import ReadoutValue from './ReadoutValue'
 
 /** Learner-facing hint per solver rejection code. Codes stay server-owned. */
 const ERROR_HINTS: Record<string, string> = {
-  DANGLING_TERMINAL: 'Some terminals are still loose — connect every glowing dot, then test again.',
-  FLOATING_COMPONENT: 'A part sits outside the loop — wire every component into one connected circuit.',
-  SHORTED_BATTERY: 'The battery is shorted — give the current a path through the bulb instead.',
-  CONFLICTING_SOURCES: 'Two batteries fight each other — this setup cannot settle on one answer.',
-  EMPTY_CIRCUIT: 'There is nothing to test yet — place parts on the canvas first.',
-  NO_BATTERY: 'A circuit needs a battery — place one to power the loop.',
-  MALFORMED_NETLIST: 'Something about this drawing is unreadable — rebuild it step by step.',
-  INVALID_VALUE: 'One of the part values is not usable — check the battery voltage.',
-  UNSOLVABLE: 'The simulator cannot settle this circuit — simplify the wiring and try again.',
+  DANGLING_TERMINAL: 'Some terminals are still loose  -  connect every glowing dot, then test again.',
+  FLOATING_COMPONENT: 'A part sits outside the loop  -  wire every component into one connected circuit.',
+  SHORTED_BATTERY: 'The battery is shorted  -  give the current a path through the bulb instead.',
+  CONFLICTING_SOURCES: 'Two batteries fight each other  -  this setup cannot settle on one answer.',
+  EMPTY_CIRCUIT: 'There is nothing to test yet  -  place parts on the canvas first.',
+  NO_BATTERY: 'A circuit needs a battery  -  place one to power the loop.',
+  MALFORMED_NETLIST: 'Something about this drawing is unreadable  -  rebuild it step by step.',
+  INVALID_VALUE: 'One of the part values is not usable  -  check the battery voltage.',
+  UNSOLVABLE: 'The simulator cannot settle this circuit  -  simplify the wiring and try again.',
 }
 
 /** Measurements for a solved circuit, or the invalid banner with offender ids. */

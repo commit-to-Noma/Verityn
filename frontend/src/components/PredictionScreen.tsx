@@ -132,7 +132,7 @@ export default function PredictionScreen({
       <p className="text-lg font-semibold">{challenge.question}</p>
       {demo !== undefined && (
         <p className="text-ink-muted text-sm" aria-live="polite">
-          Demo prediction — touch anything to take over.
+          Demo prediction  -  touch anything to take over.
         </p>
       )}
       <div className="flex gap-2" role="group" aria-label="Your prediction">
@@ -183,7 +183,7 @@ export default function PredictionScreen({
         </div>
         <p className="text-ink-muted text-sm">
           {speechSupport().recognition
-            ? 'Speak your reasoning, or type it — the microphone is optional.'
+            ? 'Speak your reasoning, or type it  -  the microphone is optional.'
             : 'Type your reasoning below.'}
         </p>
         {why.trim() !== '' && (

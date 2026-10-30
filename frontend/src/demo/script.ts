@@ -1,6 +1,6 @@
 /** Deterministic guided-demo script: learner-safe actions only.
  *
- * The demo performs the real journey — the same PredictionScreen,
+ * The demo performs the real journey  -  the same PredictionScreen,
  * CircuitCanvas, solver, coach ladder, and finale a learner uses. This
  * module only names WHAT the demo does (which choice, which terminals,
  * which validated demonstration); the components decide HOW, through

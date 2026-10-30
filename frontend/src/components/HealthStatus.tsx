@@ -16,7 +16,7 @@ export default function HealthStatus({ compact = false }: { compact?: boolean })
     () =>
       subscribeBackendHealth((health) => {
         if (health === 'down') {
-          setDetail('A request failed — the backend may be unreachable.')
+          setDetail('A request failed  -  the backend may be unreachable.')
           setStatus('error')
         } else {
           setDetail('')

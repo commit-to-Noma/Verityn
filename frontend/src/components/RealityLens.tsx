@@ -330,7 +330,7 @@ export default function RealityLens({
           </span>
           <p className="text-base">{sample.guide}</p>
           <p className="text-ink-muted text-xs">
-            Written for this diagram — the live coach serves the Reality Check.
+            Written for this diagram  -  the live coach serves the Reality Check.
           </p>
         </div>
       )}

@@ -1,18 +1,14 @@
 /** Homepage copy, shared between the component and its tests. */
 
-export const HOMEPAGE_HEADLINE = 'Turn questions into experiments.'
+export const HOMEPAGE_HEADLINE = 'Imagine it. Test it. Understand it.'
 
 export const HOMEPAGE_SUBHEAD =
-  'Predict what will happen, build your idea, and let evidence change your mind.'
-
-export const HOMEPAGE_FIRST_LAB =
-  'Circuits are where Verityn begins. The same reasoning loop can grow into biology, chemistry, and engineering systems.'
+  'Explore four STEM disciplines through interactive labs. Circuits are our first live Engineering module.'
 
 export const HOMEPAGE_ENTRIES = {
-  guidedLab: 'Enter the Guided Lab',
-  explore: 'Explore the Laboratory',
+  demo: 'Play the guided demo',
+  laboratory: 'Explore the laboratory',
   realityLens: 'Open Reality Lens',
-  demo: 'Watch the guided demo',
 } as const
 
 export type LaboratoryStationId = 'lab' | 'experiment' | 'lens' | 'coach' | 'solver'
@@ -37,19 +33,19 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     id: 'lab',
     title: 'Guided Lab',
     description:
-      'Make a prediction, build the circuit, and compare your idea with measured evidence.',
+      'Predict, build, and test a circuit against measured results.',
     evidence: 'Predict → Build → Reality Check → Solo',
-    details: ['0.6 A · 3.6 W', 'Solver-verified example'],
+    details: ['Engineering · Module 1', 'Solver-verified'],
     actionLabel: 'Enter Guided Lab',
     action: 'lab',
   },
   {
     id: 'experiment',
-    title: 'Experiment Bench',
+    title: 'Experiment Bay',
     description:
-      'Build freely, change the circuit, and test what happens without a lesson gate.',
+      'Build freely. Change a circuit and run it whenever you’re ready.',
     evidence: 'Run · Compare · Reset',
-    details: ['5 starter benches', 'Session-local run history'],
+    details: ['5 starter experiments', 'Run history'],
     actionLabel: 'Open Experiment',
     action: 'experiment',
   },
@@ -57,9 +53,9 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     id: 'lens',
     title: 'Reality Lens',
     description:
-      'Bring a real circuit diagram into the laboratory, review the proposed model, and test it.',
-    evidence: 'Image → Review → Editable circuit → Solver result',
-    details: ['Upload → Review → Confirm', 'Measured after confirmation'],
+      'Turn a circuit image into a model you can review and test.',
+    evidence: 'Image → Review → Test',
+    details: ['You confirm before solving', 'Meta vision'],
     actionLabel: 'Open Reality Lens',
     action: 'lens',
   },
@@ -67,9 +63,9 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     id: 'coach',
     title: 'Meta Muse Spark',
     description:
-      'Guides questions and explanations using the evidence Verityn has already measured.',
-    evidence: 'Asks · Hints · Explains',
-    details: ['Bounded coach', 'Grounded in simulator evidence'],
+      'A bounded coach that asks questions and points to evidence.',
+    evidence: 'Prompts · Hints · Demonstrates',
+    details: ['Never judges the physics', 'Grounded in measurements'],
     actionLabel: 'See how the coach works',
     action: 'scroll',
   },
@@ -77,10 +73,50 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     id: 'solver',
     title: 'Verityn Solver',
     description:
-      'Calculates current, voltage, power, validity, and component condition.',
+      'The deterministic engine behind every circuit measurement.',
     evidence: 'Measured, not guessed',
-    details: ['Current', 'Power', 'Validity', 'Component condition'],
+    details: ['Current · Voltage · Power', 'Circuit validity'],
     actionLabel: 'Run an experiment',
     action: 'experiment',
+  },
+]
+
+export type STEMFieldId = 'science' | 'technology' | 'engineering' | 'mathematics'
+
+export interface STEMField {
+  id: STEMFieldId
+  title: string
+  description: string
+  status: 'future' | 'live'
+}
+
+/** The four connected disciplines behind Verityn's wider learning vision. */
+export const STEM_FIELDS: STEMField[] = [
+  {
+    id: 'science',
+    title: 'Science',
+    description:
+      'Model a natural system, predict what will change, then compare your idea with simulated results.',
+    status: 'future',
+  },
+  {
+    id: 'technology',
+    title: 'Technology',
+    description:
+      'Design a useful tool, test how it behaves, and improve it through repeated trials.',
+    status: 'future',
+  },
+  {
+    id: 'engineering',
+    title: 'Engineering',
+    description: 'Circuits are the first live module: build a system, test it, and learn from its measurements.',
+    status: 'live',
+  },
+  {
+    id: 'mathematics',
+    title: 'Mathematics',
+    description:
+      'Change values in a model, spot patterns, and see how one quantity affects another.',
+    status: 'future',
   },
 ]

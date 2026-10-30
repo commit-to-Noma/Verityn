@@ -3,7 +3,7 @@
  * Speech synthesis reads real coach text aloud; speech recognition fills
  * ordinary learner inputs. Both are strictly optional: every flow works
  * with text alone, and unsupported browsers keep the text experience.
- * Nothing here is a Meta-generated voice — synthesis is the browser's.
+ * Nothing here is a Meta-generated voice  -  synthesis is the browser's.
  * Pure wrappers over injected hosts; tests use mocked capabilities.
  */
 

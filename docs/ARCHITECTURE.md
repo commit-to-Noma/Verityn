@@ -3,12 +3,13 @@
 The current feature checklist, UI inventory, model boundaries, and remaining
 work are maintained in [PRODUCT_PLAN.md](./PRODUCT_PLAN.md).
 
-Concept: **a simulation-grounded, AI-guided circuit-learning system.**
-Neuro-symbolic division of responsibilities: a modified-nodal-analysis
-solver establishes physical ground truth, Muse Spark guides Socratic
-reasoning, and the learner must predict, build, and transfer. This is
-not a chatbot tutor — there is no open chat, and the model never
-touches physics.
+Concept: **an evidence-first STEM learning platform.** Engineering
+circuits are its first live module and the first demonstration domain for
+the wider predict → build → test → explain → transfer method. The
+neuro-symbolic division of responsibilities keeps physical ground truth in
+the deterministic modified-nodal-analysis solver while Muse Spark guides
+Socratic reasoning. This is not a chatbot tutor  -  there is no open chat, and
+the model never touches physics.
 
 Submission deadline: Nov 4, 9:00 PM ET. Roadmap tiers below are
 locked in priority order; nothing outranks a reliable demo.
@@ -21,8 +22,8 @@ locked in priority order; nothing outranks a reliable demo.
    guiding question per coaching request; everything else about the
    interaction is code-determined.
 3. **Every model output is a proposal.** It passes grounded evidence
-   verification — constrained JSON schema, closed misconception ids,
-   leak checks, numbers only from solver facts — before reaching the
+   verification  -  constrained JSON schema, closed misconception ids,
+   leak checks, numbers only from solver facts  -  before reaching the
    learner. Anything rejected falls back to fixed templates.
 4. **No decorative AI.** Every model call must change what the app
    does. Docs and UI state which parts are plain code.
@@ -101,7 +102,7 @@ models, decorative image generation.
    faked locally.
 
 Diagnostics are sanitized by design: logs carry stage codes, HTTP
-statuses, and structural shape metadata only — never keys, prompts,
+statuses, and structural shape metadata only  -  never keys, prompts,
 response bodies, or model text.
 
 ## 6. Roadmap (locked tiers)
@@ -116,7 +117,7 @@ response bodies, or model text.
 3. **Physics brought to life.** Continuous bulb glow from solver power
    (P = I²R); wire current animation gated on solver current > 0,
    frozen on open switches; highlights restricted to validated solver
-   IDs. Presentation only — no new-truth claims.
+   IDs. Presentation only  -  no new-truth claims.
 4. **Voice & visual coaching.** Transcribed Why input; coach highlights
    validated against the canvas netlist. Optional; typed input stays.
 
@@ -125,8 +126,10 @@ Infrastructure: Meta Model API stays primary. Open-weight hosting
 
 ## 7. Honest limits to state in the pitch
 
-- Circuits are the demonstration domain; predict → build → transfer
-  with grounded verification is the idea.
+- Engineering circuits are the first live module, not the full STEM
+  platform; Science, Technology, and Mathematics are future pathways.
+- The orbital STEM map communicates the wider platform vision; the
+  five-stop laboratory turntable lists the live tools available today.
 - The trace shows what happened in one session, not learning or
   ability. One correct prediction proves nothing durable.
 - Which parts are plain code (physics, verdicts, gates, templates)

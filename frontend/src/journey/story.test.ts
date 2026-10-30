@@ -114,7 +114,7 @@ describe('storyNodes', () => {
       'Solo prediction',
       'Verified transfer',
     ])
-    expect(nodes[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
+    expect(nodes[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(nodes[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
     expect(nodes[2].detail).toBe('One guiding question (Fallback coach)')
     expect(nodes[3].detail).toBe('Predicted “Yes”')
@@ -156,7 +156,7 @@ describe('evidenceCards', () => {
       'Simulator evidence',
       'Independent transfer',
     ])
-    expect(cards[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
+    expect(cards[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(cards[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
     expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
   })
@@ -175,7 +175,7 @@ describe('evidenceCards', () => {
       { id: 'L1T1', title: 'L1T1', solo: false, input: null },
       chapter('L1T2', TRANSFER_INPUT),
     ])
-    expect(cards[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
+    expect(cards[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(cards[1].detail).toBe('Complete this chapter to unlock its evidence.')
     expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
   })

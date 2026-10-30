@@ -79,7 +79,7 @@ the honest fallback for browser rehearsal.
 Suite totals, journey scenario table, and any measured model
 behaviour with sample sizes (e.g. template-fallback rate across
 hint tests). Every number carries its n. No claim about learning
-outcomes — the trace shows one session's observed evidence only.
+outcomes  -  the trace shows one session's observed evidence only.
 
 ## 6. Explicitly out of scope
 
@@ -91,23 +91,23 @@ measured; if P2/P4 ship, §4 defines their smaller replacements.
 
 ## 7. Rehearsal log
 
-### P0 judge-path rehearsal — 2026-10-29 (committed as 1da1665)
+### P0 judge-path rehearsal  -  2026-10-29 (committed as 1da1665)
 
 Stack: current-tree Flask backend (:5050) + vite dev (:5174, proxy),
 fake coach only (no model key), headless Chrome over CDP.
 Gates at rehearsal time: backend 505, frontend 239, lint 0/0, build clean.
 
-- Committed `scripts/smoke_browser.mjs`: PASSED — misconception path,
+- Committed `scripts/smoke_browser.mjs`: PASSED  -  misconception path,
   mid-ladder demo excursion (apply → Consistent 3.6 W → undo → dark)
   with R1/R2 preserved, R4 served after undo, exactly 3 coach calls
   in R1/R2/R4 order, zero solo coach calls, proof cards, drawer
   sections, lazy lab chunk, 390px hub overflow 0px.
-- P0 rehearsal (throwaway `/tmp` driver): PASSED — LabNav lens link
+- P0 rehearsal (throwaway `/tmp` driver): PASSED  -  LabNav lens link
   and Auto-demo toggle visible in-lab; 12 screenshots in `docs/demo/`
   (homepage, prediction, build-verified, contradiction,
   demonstration, solo, finale, lens lab steps, lens sample overlay,
   1180×820 tablet, 390×844 mobile); overflow 0px at 1180 and 390.
-- Replay ×2 + consistent path (throwaway driver): PASSED — replay
+- Replay ×2 + consistent path (throwaway driver): PASSED  -  replay
   returns to a clean hub, prediction restarts unanswered
   (Continue disabled), consistent reality verdict skips the coach.
 - Live `scripts/smoke_live.py`: SMOKE PASSED (ephemeral port).
@@ -128,7 +128,7 @@ Not covered here at P0 time: live vision upload (no key in this
 environment; lens verified via curated samples + the stubbed-proposal
 browser run), full keyboard/contrast audit, demo recording.
 
-### P1 live-vision upload — 2026-10-29 (same tree)
+### P1 live-vision upload  -  2026-10-29 (same tree)
 
 One authorized `POST /api/vision/propose` with
 `tests/fixtures/sam_spike/05_textbook_simple..png` against the
@@ -140,13 +140,13 @@ Two earlier attempts in this session returned `Vision unavailable`
 (key not wired into the backend process); both failed before any
 inference, so exactly one live vision request was spent here.
 
-### P1 accessibility audit — 2026-10-29 (same tree, throwaway `/tmp` driver)
+### P1 accessibility audit  -  2026-10-29 (same tree, throwaway `/tmp` driver)
 
 15/15 passed in headless Chrome against the current frontend:
 
 - Contrast (token pairs over `#0a0e1c`): body 16.44:1, muted
   8.59:1, flow accents 10.95:1, on-accent button labels 10.95:1,
-  ok 10.00:1, bad 7.14:1 — all above WCAG AA.
+  ok 10.00:1, bad 7.14:1  -  all above WCAG AA.
 - Keyboard-only path hub → predict → answer (Space) → Why input →
   Continue (Enter) → build works; every stop matches
   `:focus-visible` with the 2px outline.
@@ -161,7 +161,7 @@ pointer-only; palette buttons are keyboard-reachable but placement
 and wiring need a pointer. No keyboard trap was observed on the
 audited path.
 
-### Phase 1 shell verification — 2026-10-29 (uncommitted on 6632ad9)
+### Phase 1 shell verification  -  2026-10-29 (uncommitted on 6632ad9)
 
 Backend 505, frontend 245 (9 new: shell location/nav, homepage
 copy), lint 0/0, build clean, committed browser smoke passed with
@@ -184,7 +184,7 @@ Re-verified: backend 505, frontend 245, lint 0/0, build clean,
 full smoke passed including the mid-ladder excursion, 3 sizes
 re-shot (`16–19`).
 
-### P1 final demo-path rehearsal — 2026-10-29 (same tree)
+### P1 final demo-path rehearsal  -  2026-10-29 (same tree)
 
 Committed `scripts/smoke_browser.mjs`: PASSED on a deterministic
 no-key stack (current tree, fake coach). Deliberately not run
@@ -206,7 +206,7 @@ Phase 1 shell acceptance (all in the real browser unless noted):
 - Persistent shell on every view: logo + name, Laboratory/Hub,
   Guided Lab, Experiment, Reality Lens entries, visible current
   location, in-app back/forward, and a clear Return-to-laboratory
-  action — every major feature reachable without browser Back.
+  action  -  every major feature reachable without browser Back.
 - `document.title` is `Verityn Laboratory`; a site icon is served
   and referenced (no 404 for the favicon request).
 - Exported logo assets exist at bounded sizes (nothing near the
@@ -324,7 +324,7 @@ Phase 5 result acceptance (all in the real browser unless noted):
   no prediction gate, ladder, verdict, or trace renders.
 - No auto-run: a loaded preset sits at `Ready to test your
   circuit.` until `Run experiment`; any edit hides
-  measurements and shows `Circuit changed — run the
+  measurements and shows `Circuit changed  -  run the
   experiment again.` (unit: converter, ids, reset; browser:
   stale after a real toggle).
 - All four presets convert through the shared converter and
@@ -393,10 +393,9 @@ Phase 6 result acceptance (all in the real browser unless noted):
 
 Phase 7A result acceptance (all in the real browser unless noted):
 
-- Homepage opens on `Turn questions into experiments.` with
-  the Guided Lab primary, Laboratory scroll secondary, demo
-  link, live Engineering Lab 01 card, and the honest
-  circuits-first line (unit: copy module, entries).
+- The original homepage opened on `Turn questions into experiments.`
+  with Guided Lab, Laboratory scroll, demo, and the live Engineering
+  Lab 01 card; see Phase 7B below for the updated STEM framing.
 - The turntable shows five stations in order with neighbor
   previews, prev/next controls, direct-select tabs, one
   route action, and truthful static details (unit: order,

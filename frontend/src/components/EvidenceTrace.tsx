@@ -28,9 +28,9 @@ function StepBody({ body }: { body: TraceBody }) {
           <p className="text-base">
             <span className="font-medium">{body.choiceLabel}</span>
             {body.why === null ? (
-              <span className="text-ink-muted"> — no reason given</span>
+              <span className="text-ink-muted">  -  no reason given</span>
             ) : (
-              <span className="text-ink-muted"> — “{body.why}”</span>
+              <span className="text-ink-muted">  -  “{body.why}”</span>
             )}
           </p>
         </div>
@@ -53,7 +53,7 @@ function StepBody({ body }: { body: TraceBody }) {
           <div className="flex flex-col gap-2">
             <p className="text-sm">
               <span className="font-mono">{body.summary.code}</span>
-              <span className="text-ink-muted"> — {body.summary.message}</span>
+              <span className="text-ink-muted">  -  {body.summary.message}</span>
             </p>
             {body.summary.offenders.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -71,7 +71,7 @@ function StepBody({ body }: { body: TraceBody }) {
         )
       }
       if (body.summary.lit.length === 0 && body.summary.darkBulbs.length === 0) {
-        return <p className="text-ink-muted text-sm">Solved — no bulbs in this circuit.</p>
+        return <p className="text-ink-muted text-sm">Solved  -  no bulbs in this circuit.</p>
       }
       return (
         <ul className="flex flex-col gap-1">
@@ -136,7 +136,7 @@ function StepBody({ body }: { body: TraceBody }) {
               </div>
             ))}
             <p className="text-ink-muted text-xs">
-              Prompts to reconsider — not a diagnosis of what you think.
+              Prompts to reconsider  -  not a diagnosis of what you think.
             </p>
           </div>
         )
@@ -153,7 +153,7 @@ function StepBody({ body }: { body: TraceBody }) {
             </p>
           )}
           <p className="text-ink-muted text-xs">
-            A prompt to reconsider — not a diagnosis of what you think.
+            A prompt to reconsider  -  not a diagnosis of what you think.
           </p>
         </div>
       )

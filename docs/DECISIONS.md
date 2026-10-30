@@ -36,7 +36,7 @@ invent measurements, verdicts, or topology certainty.
 
 Kept as shipped and verified: "Consistent with the model",
 "Contradicted by the model", "Can't assess". No mastery, learning,
-or dependency scores — show the actual actions. Judging-weight
+or dependency scores  -  show the actual actions. Judging-weight
 percentages from early planning are unconfirmed; never cite them.
 
 ## Acceptance gates

@@ -81,7 +81,7 @@ def grounded_question(facts):
 
 #: Experiment explanations for rejected circuits, keyed by solver code.
 EXPLAIN_INVALID = {
-    "EMPTY_CIRCUIT": ("There is nothing to measure yet — place a battery, "
+    "EMPTY_CIRCUIT": ("There is nothing to measure yet  -  place a battery, "
                       "a bulb, and wires, then run again."),
     "NO_BATTERY": ("No battery is connected, so no current can flow. "
                    "Add a battery and run again."),
@@ -141,7 +141,7 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
         limit = (facts or {}).get(f"{bid}.limit_W")
         if _finite(watts) and _finite(limit):
             return (f"{bid} drew {watts:.1f} W, past its {limit:.1f} W "
-                    "safe limit — the extra voltage overloaded it. Run "
+                    "safe limit  -  the extra voltage overloaded it. Run "
                     "again to see the failed state, or reset the bench.")
     lit = [bid for bid in bulbs
            if _finite((facts or {}).get(f"{bid}.power_W"))
@@ -168,11 +168,11 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
                    "reaches every lit bulb through a complete path.")
     closed = [sid for sid, state in (switches or {}).items() if state]
     if closed:
-        suggestion = (f"Try opening {closed[0]} and running again — what "
+        suggestion = (f"Try opening {closed[0]} and running again  -  what "
                       "happens to the current?")
     elif switches:
         suggestion = (f"Try closing {sorted(switches)[0]} and running "
-                      "again — what happens to the current?")
+                      "again  -  what happens to the current?")
     else:
         suggestion = ("Try adding a switch to the loop and running it "
                       "open and closed.")

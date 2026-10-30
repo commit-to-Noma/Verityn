@@ -97,17 +97,17 @@ function bulbWords(record: RunRecord): string {
   return record.bulbsLit === 1 ? '1 bulb lit' : `${record.bulbsLit} bulbs lit`
 }
 
-/** One line per run, e.g. `Run 3 — Switch opened — 0.0 A — bulb dark`. */
+/** One line per run, e.g. `Run 3  -  Switch opened  -  0.0 A  -  bulb dark`. */
 export function summarizeRun(record: RunRecord): string {
   if (!record.valid) {
     const code = record.errorCode ?? 'rejected'
-    return `Run ${record.n} — ${record.label} — not testable (${code})`
+    return `Run ${record.n}  -  ${record.label}  -  not testable (${code})`
   }
-  const base = `Run ${record.n} — ${record.label} — ${record.amps.toFixed(1)} A — ${bulbWords(record)}`
+  const base = `Run ${record.n}  -  ${record.label}  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
   const events = record.bulbs
     .filter((bulb) => bulb.condition === 'overloaded' || bulb.condition === 'damaged')
     .map((bulb) => `${bulb.id} ${bulb.condition}`)
-  return events.length === 0 ? base : `${base} — ${events.join(', ')}`
+  return events.length === 0 ? base : `${base}  -  ${events.join(', ')}`
 }
 
 /** Current run against the previous one; null when there is no previous run. */
@@ -117,11 +117,11 @@ export function compareRuns(previous: RunRecord | null, current: RunRecord): str
   }
   if (!previous.valid || !current.valid) {
     if (previous.valid === current.valid) {
-      return 'Both runs were rejected — fix the wiring to compare measurements.'
+      return 'Both runs were rejected  -  fix the wiring to compare measurements.'
     }
     return current.valid
-      ? 'This run tested after the last rejection — compare the new readings above.'
-      : 'The last run tested but this one was rejected — what changed in the wiring?'
+      ? 'This run tested after the last rejection  -  compare the new readings above.'
+      : 'The last run tested but this one was rejected  -  what changed in the wiring?'
   }
   const dAmps = current.amps - previous.amps
   const litShift = current.bulbsLit - previous.bulbsLit

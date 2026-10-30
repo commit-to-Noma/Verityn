@@ -12,7 +12,7 @@ export default function JourneyProgress({ active }: { active: number }) {
             {index > 0 && <span className="h-px w-3 bg-glass-border-strong" aria-hidden="true" />}
             <span
               aria-current={current ? 'step' : undefined}
-              title={done ? `${step} — complete` : current ? `${step} — current` : step}
+              title={done ? `${step}  -  complete` : current ? `${step}  -  current` : step}
               className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${
                 done
                   ? 'border-ok/50 text-ok'

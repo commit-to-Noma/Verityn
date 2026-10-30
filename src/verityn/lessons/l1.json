@@ -61,7 +61,7 @@
     },
     "fix": {
       "wire": {"a": "n1", "b": "0"},
-      "hint": "Run the wired loop as-is — the only break is the open switch."
+      "hint": "Run the wired loop as-is  -  the only break is the open switch."
     },
     "expectedFixed": {
       "ok": true,

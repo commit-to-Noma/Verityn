@@ -1,6 +1,6 @@
 # SAM 3.1 spike: "Snap the Real Thing" (World-As-Lab)
 
-2-hour isolated technical spike. Status: **RUN 2026-10-28 — GATE
+2-hour isolated technical spike. Status: **RUN 2026-10-28  -  GATE
 FAILED (2 of 10)**. Ran once with explicit authorization: 30 live
 requests (10 images × 3 prompts), no retries, no errors. Per the
 spike contract the open-ended overlay is halted and Snap & Build stays
@@ -79,8 +79,8 @@ below follow the filename prefixes.
 | 10_digital_schematic_cad | digital | no | no | no | all zero-match |
 
 Summary: **2 of 10** images detected both battery and bulb
-(threshold 7 of 10): FAIL. All 30 responses parsed cleanly — no
-transport, envelope, or grammar errors — so the misses are genuine
+(threshold 7 of 10): FAIL. All 30 responses parsed cleanly  -  no
+transport, envelope, or grammar errors  -  so the misses are genuine
 zero-match lanes, not integration failures. Notably the switch
 prompt matched nothing anywhere, and hand-drawn sketches yielded a
 single bulb. The payload contract itself is verified working.

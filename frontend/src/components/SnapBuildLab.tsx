@@ -306,7 +306,7 @@ function ReviewPanels({
                     {selection === id && status === 'connection-ambiguous' && (
                       <p className="text-ink-muted px-2 pb-1 text-xs">
                         Ambiguous: verify these endpoints on the replica before confirming. Wires
-                        carry no image region — only the terminal relationship was proposed.
+                        carry no image region  -  only the terminal relationship was proposed.
                       </p>
                     )}
                   </li>
@@ -324,7 +324,7 @@ function ReviewPanels({
             <h4 className="text-base font-semibold">Interactive circuit replica</h4>
             <p className="text-ink-muted text-xs">
               Positions mapped from the detected regions. Wire routes are reconstructed between
-              the proposed terminals — not traced from the image.
+              the proposed terminals  -  not traced from the image.
             </p>
             {(reveal === 'replica' || reveal === 'review') && (
               <CircuitCanvas
@@ -658,7 +658,7 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
       <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-3">
         <h3 className="text-base font-semibold">Verified samples</h3>
         <p className="text-ink-muted text-sm">
-          Verified sample — use this when Meta vision is unavailable or when you want to rehearse
+          Verified sample  -  use this when Meta vision is unavailable or when you want to rehearse
           the workflow.
         </p>
         <p className="text-ink-muted text-sm">
