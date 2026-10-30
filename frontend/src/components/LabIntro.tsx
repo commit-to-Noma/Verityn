@@ -4,15 +4,14 @@ import ReadoutValue from './ReadoutValue'
 import { L1 } from '../lessons/l1'
 import { HOMEPAGE_ENTRIES, HOMEPAGE_HEADLINE, HOMEPAGE_SUBHEAD } from '../content/homepage'
 
-const CAPABILITIES = [
+const CAPABILITIES: { title: string; doing: string; badge?: string }[] = [
   {
     title: 'Guided labs',
     doing: 'Predict, build, and check each step against measured evidence.',
   },
   {
     title: 'Open experiments',
-    doing: 'The next workspace: free-form circuits without a script. Not built yet.',
-    badge: 'Next',
+    doing: 'Free-form circuits on your own bench — no script, no lesson gate.',
   },
   {
     title: 'Reality Lens',
@@ -22,7 +21,7 @@ const CAPABILITIES = [
     title: 'Independent transfer',
     doing: 'Prove the idea on a fresh circuit with the coach off.',
   },
-] as const
+]
 
 const DIAGRAM_EXAMPLE = [
   { step: 'Diagram', doing: 'A real schematic or photo.' },

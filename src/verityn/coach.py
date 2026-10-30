@@ -138,6 +138,16 @@ class CoachProvider(Protocol):
         """
         ...
 
+    def explain(self, *, facts: dict, valid: bool,
+                error_code: str | None, component_ids: list,
+                switches: dict, bulbs: list) -> str:
+        """Explain an experiment run from server-side solver facts.
+
+        facts carries solver numbers for output validation; invalid
+        runs pass empty facts and their rejection code instead.
+        """
+        ...
+
 
 def load_pack(pack=None):
     """Return the lesson pack, or the injected one (tests only)."""
@@ -495,4 +505,50 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         "claim": claim,
         "actions": suggest_actions(netlist=netlist, facts=facts,
                                    claim_component=claim["component"]),
+    }
+
+
+def explain_result(netlist, provider, fallback=None):
+    """Explain an experiment run from a server-side solve.
+
+    No session, no rung, no verdict: the provider explains
+    measurements it did not compute. The solver judges the
+    submitted netlist first; rejected circuits are explainable
+    too, with empty facts and their rejection code, so no
+    provider can invent measurements for them.
+    """
+    parts = _netlist_parts(netlist)
+    switches = {pid: part.get("closed", False) is True
+                for pid, part in parts.items()
+                if part.get("type") == "switch"}
+    bulbs = sorted(pid for pid, part in parts.items()
+                   if part.get("type") == "bulb")
+    result = solver.solve(netlist)
+    if result.ok is True:
+        facts = solver_facts(result)
+        valid, error_code, component_ids = True, None, []
+    else:
+        facts = {}
+        valid, error_code = False, result.error_code
+        component_ids = list(result.component_ids)
+    call = {"facts": facts, "valid": valid, "error_code": error_code,
+            "component_ids": component_ids, "switches": switches,
+            "bulbs": bulbs}
+    try:
+        text = provider.explain(**call)
+        serving = provider.name
+    except CoachProviderError as err:
+        log.warning("coach primary failed: stage=%s http_status=%s "
+                    "shape=%s reason=%s",
+                    err.stage, err.http_status, err.shape, err.reason)
+        if fallback is None:
+            raise
+        text = fallback.explain(**call)
+        serving = fallback.name
+    return {
+        "eligible": True,
+        "text": text,
+        "provider": serving,
+        "valid": valid,
+        "error_code": error_code,
     }

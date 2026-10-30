@@ -64,6 +64,9 @@ time to see the result.
   including incomplete/skipped-chapter fallbacks.
 - [x] Backend/frontend tests, lint, production build, and deterministic/browser
   smoke checks.
+- [x] Experiment bench: free canvas, four solver-verified presets, manual
+  runs with stale invalidation, session history, and optional
+  number-grounded explanations via `POST /api/coach/explain`.
 
 ### Final polish still required
 
@@ -134,6 +137,19 @@ unavailable/retry, demonstration preview/apply/undo, unsupported or
 needs-review vision proposal, vision confirm/discard, voice failure, replay
 reset, and Solo coach-off.
 
+### Experiment bench
+
+Free canvas with battery, bulb, switch, and wire (no resistor node yet:
+the solver accepts resistors but the canvas cannot place them).
+`Run experiment` is explicit — never auto-run — and any edit returns
+the bench to `Circuit changed — run the experiment again.` Four
+presets (closed loop, open switch, series pair, shorted battery) load
+real seeds through the shared converter; `Test` runs through the
+normal solver path. `Ask Muse Spark about this result` unlocks only
+for a fresh run, posts only the netlist, and the server solves before
+explaining; failures leave the bench usable. Run history is
+session-local with current-vs-previous comparison.
+
 ## 5. Technical and model boundaries
 
 | Area | Meta model/provider may do | Verityn code must do |
@@ -143,6 +159,7 @@ reset, and Solo coach-off.
 | Vision | Propose component/connection evidence | Validate schema, topology, provenance, polarity, confirmation, handoff |
 | Voice | Transcribe or synthesize text | Keep transcript editable, handle permissions, never require voice |
 | Solver | None | Compute current, voltage, power, validity, and verdict |
+| Experiment explain | Explain measured facts, ask one question, suggest one safe test | Solve server-side first, reject numbers outside the facts, never auto-call |
 
 Vision proposals are structured and nullable. They contain status, component
 IDs/types/regions/polarity/evidence, and connections with uncertainty/evidence.
@@ -342,3 +359,38 @@ fresh 390 px mount; narrowing a live page can clip until the
 learner pans — a pre-existing React Flow trait, not a seed
 defect. `aria-label` text is not `innerText`, so probes must
 assert visible strings instead.
+
+### Phase 5 — Experiment workspace (implemented, uncommitted)
+
+- [x] Experiment is a first-class shell destination with its own
+  route, current-location state, and return path; guided lab,
+  lens, demo, Solo, and finale behavior unchanged.
+- [x] Free bench reuses the lesson canvas (`mode="experiment"`):
+  same palette, wiring, switches, solver path, and
+  invalid-circuit explanations; no second circuit model.
+- [x] Runs are explicit (`Run experiment`); edits invalidate to
+  `Circuit changed — run the experiment again.` No auto-run.
+- [x] Four presets load real seeds and verify against the live
+  solver through the shared converter: closed loop 0.6 A /
+  3.6 W lit, open switch valid 0/0 dark, series pair 0.3 A /
+  0.9 W each, shorted battery rejected `SHORTED_BATTERY`.
+- [x] `POST /api/coach/explain` solves the posted netlist
+  server-side, then explains; numbers outside the facts are
+  rejected, rejections carry no numbers, fallback is labeled,
+  total failure is a safe 500. The button unlocks for fresh
+  results only and never fires automatically.
+- [x] Session-local run history with one-line summaries and
+  current-vs-previous comparison; no accounts or persistence.
+- [x] Full gates + smoke re-run and green; no live Meta calls;
+  screenshot `20-experiment.png` captured on this tree in
+  `docs/demo/`.
+
+Phase 5 findings: StrictMode's simulated unmount aborts a fetch
+started mid-mount, which stranded preset Test in `Simulating…`
+— the run request now schedules past mount with the guard set
+inside the callback. The blank-bench instructions initially
+showed the lesson auto-test copy; experiment mode always uses
+its own instructions. Resistor stays out: the solver accepts
+`resistor{ohms}` but the canvas has no resistor node, palette
+entry, or converter support. One transient `lens lock` smoke
+timeout appeared mid-HMR and passed on the immediate re-run.

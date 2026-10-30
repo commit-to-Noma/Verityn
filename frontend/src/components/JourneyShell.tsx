@@ -63,9 +63,7 @@ export default function JourneyShell({
             aria-disabled={item.disabled === true}
             title={item.disabled === true ? 'The next workspace — not built yet.' : undefined}
             onClick={() => {
-              if (item.id !== 'experiment') {
-                onNavigate(item.id)
-              }
+              onNavigate(item.id)
             }}
             className={`flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
               location === item.id

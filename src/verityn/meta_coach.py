@@ -59,6 +59,68 @@ _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 _PART_ID = re.compile(r"[A-Za-z]+\d+")
 _SAFE_CHARS = re.compile(r"[^a-zA-Z0-9_,\-\[\]=]")
 
+# Constrained-output contract for experiment explanations: a single
+# prose string. Validated exactly like R1 minus the question rule and
+# the lesson leak list (an experiment suggestion would trip
+# lesson-answer phrases); numbers outside the solver facts still
+# reject, and rejected circuits carry no numbers at all.
+_EXPLAIN_JSON_SCHEMA = {
+    "name": "coach_explain",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "explanation": {"type": "string"},
+        },
+        "required": ["explanation"],
+        "additionalProperties": False,
+    },
+}
+
+_EXPLAIN_SYSTEM = (
+    "You explain a circuit experiment the student just ran. "
+    "Cite only numbers from the solver facts. Never invent "
+    "measurements, and never state a bulb outcome the facts "
+    "contradict. Write two to three sentences, then optionally one "
+    "question or one safe next experiment (toggle a listed switch, "
+    "add or remove a wire). Never suggest wiring that shorts the "
+    "battery."
+)
+
+
+def _explain_user_message(*, facts, valid, error_code, switches, bulbs):
+    if valid:
+        return (
+            "The simulator tested this circuit and it is valid.\n"
+            f"Solver facts (per part): {json.dumps(facts, sort_keys=True)}\n"
+            f"Switches: {json.dumps(switches, sort_keys=True)}. "
+            f"Bulbs: {json.dumps(bulbs)}.\n"
+            "Explain the measured result in two to three sentences."
+        )
+    return (
+        "The simulator rejected this circuit: no measurements exist.\n"
+        f"Rejection code: {error_code}.\n"
+        f"Switches: {json.dumps(switches, sort_keys=True)}. "
+        f"Bulbs: {json.dumps(bulbs)}.\n"
+        "Explain why it cannot be tested, without citing any numbers."
+    )
+
+
+def validate_explain_output(output, facts):
+    """Return the explanation string or raise CoachProviderError."""
+    if not isinstance(output, dict):
+        raise CoachProviderError("Meta output malformed.", stage="parse",
+                                 shape=describe_shape(output))
+    text = output.get("explanation")
+    if not isinstance(text, str) or not text.strip():
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="not-explanation")
+    cleaned = text.strip()
+    if _numbers_outside_facts(cleaned, facts):
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="number")
+    return cleaned
+
 
 def describe_shape(value):
     """Sketch a response fragment's structure: kinds and key names only.
@@ -278,3 +340,33 @@ class MetaSparkProvider:
                 err.shape = _with_completion(err.shape or "unknown", body)
             raise
         return question
+
+    def explain(self, *, facts, valid, error_code, component_ids,
+                switches, bulbs):
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": _EXPLAIN_SYSTEM},
+                {"role": "user",
+                 "content": _explain_user_message(
+                     facts=facts or {}, valid=valid,
+                     error_code=error_code, switches=switches or {},
+                     bulbs=bulbs or [])},
+            ],
+            "temperature": 0,
+            "reasoning_effort": META_REASONING_EFFORT,
+            "max_completion_tokens": META_MAX_COMPLETION_TOKENS,
+            "response_format": {"type": "json_schema",
+                                "json_schema": _EXPLAIN_JSON_SCHEMA},
+        }
+        headers = {"Content-Type": "application/json",
+                   "Authorization": f"Bearer {self.api_key}"}
+        _, body = _post_json(f"{self.base_url}/chat/completions", payload,
+                             headers, self.timeout_s)
+        try:
+            return validate_explain_output(
+                _parse_output(_chat_content(body)), facts or {})
+        except CoachProviderError as err:
+            if err.stage == "parse" and ",finish=" not in (err.shape or ""):
+                err.shape = _with_completion(err.shape or "unknown", body)
+            raise

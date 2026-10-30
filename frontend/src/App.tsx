@@ -19,6 +19,7 @@ import PredictionScreen, { type PredictionDemo } from './components/PredictionSc
 const SimulatePanel = lazy(() => import('./components/SimulatePanel'))
 const EvaluatePanel = lazy(() => import('./components/EvaluatePanel'))
 const SnapBuildLab = lazy(() => import('./components/SnapBuildLab'))
+const ExperimentPage = lazy(() => import('./experiment/ExperimentPage'))
 import type { SimulateResult, VerdictStatus } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
@@ -75,6 +76,7 @@ export default function App() {
   const [auto, setAuto] = useState(() => new URLSearchParams(window.location.search).has('auto'))
   const [autoPending, setAutoPending] = useState(false)
   const [lensPage, setLensPage] = useState(false)
+  const [experimentPage, setExperimentPage] = useState(false)
   /** Guided demo: a visible product mode above the `?auto=1` presenter timers. */
   const [demo, setDemo] = useState<DemoState>(IDLE_DEMO)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
@@ -337,6 +339,7 @@ export default function App() {
     resetJourney()
     setAuto(true)
     setLensPage(false)
+    setExperimentPage(false)
     setEntered(true)
     setDemo((current) => demoTransition(current, { type: 'start' }))
   }, [resetJourney])
@@ -387,6 +390,7 @@ export default function App() {
     endDemoToManual()
     resetJourney()
     setLensPage(false)
+    setExperimentPage(false)
     setEntered(false)
   }, [endDemoToManual, resetJourney])
 
@@ -394,6 +398,7 @@ export default function App() {
     endDemoToManual()
     resetJourney()
     setLensPage(false)
+    setExperimentPage(false)
     setEntered(true)
   }, [endDemoToManual, resetJourney])
 
@@ -423,10 +428,11 @@ export default function App() {
     endDemoToManual()
     cancelAdvance()
     setComplete(null)
+    setExperimentPage(false)
     setLensPage(true)
   }, [cancelAdvance, endDemoToManual])
 
-  const location = shellLocation(entered, lensPage)
+  const location = shellLocation(entered, lensPage, experimentPage)
 
   /** Persistent shell navigation. Recorded predictions stand, but any latched
    * gate is cleared: leaving unmounts the canvases, so builds are re-verified
@@ -437,12 +443,18 @@ export default function App() {
       cancelAdvance()
       setComplete(null)
       if (target === 'lens') {
+        setExperimentPage(false)
         setLensPage(true)
+      } else if (target === 'experiment') {
+        setLensPage(false)
+        setExperimentPage(true)
       } else if (target === 'lab') {
         setLensPage(false)
+        setExperimentPage(false)
         setEntered(true)
       } else {
         setLensPage(false)
+        setExperimentPage(false)
         setEntered(false)
       }
     },
@@ -593,6 +605,31 @@ export default function App() {
             </div>
             <Suspense fallback={<p className="text-ink-muted text-sm">Preparing Reality Lens…</p>}>
               <SnapBuildLab onReturnToLab={() => handleNavigate('lab')} />
+            </Suspense>
+          </section>
+        </div>
+      </JourneyShell>
+    )
+  }
+
+  if (experimentPage) {
+    return (
+      <JourneyShell stage="intro" auto={false} tools={developerTools} location="experiment" onNavigate={handleNavigate} wide>
+        <div className="flex flex-col gap-6">
+          <section aria-labelledby="experiment-page-heading" className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
+                Free bench
+              </p>
+              <h1 id="experiment-page-heading" className="text-3xl font-semibold tracking-tight">
+                Experiment
+              </h1>
+              <div className="flex items-center gap-2">
+                <HealthStatus compact />
+              </div>
+            </div>
+            <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
+              <ExperimentPage onReturnToLab={() => handleNavigate('lab')} />
             </Suspense>
           </section>
         </div>

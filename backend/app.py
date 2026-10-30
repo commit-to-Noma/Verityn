@@ -142,6 +142,17 @@ def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
             store, session_id, netlist, active_provider,
             fallback=active_fallback, rung=rung))
 
+    @app.post("/api/coach/explain")
+    def coach_explain():
+        body = _read_json_object()
+        if body is None:
+            return _malformed_request("Request body must be a JSON object.")
+        netlist = body.get("netlist")
+        if not isinstance(netlist, dict):
+            return _malformed_request("Request needs a netlist object.")
+        return jsonify(coach.explain_result(
+            netlist, active_provider, fallback=active_fallback))
+
     @app.post("/api/vision/propose")
     def vision_propose():
         body = _read_json_object()

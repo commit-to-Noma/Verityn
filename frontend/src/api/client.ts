@@ -254,6 +254,14 @@ export type CoachAskResult =
     }
   | { eligible: false; reason_code: string; message: string }
 
+export interface CoachExplainResult {
+  eligible: true
+  text: string
+  provider: string
+  valid: boolean
+  error_code: string | null
+}
+
 /** Provider value to honest badge text. Fake output is never Meta. */
 export function providerBadge(provider: string, rung?: string): string {
   if (provider === 'meta-spark') {
@@ -403,6 +411,34 @@ export async function askCoach(
   return guardCoachAskResult(
     await postJson('/api/coach/ask', { session_id: sessionId, netlist, rung }, signal),
   )
+}
+
+function guardCoachExplainResult(body: unknown): CoachExplainResult {
+  if (
+    !isRecord(body) ||
+    body.eligible !== true ||
+    typeof body.text !== 'string' ||
+    typeof body.provider !== 'string' ||
+    typeof body.valid !== 'boolean' ||
+    (body.error_code !== null && typeof body.error_code !== 'string')
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
+  return {
+    eligible: true,
+    text: body.text,
+    provider: body.provider,
+    valid: body.valid,
+    error_code: body.error_code,
+  }
+}
+
+/** POST /api/coach/explain; the server solves the netlist before explaining. */
+export async function explainResult(
+  netlist: Netlist,
+  signal?: AbortSignal,
+): Promise<CoachExplainResult> {
+  return guardCoachExplainResult(await postJson('/api/coach/explain', { netlist }, signal))
 }
 
 /** Mirror of the server's image upload limits (pre-check only). */

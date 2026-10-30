@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, evaluateClaim, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
+import { ApiError, askCoach, evaluateClaim, explainResult, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -269,6 +269,55 @@ describe('askCoach', () => {
   it('maps provider outages to http errors with the server code', async () => {
     stubFetch(() => errResponse(500, { error_code: 'INTERNAL_ERROR', error_message: 'Oops.' }))
     const failure = (await askCoach('s1', { components: [] }).catch(
+      (err: unknown) => err,
+    )) as ApiError
+    expect(failure.kind).toBe('http')
+    expect(failure.status).toBe(500)
+    expect(failure.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+describe('explainResult', () => {
+  const answer = {
+    eligible: true,
+    text: 'L1 lit: 0.6 A and 3.6 W.',
+    provider: 'prototype-fake',
+    valid: true,
+    error_code: null,
+  }
+
+  it('returns the explanation unchanged', async () => {
+    stubFetch(() => okResponse(answer))
+    await expect(explainResult({ components: [] })).resolves.toEqual(answer)
+  })
+
+  it('posts only the netlist', async () => {
+    const mock = vi.fn(async () => okResponse(answer))
+    vi.stubGlobal('fetch', mock)
+    await explainResult(NETLIST)
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/coach/explain')
+    expect(JSON.parse(init.body as string)).toEqual({ netlist: NETLIST })
+  })
+
+  it.each([
+    ['missing eligible', { text: 'x' }],
+    ['eligible mistyped', { ...answer, eligible: 'yes' }],
+    ['text mistyped', { ...answer, text: 7 }],
+    ['provider mistyped', { ...answer, provider: 7 }],
+    ['valid mistyped', { ...answer, valid: 'yes' }],
+    ['error mistyped', { ...answer, error_code: 7 }],
+    ['not an object', []],
+  ])('rejects malformed payloads: %s', async (_label, body) => {
+    stubFetch(() => okResponse(body))
+    const failure = await explainResult({ components: [] }).catch((err: unknown) => err)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('payload')
+  })
+
+  it('maps provider outages to http errors with the server code', async () => {
+    stubFetch(() => errResponse(500, { error_code: 'INTERNAL_ERROR', error_message: 'Oops.' }))
+    const failure = (await explainResult({ components: [] }).catch(
       (err: unknown) => err,
     )) as ApiError
     expect(failure.kind).toBe('http')

@@ -52,30 +52,37 @@ export function stageFor(state: JourneyState): Stage {
   return 'finale'
 }
 
-/** Persistent-shell location: the lab journey, the lens workspace, or the hub. */
-export type ShellLocation = 'hub' | 'lab' | 'lens'
+/** Persistent-shell location: hub, lab journey, experiment bench, or lens. */
+export type ShellLocation = 'hub' | 'lab' | 'experiment' | 'lens'
 
-/** The lens workspace overlays wherever the learner was; otherwise entered decides. */
-export function shellLocation(entered: boolean, lensPage: boolean): ShellLocation {
+/** Workspaces overlay wherever the learner was; otherwise entered decides. */
+export function shellLocation(
+  entered: boolean,
+  lensPage: boolean,
+  experimentPage = false,
+): ShellLocation {
   if (lensPage) {
     return 'lens'
+  }
+  if (experimentPage) {
+    return 'experiment'
   }
   return entered ? 'lab' : 'hub'
 }
 
 export interface ShellNavItem {
-  id: ShellLocation | 'experiment'
+  id: ShellLocation
   label: string
   /** Shown beside entries that are not built yet; they stay disabled. */
   badge?: string
   disabled?: boolean
 }
 
-/** Persistent laboratory navigation. Experiment is announced, not pretended. */
+/** Persistent laboratory navigation. */
 export const SHELL_NAV: ShellNavItem[] = [
   { id: 'hub', label: 'Hub' },
   { id: 'lab', label: 'Guided Lab' },
-  { id: 'experiment', label: 'Experiment', badge: 'Next', disabled: true },
+  { id: 'experiment', label: 'Experiment' },
   { id: 'lens', label: 'Reality Lens' },
 ]
 

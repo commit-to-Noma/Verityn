@@ -904,6 +904,9 @@ function CanvasInner({
   challenge,
   solo = false,
   layout = 'split',
+  mode = 'lesson',
+  runRequest,
+  title = 'Build what you predicted',
   importRequest,
   gate,
   simulateLocked = null,
@@ -923,7 +926,7 @@ function CanvasInner({
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
-  onSolved?: (result: SimulateResult) => void
+  onSolved?: (result: SimulateResult, netlist: Netlist) => void
   /** Locks Test + auto-run until review confirms; the string is the reason. */
   simulateLocked?: string | null
   /** Externally selected node/edge id, mirrored onto canvas selection. */
@@ -960,6 +963,12 @@ function CanvasInner({
   importRequest?: CanvasImportRequest | null
   /** Two-column experiment/insight layout (`split`) or single stacked column. */
   layout?: 'split' | 'stacked'
+  /** Free-bench behavior: no auto-run, Run/Reset labels, ready/stale copy. */
+  mode?: 'lesson' | 'experiment'
+  /** A change runs the solver once through the normal path (preset Test). */
+  runRequest?: number
+  /** Canvas heading; lessons keep the default prediction framing. */
+  title?: string
   /** Chapter gate, rendered below the result and above the evidence trace. */
   gate?: ReactNode
 }) {
@@ -975,6 +984,8 @@ function CanvasInner({
   const { screenToFlowPosition } = useReactFlow()
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
+  /** Experiment copy: idle after a run means the circuit changed. */
+  const ranOnceRef = useRef(false)
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
   const [coachOutcome, setCoachOutcome] = useState<CoachTraceOutcome | null>(null)
   const ladderMemory = useRef<LadderMemory>({ rungs: [], drafts: {} })
@@ -1238,8 +1249,12 @@ function CanvasInner({
           }),
         )
         setRunState({ phase: 'done', result, netlist })
-        if (result.ok) {
-          onSolved?.(result)
+        ranOnceRef.current = true
+        // Lessons only report solved runs; the free bench also reports
+        // rejections (history + explanations need them). The verdict
+        // block below stays lesson-gated on choice && claim.
+        if (result.ok || mode === 'experiment') {
+          onSolved?.(result, netlist)
           const verdictClaim = choice && claim ? choiceToClaim(choice, claim) : null
           if (verdictClaim) {
             setVerdictState({ phase: 'checking' })
@@ -1275,17 +1290,39 @@ function CanvasInner({
         })
       }
     })()
-  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked])
+  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode])
 
   const loopClosed = isClosedLoop(nodes, edges)
 
+  /** Preset Test: a runRequest change runs once through the normal path.
+   * The timer clears StrictMode's simulated unmount (whose abort cleanup
+   * would otherwise kill a fetch started mid-mount); the guard is set
+   * inside the callback so the re-run effect still schedules. Lessons
+   * never pass the prop. */
+  const runRequestRef = useRef<number | undefined>(undefined)
   useEffect(() => {
-    if (!loopClosed || runState.phase !== 'idle' || simulateLocked !== null) {
+    if (runRequest === undefined || runRequest === runRequestRef.current) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      runRequestRef.current = runRequest
+      run()
+    }, 60)
+    return () => window.clearTimeout(timer)
+  }, [runRequest, run])
+
+  useEffect(() => {
+    if (
+      mode === 'experiment' ||
+      !loopClosed ||
+      runState.phase !== 'idle' ||
+      simulateLocked !== null
+    ) {
       return
     }
     const timer = window.setTimeout(run, 450)
     return () => window.clearTimeout(timer)
-  }, [loopClosed, runState.phase, nodes, edges, run, simulateLocked])
+  }, [mode, loopClosed, runState.phase, nodes, edges, run, simulateLocked])
 
   /** Mirror an externally selected peer (review panel) onto the canvas. */
   useEffect(() => {
@@ -1663,6 +1700,8 @@ function CanvasInner({
               <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
               Simulating…
             </>
+          ) : mode === 'experiment' ? (
+            'Run experiment'
           ) : loopClosed ? (
             'Test again'
           ) : (
@@ -1674,7 +1713,7 @@ function CanvasInner({
           onClick={clear}
           className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
         >
-          Clear
+          {mode === 'experiment' ? 'Reset' : 'Clear'}
         </button>
         {demoUndo !== null && (
           <button
@@ -1698,9 +1737,13 @@ function CanvasInner({
           <span>
             {nodes.length === 0
               ? 'Drag a battery into the workspace to begin.'
-              : loopClosed
-                ? 'Loop closed — checking your circuit…'
-                : 'Connect the open terminal dots to complete the loop.'}
+              : mode === 'experiment'
+                ? ranOnceRef.current
+                  ? 'Circuit changed — run the experiment again.'
+                  : 'Ready to test your circuit.'
+                : loopClosed
+                  ? 'Loop closed — checking your circuit…'
+                  : 'Connect the open terminal dots to complete the loop.'}
           </span>
         </div>
       )}
@@ -1792,7 +1835,7 @@ function CanvasInner({
         <div>
           <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
           <h2 id="canvas-heading" className="text-xl font-semibold">
-            Build what you predicted
+            {title}
           </h2>
         </div>
         <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
@@ -1844,7 +1887,7 @@ function CanvasInner({
         ))}
       </div>
       <p className="text-ink-muted text-sm">
-        {nodes.length === 0 ? DEFAULT_INSTRUCTIONS : instructions}
+        {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
       </p>
       {demoBuild !== null &&
         demoBuild.connections.some(
@@ -1923,6 +1966,9 @@ export default function CircuitCanvas({
   challenge,
   solo,
   layout,
+  mode,
+  runRequest,
+  title,
   importRequest,
   gate,
   simulateLocked,
@@ -1942,7 +1988,7 @@ export default function CircuitCanvas({
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
-  onSolved?: (result: SimulateResult) => void
+  onSolved?: (result: SimulateResult, netlist: Netlist) => void
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
   onCoachDone?: (outcome?: CoachTraceOutcome) => void
@@ -1952,6 +1998,9 @@ export default function CircuitCanvas({
   challenge?: Challenge
   solo?: boolean
   layout?: 'split' | 'stacked'
+  mode?: 'lesson' | 'experiment'
+  runRequest?: number
+  title?: string
   importRequest?: CanvasImportRequest | null
   gate?: ReactNode
   simulateLocked?: string | null
@@ -1984,6 +2033,9 @@ export default function CircuitCanvas({
         challenge={challenge}
         solo={solo}
         layout={layout}
+        mode={mode}
+        runRequest={runRequest}
+        title={title}
         importRequest={importRequest}
         gate={gate}
         simulateLocked={simulateLocked}

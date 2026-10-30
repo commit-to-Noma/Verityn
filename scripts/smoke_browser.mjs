@@ -7,6 +7,7 @@
  *   Predict -> Build -> Reality Check -> R1 -> R2 -> R4 -> Solo -> Finale
  *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
  *     -> Guided demo full run (pause/resume, replay, manual takeover)
+ *     -> Experiment presets, manual run, stale, history, one explain call
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
  * interactions. The lens proposals are stubbed at the network layer from
@@ -43,6 +44,7 @@ let ws
 let msgId = 0
 const pending = new Map()
 const askRequestIds = []
+const explainRequestIds = []
 let chrome = null
 
 async function waitForCdp(timeoutMs = 20000) {
@@ -115,6 +117,19 @@ async function clickButtonStarts(prefix) {
   })()`)
   if (!ok) throw new Error('button starting with not found: ' + prefix)
   return ok
+}
+
+async function clickPresetButton(title, label) {
+  const ok = await ev(`(() => {
+    const cards = [...document.querySelectorAll('section[aria-label="Starter experiments"] div.glass-panel')];
+    const card = cards.find((d) => d.textContent.includes(${JSON.stringify(title)}));
+    const b = card && [...card.querySelectorAll('button')].find((e) => e.textContent.trim() === ${JSON.stringify(label)} && !e.disabled);
+    if (!b) return false;
+    b.scrollIntoView({ block: 'center' });
+    b.click();
+    return true;
+  })()`)
+  if (!ok) throw new Error('preset button not found: ' + title + '/' + label)
 }
 
 async function fillInput(id, value) {
@@ -244,6 +259,9 @@ async function drive() {
       if (url.includes('/api/coach/ask')) {
         askRequestIds.push(msg.params.requestId)
       }
+      if (url.includes('/api/coach/explain')) {
+        explainRequestIds.push(msg.params.requestId)
+      }
       if (url.includes('SnapBuildLab') || url.includes('RealityLens')) {
         lazyChunks.add(url)
       }
@@ -284,11 +302,11 @@ async function drive() {
   check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment'))
   const navCurrent = await ev(`document.querySelector('nav[aria-label="Laboratory"] button[aria-current="page"]')?.textContent.trim() ?? 'none'`)
   check('hub is current location', navCurrent === 'Hub', navCurrent)
-  const expDisabled = await ev(`(() => {
+  const expEnabled = await ev(`(() => {
     const b = [...document.querySelectorAll('nav[aria-label="Laboratory"] button')].find((e) => e.textContent.includes('Experiment'));
-    return b ? b.disabled === true && b.textContent.includes('Next') : 'missing';
+    return b ? b.disabled !== true && !b.textContent.includes('Next') : 'missing';
   })()`)
-  check('experiment announced but disabled', expDisabled === true, String(expDisabled))
+  check('experiment enabled in nav', expEnabled === true, String(expEnabled))
   await clickButton('Enter the guided lab')
 
   await waitFor(() => hasText('open gap'), 'l1 predict')
@@ -511,6 +529,50 @@ async function drive() {
   await sleep(300)
   check('takeover exits demo', !(await hasText('Demo playing')) && !(await hasText('Demo paused')))
   check('takeover keeps input', await ev(`document.getElementById('predict-why')?.value === 'manual takeover'`))
+
+  // ---- Experiment workspace: free bench beside the guided journey. ----
+  await send('Page.navigate', { url: BASE + '/' })
+  await waitFor(() => hasText('Enter the guided lab'), 'hub again')
+  await clickButton('Experiment')
+  await waitFor(() => hasText('Build something. Test what happens.'), 'experiment page')
+  check('experiment current location', await ev(`document.querySelector('nav[aria-label="Laboratory"] button[aria-current="page"]')?.textContent.trim()`) === 'Experiment')
+  check('no lesson gate in experiment', !(await hasText('Your prediction')) && !(await hasText('Ask the coach')))
+  check('ask locked before run', await hasText('Run the experiment first'))
+  await clickPresetButton('Light a bulb', 'Load')
+  await waitFor(() => hasText('Ready to test your circuit.'), 'preset ready')
+  check('preset prompt shown', await hasText('What carries the current?'))
+  await sleep(1500)
+  check('no auto-run in experiment', !(await hasText('Simulation result')))
+  const explainBefore = explainRequestIds.length
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Run 1 — Light a bulb'), 'history run 1', 25000)
+  check('preset measures honestly', await hasText('0.6 A'))
+  check('ask unlocked after run', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Ask Muse Spark about this result' && !b.disabled)`))
+  await clickButton('Closed')
+  await waitFor(() => hasText('Circuit changed — run the experiment again.'), 'stale status')
+  check('stale hides measurements', !(await hasText('Simulation result')))
+  check('ask locked after edit', !(await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Ask Muse Spark about this result' && !b.disabled)`)))
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Run 2 — Free build'), 'history run 2', 25000)
+  check('open switch measures dark', await hasText('0.0 A'))
+  check('run comparison shown', await hasText('Compared with run 1'))
+  await clickButton('Ask Muse Spark about this result')
+  await waitFor(() => hasText('Fallback coach'), 'explain served', 20000)
+  check('explain caption honest', await hasText('Deterministic prototype — no model call.'))
+  check('one explicit explain call', explainRequestIds.length === explainBefore + 1, `before ${explainBefore}, after ${explainRequestIds.length}`)
+  await clickPresetButton('Shorted battery', 'Test')
+  await waitFor(() => hasText('Run 3 — Shorted battery'), 'history run 3', 25000)
+  check('short rejected honestly', await hasText('SHORTED_BATTERY') || await hasText('straight back to itself'))
+  await clickButton('Reset to blank')
+  await waitFor(() => hasText('Drag a battery into the workspace to begin.'), 'blank bench')
+  check('history survives reset', await hasText('Run 1 — Light a bulb'))
+  await clickButton('Guided Lab')
+  await waitFor(() => hasText('open gap'), 'guided clean')
+  check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
+  await clickButton('Hub')
+  await waitFor(() => hasText('Enter the guided lab'), 'hub final')
+  await clickButton('Reality Lens')
+  await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)
 
   console.log(fails.length === 0 ? 'BROWSER SMOKE PASSED' : `FAILURES: ${fails.join(', ')}`)
   ws.close()

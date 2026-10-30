@@ -313,3 +313,42 @@ Phase 4 result acceptance (all in the real browser unless noted):
   build, solo seed, result, and finale; seeds all-visible at
   fresh mounts; screenshots `01–06`, `09`, `11`, `17` in
   `docs/demo/` recaptured on this tree after banner settle.
+
+Phase 5 result acceptance (all in the real browser unless noted):
+
+- Shell `Experiment` entry is enabled with no `Next` badge;
+  the bench opens without browser Back, marks
+  `aria-current`, and returns to hub, lab, and lens cleanly.
+- The bench reuses the lesson canvas: battery, bulb, switch,
+  wire palette; placement, wiring, toggle, delete, reset;
+  no prediction gate, ladder, verdict, or trace renders.
+- No auto-run: a loaded preset sits at `Ready to test your
+  circuit.` until `Run experiment`; any edit hides
+  measurements and shows `Circuit changed — run the
+  experiment again.` (unit: converter, ids, reset; browser:
+  stale after a real toggle).
+- All four presets convert through the shared converter and
+  match probe-verified solver outcomes (closed 0.6 A /
+  3.6 W, open valid dark, series 0.3 A / 0.9 W each,
+  short `SHORTED_BATTERY`); `Test` runs through the normal
+  path exactly once, including under StrictMode remounts.
+- Invalid states reuse the solver-judged hints (empty,
+  dangling, floating, shorted, conflicting, malformed);
+  valid-dark, valid-lit, and rejected runs stay visually
+  distinct; backend outages keep the bench usable.
+- `Ask Muse Spark about this result` is disabled before a
+  fresh run and after any edit; it posts only the netlist;
+  the server solves before explaining and rejects numbers
+  outside the facts (unit: fake, mocked meta, fallback
+  label, safe 500). No automatic coach calls in Experiment.
+- History logs every run (valid and rejected) with one-line
+  summaries and current-vs-previous comparison; survives
+  bench reset; never touches lesson snapshots.
+- Guided Lab, demo (pause/resume/replay/takeover), Reality
+  Lens, Solo zero-coach, and finale all still pass the same
+  smoke; experiment coverage adds preset, stale, history,
+  explain, reset, and return-leg checks.
+- 1440px, 1180px, 390px: zero horizontal overflow; presets,
+  canvas, history, and ask stack cleanly; presets fit fresh
+  390px mounts; controls stay 44px with visible focus;
+  screenshot `20-experiment.png` captured on this tree.

@@ -78,16 +78,19 @@ describe('stageFor', () => {
 })
 
 describe('shellLocation', () => {
-  it('maps entry and lens state onto hub, lab, and lens', () => {
+  it('maps entry and workspace state onto hub, lab, experiment, and lens', () => {
     expect(shellLocation(false, false)).toBe('hub')
     expect(shellLocation(true, false)).toBe('lab')
     expect(shellLocation(false, true)).toBe('lens')
     expect(shellLocation(true, true)).toBe('lens')
+    expect(shellLocation(false, false, true)).toBe('experiment')
+    expect(shellLocation(true, false, true)).toBe('experiment')
+    expect(shellLocation(true, true, true)).toBe('lens')
   })
 })
 
 describe('SHELL_NAV', () => {
-  it('exposes hub, lab, announced experiment, and lens in order', () => {
+  it('exposes hub, lab, experiment, and lens in order, all enabled', () => {
     expect(SHELL_NAV.map((item) => item.label)).toEqual([
       'Hub',
       'Guided Lab',
@@ -95,11 +98,12 @@ describe('SHELL_NAV', () => {
       'Reality Lens',
     ])
     const experiment = SHELL_NAV.find((item) => item.id === 'experiment')
-    expect(experiment?.disabled).toBe(true)
-    expect(experiment?.badge).toBe('Next')
+    expect(experiment?.disabled).toBeUndefined()
+    expect(experiment?.badge).toBeUndefined()
     expect(SHELL_NAV.filter((item) => item.disabled !== true).map((item) => item.id)).toEqual([
       'hub',
       'lab',
+      'experiment',
       'lens',
     ])
   })
