@@ -11,7 +11,7 @@ true of the committed tree; nothing is mocked for the pitch.
 
 ## Slide 1 — Title (0:00–0:15)
 
-**Verityn — Make a prediction. Meet reality.**
+**Verityn — Turn questions into experiments.**
 
 > As a student, I see how easy it is to ask AI for an answer and move
 > on. But getting the answer doesn't mean you can solve the next
@@ -29,6 +29,10 @@ true of the committed tree; nothing is mocked for the pitch.
   a think-first method through an objectively testable activity.
 
 ## Slide 3 — The loop (0:40–1:10)
+
+Verityn is an AI-guided STEM laboratory. The homepage lets judges
+explore the laboratory stations; the guided circuit journey
+demonstrates the complete prediction-to-evidence loop.
 
 **Predict → Build → Simulate → Explain → Try solo.**
 

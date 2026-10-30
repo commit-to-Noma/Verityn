@@ -48,6 +48,12 @@ learner. See `docs/` for the architecture, UI spec, and test plan.
   journey through the real UI in ~40 seconds (pause, resume,
   skip, exit, replay, manual takeover). This is the recording
   path for the 60–90 second video.
+- Laboratory homepage: `Turn questions into experiments.` with
+  an interactive five-station turntable (Guided Lab, Experiment
+  Bench, Reality Lens, Meta Muse Spark, Verityn Solver). Every
+  station action opens a real route or scrolls to the
+  technology strip; keyboard, screen-reader, reduced-motion,
+  and no-auto-rotation behavior included.
 - Voice (optional, never required): browser speech synthesis
   reads coach messages with captions and replay; microphone
   dictation fills the Why field as editable text with honest

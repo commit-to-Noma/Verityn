@@ -683,6 +683,7 @@ export default function App() {
       {stage === 'intro' && (
         <LabIntro
           onEnter={() => setEntered(true)}
+          onExperiment={() => handleNavigate('experiment')}
           onExploreLens={handleExploreLens}
           onDemo={startDemo}
         />

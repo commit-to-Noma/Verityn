@@ -5,6 +5,7 @@
  * frontend + backend pair:
  *
  *   Predict -> Build -> Reality Check -> R1 -> R2 -> R4 -> Solo -> Finale
+ *     -> Homepage turntable (rotate, keyboard, station routes)
  *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
  *     -> Guided demo full run (pause/resume, replay, manual takeover)
  *     -> Experiment presets, manual run, stale, history, one explain call
@@ -119,6 +120,19 @@ async function clickButtonStarts(prefix) {
   })()`)
   if (!ok) throw new Error('button starting with not found: ' + prefix)
   return ok
+}
+
+async function clickTab(text) {
+  const ok = await ev(`(() => {
+    const list = document.querySelector('[role="tablist"]');
+    const match = list && [...list.querySelectorAll('[role="tab"]')]
+      .find((e) => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled);
+    if (!match) return false;
+    match.scrollIntoView({ block: 'center' });
+    match.click();
+    return true;
+  })()`)
+  if (!ok) throw new Error('station tab not found: ' + text)
 }
 
 async function clickPresetButton(title, label) {
@@ -286,19 +300,59 @@ async function drive() {
   await send('Network.enable')
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await send('Page.navigate', { url: BASE + '/' })
-  await waitFor(() => hasText('Enter the guided lab'), 'hub')
+  await waitFor(() => hasText('Enter the Guided Lab'), 'hub')
   check('tab title', await ev('document.title') === 'Verityn Laboratory — Make a prediction. Meet reality.', await ev('document.title'))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
   check('brand icon linked', iconHref === '/brand/verityn-logo.png', iconHref)
   const iconRes = await fetch(BASE + iconHref)
   const iconBytes = Number(iconRes.headers.get('content-length') ?? '0')
   check('brand icon served and bounded', iconRes.ok && iconBytes > 0 && iconBytes < 100 * 1024, `${iconRes.status} ${iconBytes}B`)
-  check('hero headline', await hasText('Make a prediction. Meet reality.'))
+  check('hero headline', await hasText('Turn questions into experiments.'))
   check('lab identity', await hasText('Verityn Laboratory'))
-  check('hero entries', await hasText('Enter the guided lab') && await hasText('Open Reality Lens') && await hasText('Watch the guided demo'))
+  check('first-lab line honest', await hasText('Circuits are where Verityn begins'))
+  check('hero entries', await hasText('Enter the Guided Lab') && await hasText('Explore the Laboratory') && await hasText('Watch the guided demo'))
   check('live example card', await hasText('ENGINEERING LAB 01') && await hasText('Circuit Reality Check'))
   check('capabilities', await hasText('What Verityn can do') && await hasText('Independent transfer'))
-  check('diagram example', await hasText('bringing a circuit diagram to life'))
+  check('lab loop', await hasText('How the laboratory works') && await hasText('Test with the simulator'))
+  // Lazy Susan: visible turntable, rotation, keyboard, and real routes.
+  check('turntable visible', await hasText('Explore the laboratory') && await hasText('STATION 1 OF 5'))
+  await clickTab('Reality Lens')
+  await waitFor(() => hasText('STATION 3 OF 5'), 'turntable direct select')
+  check('tab selected state', await ev(`document.getElementById('station-tab-lens')?.getAttribute('aria-selected') === 'true'`))
+  check('station announcement', await hasText('Bring a real circuit diagram into the laboratory'))
+  await ev(`document.getElementById('station-tab-lens').focus()`)
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 })
+  await waitFor(() => hasText('STATION 4 OF 5'), 'turntable keyboard')
+  check('no auto-advance without input', await sleep(2500).then(() => hasText('STATION 4 OF 5')))
+  await clickTab('Guided Lab')
+  await waitFor(() => hasText('STATION 1 OF 5'), 'turntable back to lab')
+  await clickButtonStarts('Enter Guided Lab')
+  await waitFor(() => hasText('open gap'), 'station opens lab')
+  await clickButton('Hub')
+  await waitFor(() => hasText('Turn questions into experiments.'), 'hub again')
+  await clickTab('Experiment Bench')
+  await waitFor(() => hasText('STATION 2 OF 5'), 'turntable experiment')
+  await clickButtonStarts('Open Experiment')
+  await waitFor(() => hasText('Build something. Test what happens.'), 'station opens experiment')
+  await clickButton('Hub')
+  await waitFor(() => hasText('Turn questions into experiments.'), 'hub after experiment')
+  await clickTab('Reality Lens')
+  await waitFor(() => hasText('STATION 3 OF 5'), 'turntable lens')
+  await clickButtonStarts('Open Reality Lens')
+  await waitFor(() => hasText('META VISION WORKSPACE'), 'station opens lens')
+  await clickButton('Hub')
+  await waitFor(() => hasText('Turn questions into experiments.'), 'hub after lens')
+  await clickTab('Meta Muse Spark')
+  await waitFor(() => hasText('STATION 4 OF 5'), 'turntable coach')
+  await clickButtonStarts('See how the coach works')
+  await sleep(900)
+  check('coach station scrolls to technology', await ev(`document.getElementById('homepage-technology').getBoundingClientRect().top < window.innerHeight`))
+  await clickTab('Verityn Solver')
+  await waitFor(() => hasText('STATION 5 OF 5'), 'turntable solver')
+  await clickButtonStarts('Run an experiment')
+  await waitFor(() => hasText('Build something. Test what happens.'), 'station opens bench')
+  await clickButton('Hub')
+  await waitFor(() => hasText('Turn questions into experiments.'), 'hub after solver')
   check('tech strip', await hasText('Meta Muse Spark') && await hasText('Verityn Solver'))
   check('planned subjects honest', await hasText('Planned') && await hasText('Active demo'))
   check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment'))
@@ -309,7 +363,7 @@ async function drive() {
     return b ? b.disabled !== true && !b.textContent.includes('Next') : 'missing';
   })()`)
   check('experiment enabled in nav', expEnabled === true, String(expEnabled))
-  await clickButton('Enter the guided lab')
+  await clickButton('Enter the Guided Lab')
 
   await waitFor(() => hasText('open gap'), 'l1 predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
@@ -328,7 +382,7 @@ async function drive() {
   check('3-section card', await hasText('What the simulator observed'))
   check('simulator ready badge', await hasText('Simulator ready'))
   await clickButton('Hub')
-  await waitFor(() => hasText('Make a prediction. Meet reality.'), 'nav hub')
+  await waitFor(() => hasText('Turn questions into experiments.'), 'nav hub')
   await clickButton('Guided Lab')
   await waitFor(() => handleCenter('B1', 'b'), 'nav lab restores build', 25000)
   check('prediction stands after hub exit', await hasText('Your prediction:'))
@@ -471,13 +525,13 @@ async function drive() {
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
   await send('Page.navigate', { url: BASE + '/' })
-  await waitFor(() => hasText('Enter the guided lab'), 'mobile hub')
+  await waitFor(() => hasText('Enter the Guided Lab'), 'mobile hub')
   const overflow = await ev('document.documentElement.scrollWidth - document.documentElement.clientWidth')
   check('mobile homepage fits 390px', overflow <= 1, `overflow ${overflow}px`)
-  await clickButton('Enter the guided lab')
+  await clickButton('Enter the Guided Lab')
   await waitFor(() => hasText('open gap'), 'mobile predict')
   await send('Page.navigate', { url: BASE + '/' })
-  await waitFor(() => hasText('Enter the guided lab'), 'mobile rehub')
+  await waitFor(() => hasText('Enter the Guided Lab'), 'mobile rehub')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('META VISION WORKSPACE'), 'mobile lens')
   await waitFor(() => hasText('Your diagram'), 'mobile lens lab', 20000)
@@ -534,7 +588,7 @@ async function drive() {
 
   // ---- Experiment workspace: free bench beside the guided journey. ----
   await send('Page.navigate', { url: BASE + '/' })
-  await waitFor(() => hasText('Enter the guided lab'), 'hub again')
+  await waitFor(() => hasText('Enter the Guided Lab'), 'hub again')
   await clickButton('Experiment')
   await waitFor(() => hasText('Build something. Test what happens.'), 'experiment page')
   check('experiment current location', await ev(`document.querySelector('nav[aria-label="Laboratory"] button[aria-current="page"]')?.textContent.trim()`) === 'Experiment')
@@ -594,7 +648,7 @@ async function drive() {
   await waitFor(() => hasText('open gap'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
   await clickButton('Hub')
-  await waitFor(() => hasText('Enter the guided lab'), 'hub final')
+  await waitFor(() => hasText('Enter the Guided Lab'), 'hub final')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)
 

@@ -449,3 +449,43 @@ carry empty `conditions`/`ratings`. Damaged bulbs still show
 full voltage across the open branch, so the card reads `12.0 V
 · 0.0 A · 0.0 W — Damaged`, which is the honest open-branch
 measurement.
+
+### Phase 7A — Homepage Lazy Susan (implemented, uncommitted)
+
+- [x] New hero: `Turn questions into experiments.` with the
+  predict-build-evidence subhead, `Enter the Guided Lab`
+  primary, `Explore the Laboratory` scroll secondary, and the
+  quiet demo link. Circuits-first line names biology,
+  chemistry, and engineering systems as growth, never as
+  shipped labs.
+- [x] Laboratory turntable directly below the hero: five
+  stations (Guided Lab, Experiment Bench, Reality Lens, Meta
+  Muse Spark, Verityn Solver) with neighbor previews, prev /
+  next controls, direct-select tabs, and one route action per
+  station. Station copy lives once in `content/homepage.ts`.
+- [x] Route mapping: lab → Guided Lab, experiment + solver →
+  Experiment bench, lens → Reality Lens, coach → scrolls to
+  the technology strip. No fake Meta-only page.
+- [x] Truthful station details only (verified 0.6 A · 3.6 W,
+  5 starter benches, confirm-before-simulate); the solver
+  station reads `Measured, not guessed`.
+- [x] Below the turntable: `How the laboratory works` 4-step
+  loop, compact capabilities, `Three systems, one laboratory`
+  strip, the restrained future line, coach note, and health.
+  No feature removed; no entry point lost.
+- [x] Accessibility: tablist with `aria-selected`, roving
+  tabindex, arrows/Home/End, live-region announcements, no
+  focus trap, no auto-rotation (no timers at all), 44px
+  controls, visible focus; the global reduced-motion rule
+  collapses the rotation animation.
+- [x] Full gates + smoke re-run and green; no live Meta calls;
+  screenshots `24–25` recaptured and `27–28` added in
+  `docs/demo/` (1440 and 390 px, zero overflow).
+
+Phase 7A findings: `innerText` reflects the CSS uppercase
+transform, so smoke asserts `STATION 1 OF 5`; shell nav and
+station tabs share labels (`Guided Lab`, `Reality Lens`), so
+smoke clicks tabs through a tablist-scoped helper. The phase
+brief listed 4 starter benches, but Phase 6 shipped a fifth —
+the station truthfully reads 5. The browser tab title keeps
+the Phase 1 headline; only the hero changed.

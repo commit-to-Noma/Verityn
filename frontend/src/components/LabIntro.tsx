@@ -1,8 +1,15 @@
 import { ArrowRight, FlaskConical, Play, ScanLine } from 'lucide-react'
 import HealthStatus from './HealthStatus'
+import LaboratoryTurntable from './LaboratoryTurntable'
 import ReadoutValue from './ReadoutValue'
 import { L1 } from '../lessons/l1'
-import { HOMEPAGE_ENTRIES, HOMEPAGE_HEADLINE, HOMEPAGE_SUBHEAD } from '../content/homepage'
+import {
+  HOMEPAGE_ENTRIES,
+  HOMEPAGE_FIRST_LAB,
+  HOMEPAGE_HEADLINE,
+  HOMEPAGE_SUBHEAD,
+  type LaboratoryStation,
+} from '../content/homepage'
 
 const CAPABILITIES: { title: string; doing: string; badge?: string }[] = [
   {
@@ -23,11 +30,11 @@ const CAPABILITIES: { title: string; doing: string; badge?: string }[] = [
   },
 ]
 
-const DIAGRAM_EXAMPLE = [
-  { step: 'Diagram', doing: 'A real schematic or photo.' },
-  { step: 'Meta interpretation', doing: 'Components, terminals, and wires proposed.' },
-  { step: 'Editable circuit', doing: 'You review and correct the model.' },
-  { step: 'Solver evidence', doing: 'Current, power, and verdict measured.' },
+const LAB_LOOP = [
+  { step: 'Make a claim', doing: 'Predict what will happen before any help unlocks.' },
+  { step: 'Build or bring a model', doing: 'Wire a circuit on the canvas or confirm a Reality Lens proposal.' },
+  { step: 'Test with the simulator', doing: 'Current, power, and validity are measured, not guessed.' },
+  { step: 'Explain the evidence', doing: 'Answer the coach, then prove it solo with AI off.' },
 ] as const
 
 const STACK = [
@@ -36,16 +43,35 @@ const STACK = [
   { name: 'Verityn Solver', doing: 'Calculates current, power, validity, and verdict.' },
 ] as const
 
-/** Homepage: laboratory hero, live example, capabilities, honest credits. */
+function scrollToId(id: string) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+}
+
+/** Homepage: hero, laboratory turntable, loop, capabilities, honest credits. */
 export default function LabIntro({
   onEnter,
+  onExperiment,
   onExploreLens,
   onDemo,
 }: {
   onEnter: () => void
+  onExperiment: () => void
   onExploreLens: () => void
   onDemo: () => void
 }) {
+  const handleStation = (station: LaboratoryStation) => {
+    if (station.action === 'lab') {
+      onEnter()
+    } else if (station.action === 'experiment') {
+      onExperiment()
+    } else if (station.action === 'lens') {
+      onExploreLens()
+    } else {
+      scrollToId('homepage-technology')
+    }
+  }
+
   return (
     <section aria-labelledby="intro-heading" className="intro-ambient -m-4 flex flex-col items-center gap-10 px-4 py-16 sm:-m-6 sm:py-20">
       <div className="grid w-full items-center gap-8 text-left lg:grid-cols-2">
@@ -68,11 +94,11 @@ export default function LabIntro({
             </button>
             <button
               type="button"
-              onClick={onExploreLens}
+              onClick={() => scrollToId('laboratory-turntable')}
               className="flex min-h-[52px] items-center justify-center gap-2 rounded-[12px] border border-glass-border px-8 text-base font-semibold"
             >
               <ScanLine className="h-5 w-5" aria-hidden="true" />
-              {HOMEPAGE_ENTRIES.realityLens}
+              {HOMEPAGE_ENTRIES.explore}
             </button>
           </div>
           <button
@@ -145,7 +171,35 @@ export default function LabIntro({
         </button>
       </div>
 
-      <div className="flex w-full max-w-4xl flex-col gap-3">
+      <p className="max-w-2xl text-center text-sm text-ink-muted">{HOMEPAGE_FIRST_LAB}</p>
+
+      <div id="laboratory-turntable" className="flex w-full scroll-mt-6 flex-col items-center gap-4">
+        <h3 className="text-center text-base font-semibold">Explore the laboratory</h3>
+        <LaboratoryTurntable onStationAction={handleStation} />
+      </div>
+
+      <div className="flex w-full flex-col gap-3">
+        <h3 className="text-center text-base font-semibold">How the laboratory works</h3>
+        <ol aria-label="The laboratory loop" className="grid gap-2 text-left sm:grid-cols-2 lg:grid-cols-4">
+          {LAB_LOOP.map((item, index) => (
+            <li key={item.step} className="glass-panel relative flex flex-col gap-1 p-3">
+              <p className="text-sm font-semibold">
+                <span className="text-flow">{index + 1}. </span>
+                {item.step}
+              </p>
+              <p className="text-xs text-ink-muted">{item.doing}</p>
+              {index < LAB_LOOP.length - 1 && (
+                <ArrowRight
+                  className="absolute -right-2.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-flow lg:block"
+                  aria-hidden="true"
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="flex w-full flex-col gap-3">
         <h3 className="text-center text-base font-semibold">What Verityn can do</h3>
         <ul className="grid gap-2 text-left sm:grid-cols-2 lg:grid-cols-4">
           {CAPABILITIES.map((item) => (
@@ -164,28 +218,8 @@ export default function LabIntro({
         </ul>
       </div>
 
-      <div className="flex w-full max-w-4xl flex-col gap-3">
-        <h3 className="text-center text-base font-semibold">
-          One example: bringing a circuit diagram to life
-        </h3>
-        <ol aria-label="How a diagram becomes an experiment" className="grid gap-2 text-left sm:grid-cols-4">
-          {DIAGRAM_EXAMPLE.map((item, index) => (
-            <li key={item.step} className="glass-panel relative flex flex-col gap-1 p-3">
-              <p className="text-sm font-semibold">{item.step}</p>
-              <p className="text-xs text-ink-muted">{item.doing}</p>
-              {index < DIAGRAM_EXAMPLE.length - 1 && (
-                <ArrowRight
-                  className="absolute -right-2.5 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-flow sm:block"
-                  aria-hidden="true"
-                />
-              )}
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="flex w-full max-w-4xl flex-col gap-2 text-left">
-        <h3 className="text-center text-sm font-semibold">What does what</h3>
+      <div id="homepage-technology" className="flex w-full scroll-mt-6 flex-col gap-2 text-left">
+        <h3 className="text-center text-sm font-semibold">Three systems, one laboratory</h3>
         <ul className="grid gap-2 sm:grid-cols-3">
           {STACK.map((item) => (
             <li key={item.name} className="glass-panel flex flex-col gap-1 p-3">

@@ -221,7 +221,7 @@ Phase 1 shell acceptance (all in the real browser unless noted):
   solo coach calls, benches hidden, lazy chunk loads.
 - Reality Lens page keeps its order (upload before samples),
   confirm gate, and solver-backed proof values from a fresh run.
-- Headline `Make a prediction. Meet reality.` present; no
+- Headline `Turn questions into experiments.` present; no
   removed feature; unfinished shell work disabled or bypassable.
 
 Phase 2 lens acceptance (all in the real browser unless noted):
@@ -390,3 +390,31 @@ Phase 6 result acceptance (all in the real browser unless noted):
   stay 44px with visible focus; reduced-motion keeps the
   same facts; screenshots `21–23` captured on this tree in
   `docs/demo/`.
+
+Phase 7A result acceptance (all in the real browser unless noted):
+
+- Homepage opens on `Turn questions into experiments.` with
+  the Guided Lab primary, Laboratory scroll secondary, demo
+  link, live Engineering Lab 01 card, and the honest
+  circuits-first line (unit: copy module, entries).
+- The turntable shows five stations in order with neighbor
+  previews, prev/next controls, direct-select tabs, one
+  route action, and truthful static details (unit: order,
+  wraparound, selection, route mapping, no-future-claims).
+- Every station action works: lab, experiment, lens open
+  their routes; coach scrolls to the technology strip;
+  solver opens the bench. No dead ends, no fake pages.
+- Keyboard: arrows/Home/End move between tabs with
+  `aria-selected` and a live-region announcement; Enter and
+  Space activate; focus never traps (unit: pure selection;
+  browser: real key events).
+- No auto-rotation: the station is unchanged after 2.5 s
+  without input; no timers exist in the component.
+- Reduced motion: the global rule collapses rotation
+  animation; content and route actions stay identical.
+- Mobile 390px: single station, compact prev/next, wrapping
+  tabs, zero horizontal overflow.
+- Guided Lab, demo, Reality Lens, Solo zero-coach, finale,
+  and Experiment/overload still pass the same smoke.
+- Screenshots `24–25` recaptured, `27–28` added in
+  `docs/demo/` on this tree.
