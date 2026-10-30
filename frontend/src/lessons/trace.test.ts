@@ -149,7 +149,7 @@ describe('buildTrace', () => {
     expect(steps[3]?.body).toEqual({
       kind: 'comparison',
       status: 'CONTRADICTED',
-      note: 'Judged by the deterministic evaluator against your built circuit.',
+      note: 'Checked by the deterministic evaluator against your built circuit.',
       evidence: [{ id: 'L1', watts: 0 }],
     })
     expect(steps[4]?.body).toEqual({

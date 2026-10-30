@@ -178,7 +178,7 @@ export function buildTrace(input: TraceInput): TraceStep[] {
       body: {
         kind: 'comparison',
         status: input.verdict.status,
-        note: 'Judged by the deterministic evaluator against your built circuit.',
+        note: 'Checked by the deterministic evaluator against your built circuit.',
         evidence: evidenceRows(input.verdict.evidence),
       },
     })

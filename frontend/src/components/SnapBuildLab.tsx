@@ -161,6 +161,11 @@ function ReviewPanels({
           {visionProviderBadge(result.provider)}
         </span>
       </div>
+      {result.provider === 'meta-spark' && (
+        <p className="text-ink-muted text-xs">
+          Proposal by Meta Muse Spark · Verityn Solver measures only after you confirm.
+        </p>
+      )}
       <div
         className="flex items-start gap-2"
         role={banner.tone === 'blocked' ? 'alert' : 'note'}
@@ -324,6 +329,7 @@ function ReviewPanels({
             {(reveal === 'replica' || reveal === 'review') && (
               <CircuitCanvas
                 key={`review-${nonce}`}
+                layout="stacked"
                 importRequest={{ seed, uncertainIds, nonce }}
                 simulateLocked={
                   confirmed ? null : 'Confirm the model below before testing it against the simulator.'

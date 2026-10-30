@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
 import MicButton from '../voice/MicButton'
+import { speechSupport } from '../voice/speech'
 import CircuitPreview from './CircuitPreview'
 import CoachNote from './CoachNote'
 
@@ -180,6 +181,11 @@ export default function PredictionScreen({
             }}
           />
         </div>
+        <p className="text-ink-muted text-sm">
+          {speechSupport().recognition
+            ? 'Speak your reasoning, or type it — the microphone is optional.'
+            : 'Type your reasoning below.'}
+        </p>
         {why.trim() !== '' && (
           <p className="text-ink-muted text-sm" aria-live="polite">
             Your reasoning is recorded. We&apos;ll test it against the circuit.

@@ -318,7 +318,7 @@ export default function RealityLens({
             <p className="text-ink-muted text-sm">
               {choice === 'not_sure'
                 ? 'You chose Not sure, so there is no definite prediction to check.'
-                : 'Checking your prediction against the model…'}
+                : 'Checking your prediction against the circuit result…'}
             </p>
           )}
         </div>

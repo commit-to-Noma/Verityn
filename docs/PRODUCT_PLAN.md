@@ -293,5 +293,52 @@ Phase 3 findings: verdict-subtree remounts reset the card-local
 demo flags, so auto-apply and the R4 wait are keyed on the
 mount-stable demonstration trace — otherwise the demo re-applies
 in a loop and the pending undo never lands. L1's StartVerdict
-also renders `Consistent with the model`, so the smoke keys the
-apply check on the Undo button instead.
+rendered a matching headline at the time, so the smoke keys the
+apply check on the Undo button instead (wording replaced in
+Phase 4; the Undo keying stays).
+
+### Phase 4 — Learning result + voice (implemented, uncommitted)
+
+- [x] Two-column lab layout: the canvas renders experiment
+  (canvas + controls + result banner) and insight (prediction
+  recap + readings + verdicts + next action) panes, side by side
+  at `lg` and stacked below; the narrow lens replica pins
+  `layout="stacked"`. Plain element variables, not components,
+  so React Flow never remounts.
+- [x] Learner-friendly verdicts everywhere via `VERDICT_LABELS`
+  (`Your prediction matched / did not match the circuit
+  result`); `explainLitVerdict` derives the cause only from
+  solver + netlist; a test bans model-as-authority wording and
+  the old `Contradicted by the model` headline.
+- [x] Solo four-beat result (`solo/summary.ts` + `SoloResult`):
+  prediction, change, per-bulb measurement, factual suggestion;
+  coach-off and zero coach calls preserved.
+- [x] Finale is evidence-first: three cards, factual narrative,
+  capstone, story, a `How the system works` disclosure, and
+  four exits (guided lab, replay, lens, laboratory).
+- [x] Restrained attribution: live coach captions read `Guided
+  by Meta Muse Spark · Grounded in simulator evidence`; live
+  lens proposals read `Proposal by Meta Muse Spark · Verityn
+  Solver measures only after you confirm`. Samples and fallback
+  keep their honest labels.
+- [x] Voice is explicit and optional: a support-aware ready
+  line, an announced Listening state with a stop control,
+  editable transcripts, no autoplay, and a verified
+  type-only fallback when recognition is missing.
+- [x] Gates before demo transitions stay result-first (manual
+  mode never auto-advances); smoke covers result-with-gate,
+  pause/resume, replay, takeover, and solo zero-coach.
+- [x] Full gates + smoke re-run and green; no live Meta calls;
+  screenshots `01–06`, `09`, `11`, `17` recaptured on this
+  tree in `docs/demo/`.
+
+Phase 4 findings: the finale narrative once read as if the
+simulator had measured the L1 starting gap (which the solver
+rejects), so the reality line now names its circuit: `Then,
+with the switch open, …`. Banner screenshots need a ~1 s
+settle: `AnimatedReadout` counts 0 → value (reduced-motion
+users see the final value immediately). Canvases fit at a
+fresh 390 px mount; narrowing a live page can clip until the
+learner pans — a pre-existing React Flow trait, not a seed
+defect. `aria-label` text is not `innerText`, so probes must
+assert visible strings instead.

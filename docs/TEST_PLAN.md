@@ -275,3 +275,41 @@ Phase 3 demo acceptance (all in the real browser unless noted):
   visible, controls stay 44px, zero horizontal overflow.
 - Normal learner mode unchanged without the demo: manual
   predictions, no silent advances, `?auto=1` keeps its old beat.
+
+Phase 4 result acceptance (all in the real browser unless noted):
+
+- Lab stages split into experiment (canvas + controls +
+  result banner) and insight (prediction recap + readings +
+  verdicts + next action) columns at desktop widths; one
+  stacked column below `lg`; the lens replica stays stacked;
+  no canvas remounts, no duplicated information.
+- Every verdict uses learner wording (`Your prediction
+  matched / did not match the circuit result`, `You completed
+  the loop`); the cause line derives only from solver +
+  netlist; no `Contradicted by the model` headline or
+  model-as-authority label survives (source-audited and
+  unit-tested).
+- Solo renders four beats (prediction, change, per-bulb
+  measurement, factual suggestion) with coach off and zero
+  `/api/coach/*` calls; the seed netlist and terminal IDs are
+  unchanged and every node fits a fresh 390 px mount.
+- Finale order is evidence cards → factual narrative →
+  capstone → story → `How the system works` → four exits;
+  the narrative names the open-switch run and claims nothing
+  beyond the snapshots.
+- Live coach captions credit Meta Muse Spark and simulator
+  grounding; live lens proposals credit Meta proposal with
+  solver measurement after confirm; fallback and samples keep
+  honest labels; no capability is claimed where unused.
+- Voice: support-aware ready line, announced Listening state
+  with stop control, editable transcripts, replay-via-Listen,
+  no autoplay; recognition stripped in-browser falls back to
+  a disabled mic, type-only helper, and intact typing.
+- Chapter gates keep results visible before any transition;
+  manual mode never auto-advances; smoke still covers
+  result-with-gate, pause/resume, replay, takeover, and both
+  solo zero-coach runs.
+- 1440px, 1180px, 390px: zero horizontal overflow on hub,
+  build, solo seed, result, and finale; seeds all-visible at
+  fresh mounts; screenshots `01–06`, `09`, `11`, `17` in
+  `docs/demo/` recaptured on this tree after banner settle.

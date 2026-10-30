@@ -51,15 +51,20 @@ export default function MicButton({ onTranscript }: { onTranscript: (text: strin
   }
   if (state === 'listening') {
     return (
-      <button
-        type="button"
-        onClick={() => recognizer.stop()}
-        aria-label="Stop dictation"
-        title="Listening — select to stop"
-        className="text-bad absolute top-1/2 right-2 -translate-y-1/2 rounded-[8px] p-2"
-      >
-        <Square className="h-4 w-4" aria-hidden="true" />
-      </button>
+      <>
+        <span className="sr-only" role="status">
+          Listening…
+        </span>
+        <button
+          type="button"
+          onClick={() => recognizer.stop()}
+          aria-label="Stop dictation"
+          title="Listening — select to stop"
+          className="text-bad absolute top-1/2 right-2 -translate-y-1/2 rounded-[8px] p-2"
+        >
+          <Square className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </>
     )
   }
   return (

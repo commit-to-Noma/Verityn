@@ -7,8 +7,9 @@ matches the circuit model; it never says anything about the learner, and
 one consistent prediction proves nothing about understanding.
 
 Call: evaluate(claim, netlist, result) -> Verdict(status, reason, evidence).
-Statuses map to the UI labels one to one: CONSISTENT is "Consistent with
-the model", CONTRADICTED is "Contradicted by the model", UNASSESSABLE is
+Statuses map to the UI labels one to one: CONSISTENT is "Your
+prediction matched the circuit result", CONTRADICTED is "Your
+prediction did not match the circuit result", UNASSESSABLE is
 "Can't assess".
 
 V1 claims (anything else is MALFORMED_CLAIM):

@@ -25,7 +25,7 @@ import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
-import { CHOICE_LABELS, matchesExpected } from './lessons/lesson'
+import { matchesExpected } from './lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
 
@@ -47,19 +47,6 @@ interface ChapterGate {
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
-function PredictionSummary({ prediction, hint }: { prediction: Prediction; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-glass-border p-4">
-      <p className="text-sm">
-        <span className="text-ink-muted">Your prediction: </span>
-        {CHOICE_LABELS[prediction.choice]}
-        {prediction.why.trim() === '' ? '' : ` — “${prediction.why.trim()}”`}
-      </p>
-      <p className="mt-1 text-sm text-ink-muted">{hint}</p>
-    </div>
-  )
 }
 
 const STAGE_CONTENT: Record<Stage, null> = {
@@ -253,7 +240,7 @@ export default function App() {
         gate?.chapter === 'reality'
           ? {
               ...gate,
-              title: 'The model disagrees',
+              title: 'Prediction did not match',
               detail: 'Ask the coach above, then continue when ready.',
               coach: 'invited',
             }
@@ -674,7 +661,6 @@ export default function App() {
       )}
       {stage === 'l1-build' && l1Prediction !== null && (
         <div className="flex flex-col gap-4">
-          <PredictionSummary prediction={l1Prediction} hint={L1.fix.hint} />
           <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="l1"
@@ -706,7 +692,6 @@ export default function App() {
       )}
       {stage === 'reality-build' && realityPrediction !== null && (
         <div className="flex flex-col gap-4">
-          <PredictionSummary prediction={realityPrediction} hint={L1.twist.fix.hint} />
           <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="reality"
@@ -752,7 +737,6 @@ export default function App() {
       )}
       {stage === 'transfer-build' && transferPrediction !== null && (
         <div className="flex flex-col gap-4">
-          <PredictionSummary prediction={transferPrediction} hint={TRANSFER.fix.hint} />
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
               Solo mode — the AI coach is off for this challenge. Predict, build, and check
@@ -785,6 +769,7 @@ export default function App() {
       {stage === 'finale' && (
         <JourneyFinale
           chapters={finaleChapters}
+          onTryLab={handleDemoManual}
           onReturnHub={() => {
             window.location.href = window.location.pathname
           }}

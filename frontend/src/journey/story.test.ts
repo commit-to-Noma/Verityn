@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SimulateResult } from '../api/client'
 import type { TraceInput } from '../lessons/trace'
 import type { ChapterRecap } from './story'
-import { evidenceCards, storyNodes } from './story'
+import { evidenceCards, finaleNarrative, storyNodes } from './story'
 
 function solved(power: Record<string, number>): SimulateResult {
   const components: SimulateResult['components'] = {}
@@ -55,6 +55,51 @@ const TRANSFER_INPUT: Partial<TraceInput> = {
   verdict: { status: 'CONSISTENT', evidence: { 'L2.power': 3.6 } },
 }
 
+describe('finaleNarrative', () => {
+  const chapters = () => [
+    chapter('L1', L1_INPUT),
+    chapter('L1T1', TWIST_INPUT),
+    chapter('L1T2', TRANSFER_INPUT),
+  ]
+
+  it('narrates the completed journey in three factual sentences', () => {
+    expect(finaleNarrative(chapters())).toEqual([
+      'You predicted that the open circuit would light the bulb.',
+      'Then, with the switch open, the simulator measured 0 A and 0 W, and L1 stayed dark.',
+      'You then completed a new circuit independently (2 bulbs lit) and tested your prediction without AI coaching.',
+    ])
+  })
+
+  it('adapts the first sentence to the recorded choice', () => {
+    const no = chapters()
+    no[0] = chapter('L1', {
+      ...L1_INPUT,
+      prediction: { lessonId: 'L1', choice: 'no', why: '' },
+    })
+    expect(finaleNarrative(no)[0]).toBe('You predicted that the open circuit would stay dark.')
+  })
+
+  it('reports a mismatched solo honestly', () => {
+    const missed = chapters()
+    missed[2] = chapter('L1T2', {
+      ...TRANSFER_INPUT,
+      verdict: { status: 'CONTRADICTED', evidence: { 'L2.power': 0 } },
+    })
+    expect(finaleNarrative(missed)[2]).toContain('did not match your prediction')
+  })
+
+  it('skips chapters without evidence instead of inventing closure', () => {
+    const chapters = [
+      chapter('L1', L1_INPUT),
+      { id: 'L1T1', title: 't', solo: false, input: null },
+      { id: 'L1T2', title: 't', solo: true, input: null },
+    ]
+    expect(finaleNarrative(chapters)).toEqual([
+      'You predicted that the open circuit would light the bulb.',
+    ])
+  })
+})
+
 describe('storyNodes', () => {
   it('tells the demo journey in five beats', () => {
     const nodes = storyNodes([
@@ -70,7 +115,7 @@ describe('storyNodes', () => {
       'Verified transfer',
     ])
     expect(nodes[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
-    expect(nodes[1].detail).toBe('Model disagreed: L1 dark at 0 W')
+    expect(nodes[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
     expect(nodes[2].detail).toBe('One guiding question (Fallback coach)')
     expect(nodes[3].detail).toBe('Predicted “Yes”')
     expect(nodes[4].detail).toBe('Verified: 2 bulbs lit')
@@ -86,7 +131,7 @@ describe('storyNodes', () => {
       }),
       chapter('L1T2', TRANSFER_INPUT),
     ])
-    expect(nodes[1].detail).toBe('Prediction held: L1 dark at 0 W')
+    expect(nodes[1].detail).toBe('Prediction matched: L1 dark at 0 W')
     expect(nodes[2].detail).toBe('No coaching')
   })
 
@@ -112,7 +157,7 @@ describe('evidenceCards', () => {
       'Independent transfer',
     ])
     expect(cards[0].detail).toBe('Predicted “Yes” — “Looks complete.”')
-    expect(cards[1].detail).toBe('Model disagreed: L1 dark at 0 W')
+    expect(cards[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
     expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
   })
 
