@@ -108,18 +108,41 @@ def _finite(value):
     return isinstance(value, (int, float)) and math.isfinite(value)
 
 
-def explain_experiment(*, facts, valid, error_code, switches, bulbs):
+def explain_experiment(*, facts, valid, error_code, switches, bulbs,
+                       conditions=None, batteries=None):
     """Deterministic experiment explanation from server-side facts only.
 
     Numbers come from the solver facts; invalid circuits get the
-    code-owned hint; the closing suggestion names only parts that
-    exist. Never calls a model.
+    code-owned hint; overloaded and damaged bulbs get their measured
+    verdict; the closing suggestion names only parts that exist.
+    Never calls a model.
     """
     if not valid:
         return EXPLAIN_INVALID.get(
             error_code,
             "The simulator could not test this circuit. Fix the wiring "
             "and run again.")
+    conditions = conditions or {}
+    damaged = [bid for bid in bulbs if conditions.get(bid) == "damaged"]
+    if damaged:
+        bid = damaged[0]
+        amps = (facts or {}).get(f"{bid}.current_A", 0.0)
+        watts = (facts or {}).get(f"{bid}.power_W", 0.0)
+        amps = amps if _finite(amps) else 0.0
+        watts = watts if _finite(watts) else 0.0
+        return (f"{bid} is damaged and no longer completes the circuit: "
+                f"{amps:.1f} A and {watts:.1f} W. Reset the bench to "
+                "restore an intact bulb.")
+    overloaded = [bid for bid in bulbs
+                  if conditions.get(bid) == "overloaded"]
+    if overloaded:
+        bid = overloaded[0]
+        watts = (facts or {}).get(f"{bid}.power_W")
+        limit = (facts or {}).get(f"{bid}.limit_W")
+        if _finite(watts) and _finite(limit):
+            return (f"{bid} drew {watts:.1f} W, past its {limit:.1f} W "
+                    "safe limit — the extra voltage overloaded it. Run "
+                    "again to see the failed state, or reset the bench.")
     lit = [bid for bid in bulbs
            if _finite((facts or {}).get(f"{bid}.power_W"))
            and facts[f"{bid}.power_W"] > DARK_POWER_W]
@@ -174,10 +197,11 @@ class FakeCoachProvider:
         return route_template(choice, why)
 
     def explain(self, *, facts, valid, error_code, component_ids,
-                switches, bulbs):
+                switches, bulbs, conditions=None, batteries=None):
         if self.fail:
             raise CoachProviderError("Fake provider forced failure.",
                                      stage="transport")
         return explain_experiment(facts=facts, valid=valid,
                                   error_code=error_code, switches=switches,
-                                  bulbs=bulbs)
+                                  bulbs=bulbs, conditions=conditions,
+                                  batteries=batteries)

@@ -31,6 +31,8 @@ const SOLVED = {
   error_code: null,
   error_message: '',
   component_ids: [],
+  conditions: { L1: 'intact' },
+  ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
 }
 
 describe('simulate', () => {
@@ -47,9 +49,21 @@ describe('simulate', () => {
       error_code: 'SHORTED_BATTERY',
       error_message: 'Battery B1 is shorted by W1.',
       component_ids: ['B1', 'W1'],
+      conditions: {},
+      ratings: {},
     }
     stubFetch(() => okResponse(judged))
     await expect(simulate({ components: [] })).resolves.toEqual(judged)
+  })
+
+  it('defaults absent conditions and ratings to empty', async () => {
+    const { conditions: _c, ratings: _r, ...legacy } = SOLVED
+    stubFetch(() => okResponse(legacy))
+    await expect(simulate({ components: [] })).resolves.toEqual({
+      ...legacy,
+      conditions: {},
+      ratings: {},
+    })
   })
 
   it.each([
@@ -58,6 +72,9 @@ describe('simulate', () => {
     ['components mistyped', { ...SOLVED, components: { L1: { voltage: 1 } } }],
     ['error_code mistyped', { ...SOLVED, error_code: 7 }],
     ['component_ids mistyped', { ...SOLVED, component_ids: 'L1' }],
+    ['condition mistyped', { ...SOLVED, conditions: { L1: 'burning' } }],
+    ['conditions mistyped', { ...SOLVED, conditions: [] }],
+    ['ratings mistyped', { ...SOLVED, ratings: { L1: { rated_volts: 'six' } } }],
     ['not an object', []],
   ])('rejects malformed payloads: %s', async (_label, body) => {
     stubFetch(() => okResponse(body))

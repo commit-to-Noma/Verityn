@@ -1,5 +1,6 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
+import type { ComponentCondition } from '../../api/client'
 import { useSwitchToggle } from './switchToggle'
 
 export type CircuitNodeData = {
@@ -8,6 +9,13 @@ export type CircuitNodeData = {
   /** Continuous bulb glow 0..1 from solver power; 0 for other kinds. */
   glow: number
   invalid: boolean
+  /** Battery voltage for display and conversion; 6 when absent. */
+  volts?: number
+  /** Bulb safety ratings for conversion; solver defaults apply when absent. */
+  ratedVolts?: number
+  maxSafeWatts?: number
+  /** Solver-assessed bulb condition; shown only where the canvas sets it. */
+  condition?: ComponentCondition
   measurement?: {
     voltage: number
     current: number
@@ -104,11 +112,32 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         )}
         <span className="text-xs font-semibold text-ink">
           {data.kind === 'battery'
-            ? 'Battery · 6 V'
+            ? `Battery · ${data.volts ?? 6} V`
             : data.kind === 'bulb'
               ? `Bulb · ${data.label}`
               : `Switch · ${data.label}`}
         </span>
+        {data.kind === 'bulb' && data.condition !== undefined && (
+          <span
+            role="status"
+            aria-label={
+              data.condition === 'damaged' ? 'Bulb damaged' : `Bulb ${data.condition}`
+            }
+            className={`rounded-full border px-2 py-px text-[10px] font-medium ${
+              data.condition === 'damaged'
+                ? 'border-bad/60 text-bad'
+                : data.condition === 'overloaded'
+                  ? 'border-light/60 text-light'
+                  : 'border-ok/60 text-ok'
+            }`}
+          >
+            {data.condition === 'damaged'
+              ? 'Damaged'
+              : data.condition === 'overloaded'
+                ? 'Overloaded'
+                : 'Intact'}
+          </span>
+        )}
         {data.kind === 'battery' && data.polarity !== undefined && (
           <span className="font-mono text-[10px] text-ink-muted" title="Detected polarity">
             +{data.polarity.positive} −{data.polarity.negative}

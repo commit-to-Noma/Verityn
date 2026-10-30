@@ -43,6 +43,15 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0
 }
 
+function isPositiveFinite(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+}
+
+/** Battery volts, defaulting to the classroom 6 V for absent/invalid input. */
+function positiveOr(value: unknown, fallback: number): number {
+  return isPositiveFinite(value) ? value : fallback
+}
+
 export function toNetlist(graph: CanvasGraph): Netlist {
   const nodesRaw = isRecord(graph) && Array.isArray(graph.nodes) ? graph.nodes : []
   const edgesRaw = isRecord(graph) && Array.isArray(graph.edges) ? graph.edges : []
@@ -67,11 +76,17 @@ export function toNetlist(graph: CanvasGraph): Netlist {
     const id = entry.id
     const junctions = { a: junctionId(id, 'a'), b: junctionId(id, 'b') }
     if (kind === 'battery') {
-      components.push({ id, type: 'battery', volts: BATTERY_VOLTS, ...junctions })
+      components.push({ id, type: 'battery', volts: positiveOr(entry.volts, BATTERY_VOLTS), ...junctions })
     } else if (kind === 'switch') {
       components.push({ id, type: 'switch', closed: entry.closed as boolean, ...junctions })
     } else {
-      components.push({ id, type: 'bulb', ...junctions })
+      components.push({
+        id,
+        type: 'bulb',
+        ...(isPositiveFinite(entry.ratedVolts) ? { rated_volts: entry.ratedVolts } : {}),
+        ...(isPositiveFinite(entry.maxSafeWatts) ? { max_safe_watts: entry.maxSafeWatts } : {}),
+        ...junctions,
+      })
     }
   }
   for (const entry of edgesRaw) {

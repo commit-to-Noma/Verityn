@@ -24,6 +24,8 @@ const DARK_RESULT: SimulateResult = {
   error_code: null,
   error_message: '',
   component_ids: [],
+  conditions: {},
+  ratings: {},
 }
 
 const LIT_RESULT: SimulateResult = {
@@ -41,6 +43,8 @@ const REJECTED_RESULT: SimulateResult = {
   error_code: 'DANGLING_TERMINAL',
   error_message: 'The circuit has loose ends.',
   component_ids: ['B1', 'L1'],
+  conditions: {},
+  ratings: {},
 }
 
 function baseInput(overrides: Partial<TraceInput> = {}): TraceInput {

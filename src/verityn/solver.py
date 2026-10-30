@@ -9,11 +9,23 @@ Netlist format:
                       "a": "p", "b": "0"}, ...]}
 Component types: battery{volts}, resistor{ohms}, bulb{}, switch{closed: bool},
 wire{}. Every component has a unique string id and two terminal nodes a and b.
-For a battery, a is the + terminal and b is the - terminal.
+For a battery, a is the + terminal and b is the - terminal. A bulb may
+carry optional safety metadata: rated_volts, max_safe_watts (both
+positive finite numbers), and condition ('intact' or 'damaged').
 
 Model (ideal, steady DC): wires and closed switches are 0 ohm; an open switch
 carries 0 A; every bulb is the same fixed 10 ohm resistor (TEST_PLAN 3.3:
-a 6 V battery across one bulb gives 0.6 A and 3.6 W).
+a 6 V battery across one bulb gives 0.6 A and 3.6 W). A damaged bulb is
+an open branch: it carries 0 A like an open switch, but its terminals
+stay wired (never a dangling error).
+
+Assessment (deterministic, from the same measurement): every solved bulb
+is reported 'intact', 'overloaded', or 'damaged'. A bulb is overloaded
+when |voltage| exceeds its rated volts or power exceeds its max safe
+watts; unrated bulbs use the classroom defaults of 6 V and 6 W. The
+solver never latches damage itself: callers pass condition 'damaged'
+for bulbs that failed in an earlier run. Overload is a warning on a
+valid measurement, never a rejection; no new error codes exist.
 
 Conventions: voltage = V(a) - V(b); current flows a -> b through the
 component; power = voltage * current (absorbed). A battery delivering power
@@ -49,20 +61,33 @@ CONFLICTING_SOURCES = "CONFLICTING_SOURCES"
 UNSOLVABLE = "UNSOLVABLE"
 
 BULB_OHMS = 10.0
+#: Classroom bulb defaults: the guided lessons run 6 V / 3.6 W, intact.
+BULB_RATED_VOLTS = 6.0
+BULB_MAX_SAFE_WATTS = 6.0
+#: Component condition vocabulary: intact, overloaded, damaged. Nothing else.
+CONDITIONS = ("intact", "overloaded", "damaged")
 TYPES = ("battery", "resistor", "bulb", "switch", "wire")
 
 
 class SolveResult:
-    """Outcome of `solve`: either numbers (ok) or an explained rejection."""
+    """Outcome of `solve`: either numbers (ok) or an explained rejection.
+
+    conditions maps each solved bulb id to its assessed condition;
+    ratings maps each solved bulb id to the applied
+    (rated_volts, max_safe_watts). Both are empty on rejection.
+    """
 
     def __init__(self, ok, node_voltages=None, components=None,
-                 error_code=None, error_message="", component_ids=None):
+                 error_code=None, error_message="", component_ids=None,
+                 conditions=None, ratings=None):
         self.ok = ok
         self.node_voltages = node_voltages or {}
         self.components = components or {}
         self.error_code = error_code
         self.error_message = error_message
         self.component_ids = component_ids or []
+        self.conditions = conditions or {}
+        self.ratings = ratings or {}
 
 
 def _is_number(value):
@@ -115,15 +140,32 @@ def _structural_error(comps):
         if ctype == "switch" and not isinstance(item.get("closed"), bool):
             return (MALFORMED_NETLIST, [cid],
                     f"Switch '{cid}' needs a boolean 'closed'.")
+        if ctype == "bulb":
+            for field in ("rated_volts", "max_safe_watts"):
+                if field in item and not _is_number(item.get(field)):
+                    return (MALFORMED_NETLIST, [cid],
+                            f"Bulb '{cid}' needs a numeric '{field}'.")
+            if "condition" in item \
+                    and item.get("condition") not in ("intact", "damaged"):
+                return (MALFORMED_NETLIST, [cid],
+                        f"Bulb '{cid}' needs 'intact' or 'damaged'.")
     return None
 
 
 def _bad_values(comps):
+    def _bad_rating(comp):
+        for field in ("rated_volts", "max_safe_watts"):
+            if field in comp and (not _is_finite_number(comp[field])
+                                  or comp[field] <= 0):
+                return True
+        return False
+
     bad = [c["id"] for c in comps
            if (c["type"] == "resistor"
                and (not _is_finite_number(c["ohms"]) or c["ohms"] <= 0))
            or (c["type"] == "battery"
-               and (not _is_finite_number(c["volts"]) or c["volts"] <= 0))]
+               and (not _is_finite_number(c["volts"]) or c["volts"] <= 0))
+           or (c["type"] == "bulb" and _bad_rating(c))]
     if bad:
         return (INVALID_VALUE, bad,
                 f"Values must be positive and finite: {', '.join(sorted(bad))}.")
@@ -250,7 +292,13 @@ def validate(netlist):
     return None
 
 
+def _is_damaged(comp):
+    return comp["type"] == "bulb" and comp.get("condition") == "damaged"
+
+
 def _resistance(comp):
+    if _is_damaged(comp):
+        return None
     if comp["type"] == "resistor":
         return float(comp["ohms"])
     if comp["type"] == "bulb":
@@ -341,12 +389,15 @@ def solve(netlist):
                      "Values produce non-finite node voltages.",
                      [comp["id"] for comp in comps])
     out = {}
+    conditions = {}
+    ratings = {}
     for comp in comps:
         ctype = comp["type"]
-        if ctype in ("resistor", "bulb"):
+        damaged = _is_damaged(comp)
+        if ctype in ("resistor", "bulb") and not damaged:
             voltage = volts[comp["a"]] - volts[comp["b"]]
             current = voltage / _resistance(comp)
-        elif ctype == "switch" and not comp["closed"]:
+        elif (ctype == "switch" and not comp["closed"]) or damaged:
             voltage = volts[comp["a"]] - volts[comp["b"]]
             current = 0.0
         else:
@@ -359,4 +410,17 @@ def solve(netlist):
                          [comp["id"]])
         out[comp["id"]] = {"voltage": voltage, "current": current,
                            "power": voltage * current}
-    return SolveResult(ok=True, node_voltages=volts, components=out)
+        if ctype == "bulb":
+            rated = float(comp.get("rated_volts", BULB_RATED_VOLTS))
+            limit = float(comp.get("max_safe_watts", BULB_MAX_SAFE_WATTS))
+            ratings[comp["id"]] = {"rated_volts": rated,
+                                   "max_safe_watts": limit}
+            if damaged:
+                conditions[comp["id"]] = "damaged"
+            elif (abs(out[comp["id"]]["voltage"]) > rated
+                    or out[comp["id"]]["power"] > limit):
+                conditions[comp["id"]] = "overloaded"
+            else:
+                conditions[comp["id"]] = "intact"
+    return SolveResult(ok=True, node_voltages=volts, components=out,
+                       conditions=conditions, ratings=ratings)

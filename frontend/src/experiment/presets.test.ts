@@ -3,12 +3,13 @@ import { toNetlist } from '../canvas/toNetlist'
 import { EXPERIMENT_PRESETS } from './presets'
 
 describe('EXPERIMENT_PRESETS', () => {
-  it('offers the four documented starters with prompts', () => {
+  it('offers the five documented starters with prompts', () => {
     expect(EXPERIMENT_PRESETS.map((preset) => preset.id)).toEqual([
       'light-bulb',
       'open-switch',
       'series-pair',
       'shorted-battery',
+      'overload-bulb',
     ])
     for (const preset of EXPERIMENT_PRESETS) {
       expect(preset.title.length).toBeGreaterThan(0)
@@ -57,6 +58,21 @@ describe('EXPERIMENT_PRESETS', () => {
     ).toHaveLength(0)
     const short = nets.get('shorted-battery')?.components.find((part) => part.id === 'W1')
     expect(short).toMatchObject({ type: 'wire', a: 'B1.a', b: 'B1.b' })
+  })
+
+  it('seeds the overload bench with a rated bulb and a 6 V battery', () => {
+    const netlist = toNetlist({
+      nodes: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.nodes ?? [],
+      edges: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.edges ?? [],
+    })
+    const byId = new Map(netlist.components.map((part) => [part.id, part]))
+    expect(byId.get('B1')).toMatchObject({ type: 'battery', volts: 6 })
+    expect(byId.get('S1')).toMatchObject({ type: 'switch', closed: true })
+    expect(byId.get('L1')).toMatchObject({
+      type: 'bulb',
+      rated_volts: 6,
+      max_safe_watts: 6,
+    })
   })
 
   it('uses stable unique ids within each seed', () => {

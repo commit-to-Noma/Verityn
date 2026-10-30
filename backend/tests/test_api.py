@@ -58,6 +58,8 @@ def test_simulate_valid_circuit_returns_exact_numbers(client):
         "error_code": None,
         "error_message": "",
         "component_ids": [],
+        "conditions": {},
+        "ratings": {},
     }
 
 

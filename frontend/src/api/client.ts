@@ -8,6 +8,9 @@ export interface ApiComponent {
   volts?: number
   ohms?: number
   closed?: boolean
+  rated_volts?: number
+  max_safe_watts?: number
+  condition?: 'intact' | 'damaged'
 }
 
 export interface Netlist {
@@ -24,6 +27,13 @@ export interface ComponentResult {
   power: number
 }
 
+export type ComponentCondition = 'intact' | 'overloaded' | 'damaged'
+
+export interface BulbRating {
+  rated_volts: number
+  max_safe_watts: number
+}
+
 export interface SimulateResult {
   ok: boolean
   node_voltages: Record<string, number>
@@ -31,6 +41,8 @@ export interface SimulateResult {
   error_code: string | null
   error_message: string
   component_ids: string[]
+  conditions: Record<string, ComponentCondition>
+  ratings: Record<string, BulbRating>
 }
 
 export type VerdictStatus = 'CONSISTENT' | 'CONTRADICTED' | 'UNASSESSABLE'
@@ -83,6 +95,18 @@ function isComponentResult(value: unknown): value is ComponentResult {
   )
 }
 
+function isCondition(value: unknown): value is ComponentCondition {
+  return value === 'intact' || value === 'overloaded' || value === 'damaged'
+}
+
+function isRating(value: unknown): value is BulbRating {
+  return (
+    isRecord(value) &&
+    typeof value.rated_volts === 'number' &&
+    typeof value.max_safe_watts === 'number'
+  )
+}
+
 function guardSimulateResult(body: unknown): SimulateResult {
   if (!isRecord(body) || typeof body.ok !== 'boolean') {
     throw new ApiError('payload', 'Unexpected response from the server.')
@@ -98,6 +122,18 @@ function guardSimulateResult(body: unknown): SimulateResult {
   ) {
     throw new ApiError('payload', 'Unexpected response from the server.')
   }
+  // Conditions and ratings are additive: absent means an old-shape
+  // response (or no bulbs), present-but-malformed is rejected.
+  const conditions = body.conditions ?? {}
+  const ratings = body.ratings ?? {}
+  if (
+    !isRecord(conditions) ||
+    !Object.values(conditions).every(isCondition) ||
+    !isRecord(ratings) ||
+    !Object.values(ratings).every(isRating)
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the server.')
+  }
   return {
     ok: body.ok,
     node_voltages: body.node_voltages,
@@ -105,6 +141,8 @@ function guardSimulateResult(body: unknown): SimulateResult {
     error_code: body.error_code,
     error_message: body.error_message,
     component_ids: body.component_ids,
+    conditions: conditions as Record<string, ComponentCondition>,
+    ratings: ratings as Record<string, BulbRating>,
   }
 }
 

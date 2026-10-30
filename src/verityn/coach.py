@@ -140,11 +140,15 @@ class CoachProvider(Protocol):
 
     def explain(self, *, facts: dict, valid: bool,
                 error_code: str | None, component_ids: list,
-                switches: dict, bulbs: list) -> str:
+                switches: dict, bulbs: list,
+                conditions: dict | None = None,
+                batteries: dict | None = None) -> str:
         """Explain an experiment run from server-side solver facts.
 
         facts carries solver numbers for output validation; invalid
         runs pass empty facts and their rejection code instead.
+        conditions maps bulb ids to assessed conditions and batteries
+        maps battery ids to volts; both come from the server solve.
         """
         ...
 
@@ -235,12 +239,20 @@ def _refused(reason_code, message):
 
 
 def solver_facts(result):
-    """Flatten a solved result into per-part solver numbers."""
+    """Flatten a solved result into per-part solver numbers.
+
+    Bulb safety ratings join as limit/rated numbers so grounded
+    explanations may cite them; assessed conditions travel beside
+    the facts (they carry no numbers to validate).
+    """
     facts = {}
     for cid, measurement in result.components.items():
         facts[f"{cid}.power_W"] = measurement["power"]
         facts[f"{cid}.current_A"] = measurement["current"]
         facts[f"{cid}.voltage_V"] = measurement["voltage"]
+    for bid, rating in (result.ratings or {}).items():
+        facts[f"{bid}.limit_W"] = rating["max_safe_watts"]
+        facts[f"{bid}.rated_V"] = rating["rated_volts"]
     return facts
 
 
@@ -523,17 +535,27 @@ def explain_result(netlist, provider, fallback=None):
                 if part.get("type") == "switch"}
     bulbs = sorted(pid for pid, part in parts.items()
                    if part.get("type") == "bulb")
+    batteries = {pid: part.get("volts", 6)
+                 for pid, part in parts.items()
+                 if part.get("type") == "battery"}
     result = solver.solve(netlist)
     if result.ok is True:
         facts = solver_facts(result)
+        facts["batteries.count"] = float(len(batteries))
+        facts["batteries.total_V"] = float(sum(
+            volts for volts in batteries.values()
+            if _is_number(volts)))
         valid, error_code, component_ids = True, None, []
+        conditions = dict(result.conditions or {})
     else:
         facts = {}
         valid, error_code = False, result.error_code
         component_ids = list(result.component_ids)
+        conditions = {}
     call = {"facts": facts, "valid": valid, "error_code": error_code,
             "component_ids": component_ids, "switches": switches,
-            "bulbs": bulbs}
+            "bulbs": bulbs, "conditions": conditions,
+            "batteries": batteries}
     try:
         text = provider.explain(**call)
         serving = provider.name

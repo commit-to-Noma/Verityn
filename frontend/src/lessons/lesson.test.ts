@@ -133,6 +133,8 @@ function solved(
     error_code: null,
     error_message: '',
     component_ids: [],
+    conditions: {},
+    ratings: {},
   }
 }
 
@@ -144,6 +146,8 @@ function rejected(): SimulateResult {
     error_code: 'DANGLING_TERMINAL',
     error_message: 'loose ends',
     component_ids: ['B1', 'L1'],
+    conditions: {},
+    ratings: {},
   }
 }
 

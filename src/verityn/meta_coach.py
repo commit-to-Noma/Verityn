@@ -88,20 +88,28 @@ _EXPLAIN_SYSTEM = (
 )
 
 
-def _explain_user_message(*, facts, valid, error_code, switches, bulbs):
+def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
+                         conditions=None, batteries=None):
+    conditions = conditions or {}
+    batteries = batteries or {}
     if valid:
         return (
             "The simulator tested this circuit and it is valid.\n"
             f"Solver facts (per part): {json.dumps(facts, sort_keys=True)}\n"
             f"Switches: {json.dumps(switches, sort_keys=True)}. "
             f"Bulbs: {json.dumps(bulbs)}.\n"
-            "Explain the measured result in two to three sentences."
+            f"Bulb conditions: {json.dumps(conditions, sort_keys=True)}. "
+            f"Batteries: {json.dumps(batteries, sort_keys=True)}.\n"
+            "Explain the measured result in two to three sentences. "
+            "Name an overloaded or damaged bulb only when the "
+            "conditions say so."
         )
     return (
         "The simulator rejected this circuit: no measurements exist.\n"
         f"Rejection code: {error_code}.\n"
         f"Switches: {json.dumps(switches, sort_keys=True)}. "
         f"Bulbs: {json.dumps(bulbs)}.\n"
+        f"Batteries: {json.dumps(batteries, sort_keys=True)}.\n"
         "Explain why it cannot be tested, without citing any numbers."
     )
 
@@ -342,7 +350,7 @@ class MetaSparkProvider:
         return question
 
     def explain(self, *, facts, valid, error_code, component_ids,
-                switches, bulbs):
+                switches, bulbs, conditions=None, batteries=None):
         payload = {
             "model": self.model,
             "messages": [
@@ -351,7 +359,8 @@ class MetaSparkProvider:
                  "content": _explain_user_message(
                      facts=facts or {}, valid=valid,
                      error_code=error_code, switches=switches or {},
-                     bulbs=bulbs or [])},
+                     bulbs=bulbs or [], conditions=conditions,
+                     batteries=batteries)},
             ],
             "temperature": 0,
             "reasoning_effort": META_REASONING_EFFORT,

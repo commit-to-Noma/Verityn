@@ -10,6 +10,8 @@ function solved(components: SimulateResult['components']): SimulateResult {
     error_code: null,
     error_message: '',
     component_ids: [],
+    conditions: {},
+    ratings: {},
   }
 }
 

@@ -90,6 +90,11 @@ export interface SeedNode {
   id: string
   kind: string
   closed?: boolean
+  /** Battery voltage; experiment seeds only (lessons use 6 V). */
+  volts?: number
+  /** Bulb safety ratings; experiment seeds only (solver defaults apply). */
+  ratedVolts?: number
+  maxSafeWatts?: number
   /** Detected battery polarity (+/− terminals); batteries only. */
   polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
   /** Review provenance for vision-seeded replicas. */

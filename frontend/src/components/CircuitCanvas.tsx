@@ -134,6 +134,9 @@ function seedNodes(seed: LessonSeed | undefined): CircuitNodeType[] {
         closed: node.kind === 'switch' ? (node.closed ?? true) : true,
         polarity: node.polarity,
         review: node.review,
+        volts: node.volts,
+        ratedVolts: node.ratedVolts,
+        maxSafeWatts: node.maxSafeWatts,
       },
     }))
 }
@@ -907,6 +910,10 @@ function CanvasInner({
   mode = 'lesson',
   runRequest,
   title = 'Build what you predicted',
+  benchConditions,
+  batteryVolts,
+  benchNonce,
+  onParts,
   importRequest,
   gate,
   simulateLocked = null,
@@ -969,6 +976,14 @@ function CanvasInner({
   runRequest?: number
   /** Canvas heading; lessons keep the default prediction framing. */
   title?: string
+  /** Session damage latch (experiment only), stamped into runs, never drawn. */
+  benchConditions?: Record<string, 'damaged'>
+  /** Bench battery voltages by id (experiment only); validated by the parent. */
+  batteryVolts?: Record<string, number>
+  /** A change applies batteryVolts and invalidates (damage clears only). */
+  benchNonce?: number
+  /** Fired when the part list changes (experiment battery panel). */
+  onParts?: (parts: { id: string; kind: string; volts?: number }[]) => void
   /** Chapter gate, rendered below the result and above the evidence trace. */
   gate?: ReactNode
 }) {
@@ -1040,7 +1055,12 @@ function CanvasInner({
     setRunState({ phase: 'idle' })
     setNodes((current) =>
       current.map((node) => {
-        if (node.data.glow > 0 || node.data.invalid || node.data.demonstrated === true) {
+        if (
+          node.data.glow > 0 ||
+          node.data.invalid ||
+          node.data.demonstrated === true ||
+          node.data.condition !== undefined
+        ) {
           return {
             ...node,
             data: {
@@ -1049,6 +1069,7 @@ function CanvasInner({
               invalid: false,
               measurement: undefined,
               demonstrated: false,
+              condition: undefined,
             },
           }
         }
@@ -1123,6 +1144,7 @@ function CanvasInner({
           glow: 0,
           invalid: false,
           closed: true,
+          volts: tool === 'battery' ? 6 : undefined,
         },
       },
     ])
@@ -1148,6 +1170,7 @@ function CanvasInner({
           glow: 0,
           invalid: false,
           closed: true,
+          volts: kind === 'battery' ? 6 : undefined,
         },
       },
     ])
@@ -1200,7 +1223,14 @@ function CanvasInner({
     const id = requestId.current
     setRunState({ phase: 'loading' })
     const netlist = toNetlist({
-      nodes: nodes.map((node) => ({ id: node.id, kind: node.data.kind, closed: node.data.closed })),
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        kind: node.data.kind,
+        closed: node.data.closed,
+        volts: node.data.volts,
+        ratedVolts: node.data.ratedVolts,
+        maxSafeWatts: node.data.maxSafeWatts,
+      })),
       edges: edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
@@ -1209,6 +1239,14 @@ function CanvasInner({
         targetTerminal: edge.targetHandle ?? '',
       })),
     })
+    if (mode === 'experiment') {
+      const damaged = benchConditionsRef.current ?? {}
+      for (const part of netlist.components) {
+        if (part.type === 'bulb' && damaged[part.id] === 'damaged') {
+          part.condition = 'damaged'
+        }
+      }
+    }
     void (async () => {
       try {
         const result = await simulate(netlist, next.signal)
@@ -1227,6 +1265,8 @@ function CanvasInner({
                   : 0,
               invalid: offenders.has(node.id),
               measurement: result.ok ? result.components[node.id] : undefined,
+            condition:
+              mode === 'experiment' && result.ok ? result.conditions[node.id] : undefined,
             },
           })),
         )
@@ -1310,6 +1350,58 @@ function CanvasInner({
     }, 60)
     return () => window.clearTimeout(timer)
   }, [runRequest, run])
+
+  /** Bench damage/voltage state, always current for the next run. */
+  const benchConditionsRef = useRef(benchConditions)
+  benchConditionsRef.current = benchConditions
+  const batteryVoltsRef = useRef(batteryVolts)
+  batteryVoltsRef.current = batteryVolts
+
+  /** Parent-driven bench change (voltage edit, damage clear): apply the
+   * voltages and invalidate. Mount is skipped; damage latches never bump
+   * the nonce, so the overload result that caused them stays visible. */
+  const benchNonceRef = useRef<number | undefined>(undefined)
+  const benchMountedRef = useRef(false)
+  useEffect(() => {
+    if (!benchMountedRef.current) {
+      benchMountedRef.current = true
+      benchNonceRef.current = benchNonce
+      return
+    }
+    if (benchNonce === undefined || benchNonce === benchNonceRef.current) {
+      return
+    }
+    benchNonceRef.current = benchNonce
+    const volts = batteryVoltsRef.current ?? {}
+    setNodes((current) =>
+      current.map((node) =>
+        node.data.kind === 'battery' && typeof volts[node.id] === 'number'
+          ? { ...node, data: { ...node.data, volts: volts[node.id] } }
+          : node,
+      ),
+    )
+    invalidate()
+  }, [benchNonce]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Report the part list for the bench battery panel; JSON key skips
+   * no-change renders so an inline parent callback cannot loop. */
+  const partsKeyRef = useRef('')
+  useEffect(() => {
+    if (onParts === undefined) {
+      return
+    }
+    const parts = nodes.map((node) => ({
+      id: node.id,
+      kind: node.data.kind,
+      volts: node.data.volts,
+    }))
+    const key = JSON.stringify(parts)
+    if (key === partsKeyRef.current) {
+      return
+    }
+    partsKeyRef.current = key
+    onParts(parts)
+  }, [nodes, onParts])
 
   useEffect(() => {
     if (
@@ -1708,13 +1800,15 @@ function CanvasInner({
             'Test circuit'
           )}
         </button>
-        <button
-          type="button"
-          onClick={clear}
-          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-        >
-          {mode === 'experiment' ? 'Reset' : 'Clear'}
-        </button>
+        {mode !== 'experiment' && (
+          <button
+            type="button"
+            onClick={clear}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Clear
+          </button>
+        )}
         {demoUndo !== null && (
           <button
             type="button"
@@ -1969,6 +2063,10 @@ export default function CircuitCanvas({
   mode,
   runRequest,
   title,
+  benchConditions,
+  batteryVolts,
+  benchNonce,
+  onParts,
   importRequest,
   gate,
   simulateLocked,
@@ -2001,6 +2099,10 @@ export default function CircuitCanvas({
   mode?: 'lesson' | 'experiment'
   runRequest?: number
   title?: string
+  benchConditions?: Record<string, 'damaged'>
+  batteryVolts?: Record<string, number>
+  benchNonce?: number
+  onParts?: (parts: { id: string; kind: string; volts?: number }[]) => void
   importRequest?: CanvasImportRequest | null
   gate?: ReactNode
   simulateLocked?: string | null
@@ -2036,6 +2138,10 @@ export default function CircuitCanvas({
         mode={mode}
         runRequest={runRequest}
         title={title}
+        benchConditions={benchConditions}
+        batteryVolts={batteryVolts}
+        benchNonce={benchNonce}
+        onParts={onParts}
         importRequest={importRequest}
         gate={gate}
         simulateLocked={simulateLocked}

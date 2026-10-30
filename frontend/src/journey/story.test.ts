@@ -9,7 +9,7 @@ function solved(power: Record<string, number>): SimulateResult {
   for (const [id, watts] of Object.entries(power)) {
     components[id] = { voltage: 6, current: watts === 0 ? 0 : 0.6, power: watts }
   }
-  return { ok: true, node_voltages: {}, components, error_code: null, error_message: '', component_ids: [] }
+  return { ok: true, node_voltages: {}, components, error_code: null, error_message: '', component_ids: [], conditions: {}, ratings: {} }
 }
 
 function chapter(id: string, input: Partial<TraceInput>): ChapterRecap {

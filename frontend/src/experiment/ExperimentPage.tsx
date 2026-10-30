@@ -1,6 +1,14 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, explainResult, providerBadge, type Netlist, type SimulateResult } from '../api/client'
+import {
+  ApiError,
+  explainResult,
+  providerBadge,
+  type ComponentCondition,
+  type Netlist,
+  type SimulateResult,
+} from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
+import { latchedDamage, validateBatteryVolts } from './bench'
 import { compareRuns, describeRun, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 
@@ -22,6 +30,155 @@ function explainCaption(provider: string): string {
   return `Served by ${provider}.`
 }
 
+/** One bench battery row: a validated numeric control. The parent
+ * remounts it (via key) when an applied voltage lands, resetting the
+ * draft without an effect. */
+function BatteryRow({
+  id,
+  volts,
+  onApply,
+}: {
+  id: string
+  volts: number
+  onApply: (id: string, value: number) => void
+}) {
+  const [draft, setDraft] = useState(String(volts))
+  const [error, setError] = useState<string | null>(null)
+
+  const apply = () => {
+    const checked = validateBatteryVolts(draft)
+    if (!checked.ok) {
+      setError(checked.error)
+      return
+    }
+    setError(null)
+    onApply(id, checked.value)
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium">{id}</span>
+        <span className="flex items-center gap-1">
+          <input
+            id={`battery-${id}-volts`}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                apply()
+              }
+            }}
+            inputMode="decimal"
+            aria-label={`Battery ${id} voltage in volts`}
+            aria-invalid={error !== null}
+            className="border-glass-border min-h-[44px] w-24 rounded-[10px] border bg-transparent px-3 text-sm"
+          />
+          <span className="text-ink-muted text-sm">V</span>
+        </span>
+      </label>
+      <button
+        type="button"
+        onClick={apply}
+        aria-label={`Apply ${id} voltage`}
+        className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+      >
+        Apply
+      </button>
+      {error !== null && (
+        <p role="alert" className="text-bad w-full text-sm">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+const CONDITION_LABEL: Record<ComponentCondition, string> = {
+  intact: 'Intact',
+  overloaded: 'Overloaded',
+  damaged: 'Damaged',
+}
+
+const CONDITION_CLASS: Record<ComponentCondition, string> = {
+  intact: 'text-ok',
+  overloaded: 'text-light',
+  damaged: 'text-bad',
+}
+
+/** Latest fresh run, per bulb: measured V/A/W against the safe limit,
+ * with the delta from the previous run's same bulb when it exists. */
+function LatestResult({
+  fresh,
+  previous,
+}: {
+  fresh: { result: SimulateResult; netlist: Netlist }
+  previous: RunRecord | null
+}) {
+  const { result, netlist } = fresh
+  if (!result.ok) {
+    const code = result.error_code ?? 'rejected'
+    return (
+      <section aria-label="Latest result" className="glass-panel flex flex-col gap-2 p-4">
+        <h3 className="text-base font-semibold">Latest result</h3>
+        <p className="text-sm">Not testable ({code}).</p>
+        <p className="text-ink-muted text-xs">Measured by Verityn Solver.</p>
+      </section>
+    )
+  }
+  const bulbs = netlist.components.filter((part) => part.type === 'bulb')
+  const conditions = result.conditions ?? {}
+  const anyOverloaded = bulbs.some((bulb) => conditions[bulb.id] === 'overloaded')
+  return (
+    <section aria-label="Latest result" className="glass-panel flex flex-col gap-3 p-4">
+      <h3 className="text-base font-semibold">Latest result</h3>
+      {bulbs.length === 0 ? (
+        <p className="text-ink-muted text-sm">No bulbs in this circuit.</p>
+      ) : (
+        <ul className="flex flex-col gap-3" aria-live="polite">
+          {bulbs.map((bulb) => {
+            const measured = result.components[bulb.id]
+            const condition = conditions[bulb.id]
+            const limit = result.ratings?.[bulb.id]?.max_safe_watts
+            const before = previous?.bulbs.find((entry) => entry.id === bulb.id) ?? null
+            const delta =
+              before === null || measured === undefined ? null : measured.power - before.watts
+            return (
+              <li key={bulb.id} className="flex flex-col gap-1">
+                <p className="text-sm font-medium">
+                  {bulb.id}
+                  {condition !== undefined && (
+                    <span className={CONDITION_CLASS[condition]}> — {CONDITION_LABEL[condition]}</span>
+                  )}
+                </p>
+                <p className="text-sm">
+                  {measured === undefined
+                    ? 'No reading.'
+                    : `${measured.voltage.toFixed(1)} V · ${measured.current.toFixed(1)} A · ${measured.power.toFixed(1)} W`}
+                  {limit !== undefined && (
+                    <span className="text-ink-muted"> · Safe limit: {limit.toFixed(1)} W</span>
+                  )}
+                </p>
+                {delta !== null && previous !== null && (
+                  <p className="text-ink-muted text-sm">
+                    {Math.abs(delta) < 0.05
+                      ? `Same as run ${previous.n}.`
+                      : `${delta > 0 ? '+' : ''}${delta.toFixed(1)} W vs run ${previous.n}.`}
+                  </p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      {anyOverloaded && (
+        <p className="text-sm">Overloaded bulbs fail on the next run. Reset the bench to restore them.</p>
+      )}
+      <p className="text-ink-muted text-xs">Measured by Verityn Solver.</p>
+    </section>
+  )
+}
+
 /** Free bench: build anything, run the solver, keep a session history.
  * No prediction gate, no ladder, no shared state with the guided lab. */
 export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () => void }) {
@@ -35,6 +192,11 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
   const [runs, setRuns] = useState<RunRecord[]>([])
   const [fresh, setFresh] = useState<{ result: SimulateResult; netlist: Netlist } | null>(null)
   const [ask, setAsk] = useState<AskState>({ phase: 'idle' })
+  /** Session damage latch: overloaded bulbs fail on the next run. */
+  const [benchConditions, setBenchConditions] = useState<Record<string, 'damaged'>>({})
+  const [batteryVolts, setBatteryVolts] = useState<Record<string, number>>({})
+  const [benchNonce, setBenchNonce] = useState(0)
+  const [parts, setParts] = useState<{ id: string; kind: string; volts?: number }[]>([])
   const controller = useRef<AbortController | null>(null)
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -47,6 +209,8 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
     setAsk({ phase: 'idle' })
     setFresh(null)
     setActivePreset(id)
+    setBenchConditions({})
+    setBatteryVolts({})
     setBench((current) => ({ key: current.key + 1, seed: preset.seed, label: preset.title }))
     if (andRun) {
       setRunRequest((current) => (current ?? 0) + 1)
@@ -58,6 +222,8 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
     setAsk({ phase: 'idle' })
     setFresh(null)
     setActivePreset(null)
+    setBenchConditions({})
+    setBatteryVolts({})
     setBench((current) => ({ key: current.key + 1, seed: undefined, label: 'Free build' }))
   }, [])
 
@@ -66,9 +232,22 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
       setRuns((current) => [...current, describeRun(current.length + 1, bench.label, result, netlist)])
       setFresh({ result, netlist })
       setAsk({ phase: 'idle' })
+      const latched = latchedDamage(result.conditions)
+      if (Object.keys(latched).length > 0) {
+        setBenchConditions((current) => ({ ...current, ...latched }))
+      }
     },
     [bench.label],
   )
+
+  const handleParts = useCallback((next: { id: string; kind: string; volts?: number }[]) => {
+    setParts(next)
+  }, [])
+
+  const handleVoltage = useCallback((id: string, value: number) => {
+    setBatteryVolts((current) => ({ ...current, [id]: value }))
+    setBenchNonce((current) => current + 1)
+  }, [])
 
   const handleDirty = useCallback(() => {
     controller.current?.abort()
@@ -109,6 +288,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
   const lastRun = runs[runs.length - 1] ?? null
   const prevRun = runs[runs.length - 2] ?? null
   const comparison = lastRun === null ? null : compareRuns(prevRun, lastRun)
+  const batteries = parts.filter((part) => part.kind === 'battery')
 
   return (
     <div className="flex flex-col gap-6">
@@ -186,10 +366,40 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           eyebrow="Experiment · Free build"
           title="Free bench"
           instructions="Place parts, wire terminals, toggle switches — then run the experiment."
+          benchConditions={benchConditions}
+          batteryVolts={batteryVolts}
+          benchNonce={benchNonce}
+          onParts={handleParts}
           onSolved={handleSolved}
           onDirty={handleDirty}
         />
       </Suspense>
+
+      {fresh !== null && (
+        <LatestResult fresh={fresh} previous={runs.length >= 2 ? runs[runs.length - 2] : null} />
+      )}
+
+      {batteries.length > 0 && (
+        <section aria-label="Bench batteries" className="glass-panel flex flex-col gap-3 p-4">
+          <h3 className="text-base font-semibold">Batteries</h3>
+          <p className="text-ink-muted text-sm">
+            Set a battery voltage, then run the experiment to measure what changes.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            {batteries.map((part) => {
+              const applied = batteryVolts[part.id] ?? part.volts ?? 6
+              return (
+                <BatteryRow
+                  key={`${bench.key}:${part.id}:${applied}`}
+                  id={part.id}
+                  volts={applied}
+                  onApply={handleVoltage}
+                />
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <section aria-label="Run history" className="glass-panel flex flex-col gap-2 p-4">

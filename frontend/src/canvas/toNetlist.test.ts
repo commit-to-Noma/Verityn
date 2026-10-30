@@ -200,6 +200,56 @@ describe('toNetlist', () => {
     }
     expect(toNetlist(graph as unknown as CanvasGraph)).toEqual({ components: [] })
   })
+
+  it('passes explicit battery volts through', () => {
+    const graph = {
+      nodes: [{ id: 'B1', kind: 'battery', volts: 12 }],
+      edges: [],
+    }
+    expect(toNetlist(graph as unknown as CanvasGraph)).toEqual({
+      components: [{ id: 'B1', type: 'battery', volts: 12, a: 'B1.a', b: 'B1.b' }],
+    })
+  })
+
+  it.each([[{}], [{ volts: 0 }], [{ volts: -6 }], [{ volts: Number.NaN }], [{ volts: 'six' }]])(
+    'defaults invalid battery volts to 6 (%j)',
+    (extra) => {
+      const graph = {
+        nodes: [{ id: 'B1', kind: 'battery', ...extra }],
+        edges: [],
+      }
+      expect(toNetlist(graph as unknown as CanvasGraph)).toEqual({
+        components: [{ id: 'B1', type: 'battery', volts: 6, a: 'B1.a', b: 'B1.b' }],
+      })
+    },
+  )
+
+  it('passes explicit bulb ratings through', () => {
+    const graph = {
+      nodes: [{ id: 'L1', kind: 'bulb', ratedVolts: 12, maxSafeWatts: 20 }],
+      edges: [],
+    }
+    expect(toNetlist(graph as unknown as CanvasGraph)).toEqual({
+      components: [
+        { id: 'L1', type: 'bulb', rated_volts: 12, max_safe_watts: 20, a: 'L1.a', b: 'L1.b' },
+      ],
+    })
+  })
+
+  it.each([
+    [{ ratedVolts: 0, maxSafeWatts: 0 }, {}],
+    [{ ratedVolts: -6, maxSafeWatts: -1 }, {}],
+    [{ ratedVolts: Number.NaN, maxSafeWatts: 6 }, { max_safe_watts: 6 }],
+    [{ ratedVolts: 6, maxSafeWatts: 'six' }, { rated_volts: 6 }],
+    [{ ratedVolts: 6, maxSafeWatts: Number.POSITIVE_INFINITY }, { rated_volts: 6 }],
+  ])('drops invalid bulb ratings for solver defaults (%j)', (extra, kept) => {
+    const graph = {
+      nodes: [{ id: 'L1', kind: 'bulb', ...extra }],
+      edges: [],
+    }
+    const [bulb] = toNetlist(graph as unknown as CanvasGraph).components
+    expect(bulb).toEqual({ id: 'L1', type: 'bulb', ...kept, a: 'L1.a', b: 'L1.b' })
+  })
 })
 
 function deepFreeze(value: unknown): void {

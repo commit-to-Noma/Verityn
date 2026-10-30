@@ -352,3 +352,41 @@ Phase 5 result acceptance (all in the real browser unless noted):
   canvas, history, and ask stack cleanly; presets fit fresh
   390px mounts; controls stay 44px with visible focus;
   screenshot `20-experiment.png` captured on this tree.
+
+Phase 6 result acceptance (all in the real browser unless noted):
+
+- Default bulbs still measure 0.6 A / 3.6 W intact; rated
+  metadata is optional and additive (unit: solver defaults,
+  overvoltage, overpower, boundary-intact, damaged-open,
+  determinism, input-rule rejections).
+- Overload is a valid measurement with `conditions`/`ratings`,
+  never a rejection; no new error codes. Shorts, conflicts,
+  dangling, and open switches behave exactly as before.
+- The overload preset converts through the shared converter
+  with volts/ratings intact and matches probe-verified solver
+  outcomes (0.6/3.6 intact → 1.2/14.4 overloaded → latched
+  damaged 0.0 A); second-battery and 12 V-edit paths agree.
+- The damage latch fires on the next run only, survives no
+  longer than the bench (preset load and reset clear it),
+  and never wipes the overload result that caused it; moving
+  parts never clears damage.
+- Voltage controls accept finite positive volts only, show
+  inline errors otherwise, and applying invalidates the stale
+  result (unit: validation, latch; browser: stale, label).
+- The latest-result card shows per-bulb V/A/W, the safe
+  limit, and the previous-run delta from real history; the
+  comparison reports battery and power changes computed from
+  the two runs, never invented ratios.
+- Explanations unlock for fresh runs only; the server adds
+  limits, battery count/total, conditions, and volts to the
+  grounded facts (unit: spy payload, fake overload/damage
+  text, mocked limit citation, invented-number rejection).
+- Guided Lab, demo, Reality Lens, Solo zero-coach, and
+  finale still pass the same smoke; overload coverage adds
+  intact, voltage-stale, overload, damage, explain, reset,
+  and return-leg checks.
+- 1440px, 1180px, 390px: zero horizontal overflow; badges,
+  card, battery rows, and history stack cleanly; controls
+  stay 44px with visible focus; reduced-motion keeps the
+  same facts; screenshots `21–23` captured on this tree in
+  `docs/demo/`.

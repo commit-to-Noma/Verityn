@@ -30,6 +30,8 @@ def _result_to_dict(result):
         "error_code": result.error_code,
         "error_message": result.error_message,
         "component_ids": result.component_ids,
+        "conditions": result.conditions,
+        "ratings": result.ratings,
     }
 
 

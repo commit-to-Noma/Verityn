@@ -29,6 +29,17 @@ SHORTED = {"components": [
     {"id": "W1", "type": "wire", "a": "p", "b": "0"},
 ]}
 
+OVERLOAD_LOOP = {"components": [
+    {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "m"},
+    {"id": "B2", "type": "battery", "volts": 6, "a": "m", "b": "0"},
+    {"id": "L1", "type": "bulb", "a": "p", "b": "0"},
+]}
+
+DAMAGED_LOOP = {"components": [
+    {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+    {"id": "L1", "type": "bulb", "condition": "damaged", "a": "p", "b": "0"},
+]}
+
 
 def chat_response(obj):
     return {"choices": [{"message": {"content": json.dumps(obj)}}]}
@@ -214,3 +225,92 @@ def test_meta_explain_request_shape(monkeypatch):
     schema = seen["payload"]["response_format"]["json_schema"]
     assert schema["name"] == "coach_explain"
     assert schema["schema"]["required"] == ["explanation"]
+
+
+def test_explain_passes_conditions_batteries_and_limits():
+    seen = {}
+
+    class SpyProvider:
+        name = "spy"
+
+        def explain(self, **call):
+            seen.update(call)
+            return "seen"
+
+    out = coach.explain_result(OVERLOAD_LOOP, SpyProvider())
+    assert out["provider"] == "spy"
+    assert seen["valid"] is True
+    assert seen["conditions"] == {"L1": "overloaded"}
+    assert seen["batteries"] == {"B1": 6, "B2": 6}
+    assert seen["facts"]["L1.power_W"] == pytest.approx(14.4)
+    assert seen["facts"]["L1.limit_W"] == 6
+    assert seen["facts"]["L1.rated_V"] == 6
+    assert seen["facts"]["batteries.count"] == 2.0
+    assert seen["facts"]["batteries.total_V"] == 12.0
+
+
+def test_explain_rejected_passes_empty_conditions():
+    seen = {}
+
+    class SpyProvider:
+        name = "spy"
+
+        def explain(self, **call):
+            seen.update(call)
+            return "seen"
+
+    coach.explain_result(SHORTED, SpyProvider())
+    assert seen["facts"] == {}
+    assert seen["conditions"] == {}
+    assert seen["batteries"] == {"B1": 6}
+
+
+def test_explain_fake_overload_cites_measured_watts_and_limit():
+    text = coach.explain_result(
+        OVERLOAD_LOOP, fake_coach.FakeCoachProvider())["text"]
+    assert "L1 drew 14.4 W, past its 6.0 W safe limit" in text
+    assert "overloaded" in text
+
+
+def test_explain_fake_damaged_names_the_open_bulb():
+    text = coach.explain_result(
+        DAMAGED_LOOP, fake_coach.FakeCoachProvider())["text"]
+    assert "L1 is damaged and no longer completes the circuit" in text
+    assert "0.0 A and 0.0 W" in text
+
+
+def test_meta_explain_message_carries_conditions_and_batteries(monkeypatch):
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    seen = {}
+
+    def fake_post(url, payload, headers, timeout_s):
+        seen.update(payload=payload)
+        return 200, chat_response({"explanation": "Fine."})
+
+    monkeypatch.setattr(meta_coach, "_post_json", fake_post)
+    facts = {"L1.power_W": 14.4, "L1.current_A": 1.2,
+             "L1.voltage_V": 12.0, "L1.limit_W": 6,
+             "L1.rated_V": 6, "batteries.count": 2.0,
+             "batteries.total_V": 12.0}
+    provider.explain(facts=facts, valid=True, error_code=None,
+                     component_ids=[], switches={},
+                     bulbs=["L1"], conditions={"L1": "overloaded"},
+                     batteries={"B1": 6, "B2": 6})
+    user_text = seen["payload"]["messages"][1]["content"]
+    assert '"L1": "overloaded"' in user_text
+    assert '"B1": 6' in user_text and '"B2": 6' in user_text
+    assert "14.4" in user_text
+
+
+def test_meta_explain_accepts_limit_citation(monkeypatch):
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    text = "L1 drew 14.4 W, past its 6 W safe limit."
+    monkeypatch.setattr(meta_coach, "_post_json",
+                        lambda *a: (200, chat_response({"explanation": text})))
+    facts = {"L1.power_W": 14.4, "L1.current_A": 1.2,
+             "L1.voltage_V": 12.0, "L1.limit_W": 6,
+             "L1.rated_V": 6, "batteries.count": 2.0,
+             "batteries.total_V": 12.0}
+    assert provider.explain(facts=facts, valid=True, error_code=None,
+                            component_ids=[], switches={},
+                            bulbs=["L1"]) == text

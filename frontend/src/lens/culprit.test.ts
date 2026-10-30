@@ -29,6 +29,8 @@ function solved(power: number): SimulateResult {
     error_code: null,
     error_message: '',
     component_ids: [],
+    conditions: {},
+    ratings: {},
   }
 }
 

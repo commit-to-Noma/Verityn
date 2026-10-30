@@ -142,13 +142,18 @@ reset, and Solo coach-off.
 Free canvas with battery, bulb, switch, and wire (no resistor node yet:
 the solver accepts resistors but the canvas cannot place them).
 `Run experiment` is explicit — never auto-run — and any edit returns
-the bench to `Circuit changed — run the experiment again.` Four
-presets (closed loop, open switch, series pair, shorted battery) load
-real seeds through the shared converter; `Test` runs through the
-normal solver path. `Ask Muse Spark about this result` unlocks only
-for a fresh run, posts only the netlist, and the server solves before
-explaining; failures leave the bench usable. Run history is
-session-local with current-vs-previous comparison.
+the bench to `Circuit changed — run the experiment again.` Five
+presets (closed loop, open switch, series pair, shorted battery,
+overload the bulb) load real seeds through the shared converter;
+`Test` runs through the normal solver path. `Ask Muse Spark about
+this result` unlocks only for a fresh run, posts only the netlist,
+and the server solves before explaining; failures leave the bench
+usable. Run history is session-local with current-vs-previous
+comparison. The overload bench adds rated bulbs (6 V / 6 W
+defaults), per-battery voltage controls, an assessed
+intact/overloaded/damaged condition per bulb, a session damage
+latch (reset restores intact), and a latest-result card with
+measured V/A/W against the safe limit.
 
 ## 5. Technical and model boundaries
 
@@ -158,7 +163,7 @@ session-local with current-vs-previous comparison.
 | Demonstration | Request an allowed action | Validate against stage/netlist, mutate state, rerun solver |
 | Vision | Propose component/connection evidence | Validate schema, topology, provenance, polarity, confirmation, handoff |
 | Voice | Transcribe or synthesize text | Keep transcript editable, handle permissions, never require voice |
-| Solver | None | Compute current, voltage, power, validity, and verdict |
+| Solver | None | Compute current, voltage, power, validity, verdict, bulb conditions, and applied ratings |
 | Experiment explain | Explain measured facts, ask one question, suggest one safe test | Solve server-side first, reject numbers outside the facts, never auto-call |
 
 Vision proposals are structured and nullable. They contain status, component
@@ -394,3 +399,53 @@ its own instructions. Resistor stays out: the solver accepts
 `resistor{ohms}` but the canvas has no resistor node, palette
 entry, or converter support. One transient `lens lock` smoke
 timeout appeared mid-HMR and passed on the immediate re-run.
+
+### Phase 6 — Solver-backed overload physics (implemented, uncommitted)
+
+- [x] Bulbs carry optional safety metadata (`rated_volts`,
+  `max_safe_watts`; defaults 6 V / 6 W) and an input-only
+  `condition` (`intact`/`damaged`; `overloaded` is output-only
+  and rejected on input). Unrated bulbs solve exactly as before.
+- [x] The solver assesses every solved bulb as
+  `intact`/`overloaded`/`damaged` from measured volts and watts
+  against the rating; overload is a measurement with a warning,
+  never a rejection and never a new error code. A damaged bulb
+  is an open branch: valid, 0 A, full voltage across it.
+- [x] `POST /api/simulate` returns additive `conditions` and
+  `ratings` maps; old-shape payloads still parse (absent maps
+  read as empty). Guided lessons send no ratings, so their
+  numbers are unchanged.
+- [x] The `Overload the bulb` preset starts at 0.6 A / 3.6 W
+  intact; a second series battery (or a 12 V edit) measures
+  1.2 A / 14.4 W overloaded; the next run latches damaged and
+  reads 0.0 A. Probe-verified against the live solver.
+- [x] The bench owns a session damage latch (overloaded at run
+  N fails at run N+1); preset loads and `Reset to blank` clear
+  it. Edits invalidate results; moving parts never clears damage.
+- [x] Per-battery voltage controls accept finite positive volts
+  only; applying invalidates the stale result. The canvas Clear
+  button is hidden in experiment mode (the bench Reset owns it).
+- [x] The latest-result card shows per-bulb V/A/W against the
+  safe limit plus the delta from the previous run; history
+  names overload/damage events and reports battery and
+  bulb-power changes computed from the two real runs.
+- [x] Explanations stay solver-first: the server adds bulb
+  limits, battery count/total, conditions, and per-battery
+  volts to the grounded facts; the fake coach names overload
+  and damage from those facts; Meta output citing the limit
+  validates, invented numbers still reject.
+- [x] Full gates + smoke re-run and green; no live Meta calls;
+  screenshots `21-overload.png`, `22-damaged.png`, and
+  `23-damaged-mobile.png` captured on this tree in `docs/demo/`
+  (1440, 1180, and 390 px, zero overflow).
+
+Phase 6 findings: Verityn uses a simplified classroom model —
+excess simulated power fails the bulb; this is not a claim
+about real-world electrical safety. The latch must never bump
+the bench nonce, or applying it would wipe the overload result
+that caused it. Strict `SimulateResult` typing broke five older
+test fixtures at build time (vitest had passed them); they now
+carry empty `conditions`/`ratings`. Damaged bulbs still show
+full voltage across the open branch, so the card reads `12.0 V
+· 0.0 A · 0.0 W — Damaged`, which is the honest open-branch
+measurement.

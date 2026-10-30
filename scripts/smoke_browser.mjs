@@ -8,6 +8,8 @@
  *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
  *     -> Guided demo full run (pause/resume, replay, manual takeover)
  *     -> Experiment presets, manual run, stale, history, one explain call
+ *     -> Overload flow: intact run, voltage edit, overload, damage latch,
+ *        grounded explanation, reset restores intact
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
  * interactions. The lens proposals are stubbed at the network layer from
@@ -563,9 +565,31 @@ async function drive() {
   await clickPresetButton('Shorted battery', 'Test')
   await waitFor(() => hasText('Run 3 — Shorted battery'), 'history run 3', 25000)
   check('short rejected honestly', await hasText('SHORTED_BATTERY') || await hasText('straight back to itself'))
+  await clickPresetButton('Overload the bulb', 'Test')
+  await waitFor(() => hasText('Run 4 — Overload the bulb'), 'overload run 1', 25000)
+  check('overload starts intact', await hasText('Intact'))
+  check('overload limit shown', await hasText('Safe limit: 6.0 W'))
+  await fillInput('battery-B1-volts', '12')
+  await clickButton('Apply')
+  await waitFor(() => hasText('Circuit changed — run the experiment again.'), 'voltage stale')
+  check('voltage label updates', await hasText('Battery · 12 V'))
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Run 5 — Free build'), 'overload run 2', 25000)
+  check('overloaded measured', await hasText('14.4 W'))
+  check('overload badge shown', await hasText('Overloaded'))
+  check('power ratio shown', await hasText('4.0×'))
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Run 6 — Free build'), 'damaged run', 25000)
+  check('damaged latched', await hasText('Damaged'))
+  check('damaged reads dark', await hasText('0.0 A'))
+  await clickButton('Ask Muse Spark about this result')
+  await waitFor(() => hasText('is damaged and no longer completes the circuit'), 'damaged explain', 20000)
   await clickButton('Reset to blank')
   await waitFor(() => hasText('Drag a battery into the workspace to begin.'), 'blank bench')
   check('history survives reset', await hasText('Run 1 — Light a bulb'))
+  await clickPresetButton('Overload the bulb', 'Test')
+  await waitFor(() => hasText('Run 7 — Overload the bulb'), 'overload after reset', 25000)
+  check('reset restores intact', await hasText('Intact') && !(await hasText('Damaged')))
   await clickButton('Guided Lab')
   await waitFor(() => hasText('open gap'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))

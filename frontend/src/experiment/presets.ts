@@ -83,4 +83,24 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     },
     expected: 'rejected SHORTED_BATTERY',
   },
+  {
+    id: 'overload-bulb',
+    title: 'Overload the bulb',
+    tagline: 'Add a second battery → watch the bulb exceed its safe limit',
+    prompt:
+      'Run it with one battery first. Then place a second battery in series and run again — what happens to L1?',
+    seed: {
+      nodes: [
+        { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },
+        { id: 'S1', kind: 'switch', closed: true, x: 40, y: 160 },
+        { id: 'L1', kind: 'bulb', ratedVolts: 6, maxSafeWatts: 6, x: 230, y: 290 },
+      ],
+      edges: [
+        { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
+        { id: 'W2', source: 'S1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'a' },
+        { id: 'W3', source: 'B1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
+      ],
+    },
+    expected: 'L1 0.6 A, 3.6 W, intact; a second 6 V battery in series measures 1.2 A, 14.4 W, overloaded',
+  },
 ]
