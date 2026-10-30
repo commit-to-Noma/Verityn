@@ -57,14 +57,14 @@ export default function JourneyShell({
                 key={item.id}
                 type="button"
                 disabled={item.disabled === true}
-                aria-current={location === item.id ? 'page' : undefined}
+                aria-current={item.primary && location === item.destination ? 'page' : undefined}
                 aria-disabled={item.disabled === true}
                 title={item.disabled === true ? 'The next workspace  -  not built yet.' : undefined}
                 onClick={() => {
-                  onNavigate(item.id)
+                  onNavigate(item.destination)
                 }}
                 className={`flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
-                  location === item.id
+                  item.primary && location === item.destination
                     ? 'bg-glass-strong text-ink'
                     : item.disabled === true
                       ? 'cursor-not-allowed text-ink-muted opacity-60'

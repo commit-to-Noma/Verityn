@@ -624,7 +624,7 @@ export default function App() {
                 Free bench
               </p>
               <h1 id="experiment-page-heading" className="text-3xl font-semibold tracking-tight">
-                Experiment
+                Experiment Bay
               </h1>
               <div className="flex items-center gap-2">
                 <HealthStatus compact />

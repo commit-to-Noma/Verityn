@@ -54,6 +54,7 @@ export function stageFor(state: JourneyState): Stage {
 
 /** Persistent-shell location: hub, lab journey, experiment bench, or lens. */
 export type ShellLocation = 'hub' | 'lab' | 'experiment' | 'lens'
+export type ShellNavTarget = ShellLocation | 'coach' | 'solver'
 
 /** Workspaces overlay wherever the learner was; otherwise entered decides. */
 export function shellLocation(
@@ -71,19 +72,25 @@ export function shellLocation(
 }
 
 export interface ShellNavItem {
-  id: ShellLocation
+  id: ShellNavTarget
   label: string
+  /** Route opened by this tool. Some tools are integrated into another workspace. */
+  destination: ShellLocation
+  /** Only the primary workspace entry is marked as the current page. */
+  primary?: boolean
   /** Shown beside entries that are not built yet; they stay disabled. */
   badge?: string
   disabled?: boolean
 }
 
-/** Persistent laboratory navigation. */
+/** Persistent navigation for the hub and all five Verityn tools. */
 export const SHELL_NAV: ShellNavItem[] = [
-  { id: 'hub', label: 'Hub' },
-  { id: 'lab', label: 'Guided Lab' },
-  { id: 'experiment', label: 'Experiment' },
-  { id: 'lens', label: 'Reality Lens' },
+  { id: 'hub', label: 'Hub', destination: 'hub', primary: true },
+  { id: 'lab', label: 'Guided Lab', destination: 'lab', primary: true },
+  { id: 'experiment', label: 'Experiment Bay', destination: 'experiment', primary: true },
+  { id: 'lens', label: 'Reality Lens', destination: 'lens', primary: true },
+  { id: 'coach', label: 'Meta Muse Spark', destination: 'lab' },
+  { id: 'solver', label: 'Verityn Solver', destination: 'experiment' },
 ]
 
 /** Header progress: one step per chapter of the guided journey. */

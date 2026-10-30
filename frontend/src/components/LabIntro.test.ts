@@ -43,6 +43,7 @@ describe('homepage copy', () => {
     expect(HOMEPAGE_ENTRIES).toEqual({
       demo: 'Play the guided demo',
       laboratory: 'Explore the laboratory',
+      tools: 'Explore the five tools',
       realityLens: 'Open Reality Lens',
     })
   })

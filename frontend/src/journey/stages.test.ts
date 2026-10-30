@@ -94,13 +94,23 @@ describe('SHELL_NAV', () => {
     expect(SHELL_NAV.map((item) => item.label)).toEqual([
       'Hub',
       'Guided Lab',
-      'Experiment',
+      'Experiment Bay',
       'Reality Lens',
+      'Meta Muse Spark',
+      'Verityn Solver',
     ])
     const experiment = SHELL_NAV.find((item) => item.id === 'experiment')
     expect(experiment?.disabled).toBeUndefined()
     expect(experiment?.badge).toBeUndefined()
-    expect(SHELL_NAV.filter((item) => item.disabled !== true).map((item) => item.id)).toEqual([
+    expect(SHELL_NAV.map(({ id, destination }) => [id, destination])).toEqual([
+      ['hub', 'hub'],
+      ['lab', 'lab'],
+      ['experiment', 'experiment'],
+      ['lens', 'lens'],
+      ['coach', 'lab'],
+      ['solver', 'experiment'],
+    ])
+    expect(SHELL_NAV.filter((item) => item.primary).map((item) => item.id)).toEqual([
       'hub',
       'lab',
       'experiment',

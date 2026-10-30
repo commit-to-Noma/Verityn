@@ -8,6 +8,7 @@ export const HOMEPAGE_SUBHEAD =
 export const HOMEPAGE_ENTRIES = {
   demo: 'Play the guided demo',
   laboratory: 'Explore the laboratory',
+  tools: 'Explore the five tools',
   realityLens: 'Open Reality Lens',
 } as const
 

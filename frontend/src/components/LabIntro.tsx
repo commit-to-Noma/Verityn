@@ -459,10 +459,10 @@ export default function LabIntro({
             </button>
             <button
               type="button"
-              onClick={onEnter}
+              onClick={() => scrollToId('laboratory-turntable')}
               className="flex min-h-[48px] items-center rounded-[12px] border border-flow/40 px-5 text-sm font-semibold text-flow transition-colors hover:bg-flow/10 focus-visible:outline-2 focus-visible:outline-flow"
             >
-              Open live circuit lab
+              {HOMEPAGE_ENTRIES.tools}
             </button>
           </div>
         </div>
