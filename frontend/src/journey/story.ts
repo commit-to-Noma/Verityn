@@ -24,7 +24,7 @@ export interface LearningMilestone {
   complete: boolean
 }
 
-function choiceDetail(chapter: ChapterRecap | undefined): string {
+export function choiceDetail(chapter: ChapterRecap | undefined): string {
   const prediction = chapter?.input?.prediction
   if (!prediction) {
     return 'Not reached'
@@ -211,7 +211,7 @@ function demonstrationPhrase(input: TraceInput | null | undefined): string {
   return ` You tried closing ${target}.`
 }
 
-function bulbReadingText(input: TraceInput | null | undefined, bulbId: string): string {
+export function bulbReadingText(input: TraceInput | null | undefined, bulbId: string): string {
   const reading = input?.result?.components[bulbId]
   return reading === undefined
     ? `${bulbId}: no reading`

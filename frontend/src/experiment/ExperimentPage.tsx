@@ -225,6 +225,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
     setBenchConditions({})
     setBatteryVolts({})
     setBench((current) => ({ key: current.key + 1, seed: undefined, label: 'Free build' }))
+    setRunRequest(undefined)
   }, [])
 
   const handleSolved = useCallback(

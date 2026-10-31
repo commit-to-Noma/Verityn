@@ -45,6 +45,12 @@ and separate numbers from rejections; the browser smoke stubs vision at
 the network layer (zero live calls) and asserts the valid triptych, the
 invalid validator-code panel, and no proof before confirm.
 
+M5 evidence card: `card` unit tests prove the model assembles only
+session-produced fields (prediction, readings, rung, Solo, trace
+counts), omits Solo when not taken, and pairs readings with a verdict
+word only when assessable; the browser smoke asserts the card renders
+on the finale and the Download click resolves a real PNG render.
+
 Gates: backend suite, frontend suite, `npm run lint` (0/0),
 `npm run build` (`tsc -b` + vite). UI acceptance (DESIGN_SPEC §9):
 no raw hex in components, keyboard path, focus visibility,

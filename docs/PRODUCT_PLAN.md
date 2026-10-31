@@ -147,7 +147,11 @@ recognition failure retain typed input. Solo shows `Coach off` and no coach
 controls. Finale shows Prediction, Simulator evidence, Independent transfer,
 a personalized learning path narrated from saved predictions, wiring, readings,
 and demonstrations, and a factual Evidence Trace, never mastery or
-learning-gain claims.
+learning-gain claims. A shareable evidence card restates the same saved
+facts (prediction in the learner's words, solver readings, rung reached,
+Solo result when taken, trace counts) and downloads as a client-rendered
+PNG with Web Share on capable devices; it carries no score, grade, or
+outcome claim.
 
 Required modal/gate states: prediction commit, invalid circuit, coach
 unavailable/retry, demonstration preview/apply/undo, unsupported or

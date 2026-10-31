@@ -1,0 +1,105 @@
+import { describe, expect, it } from 'vitest'
+import type { ChapterRecap } from '../journey/story'
+import type { TraceInput } from '../lessons/trace'
+import { buildEvidenceCard, cardLines, wrapLine } from './card'
+
+function chapter(partial: Partial<ChapterRecap> = {}): ChapterRecap {
+  return { id: 'L1', title: 'Light the bulb', solo: false, input: null, ...partial }
+}
+
+const SOLVED_INPUT = {
+  prediction: { choice: 'no', why: 'The gap breaks the loop.' },
+  result: {
+    ok: true,
+    components: { L1: { current: 0.6, power: 3.6 }, L2: { current: 0.6, power: 3.6 } },
+  },
+  verdict: { status: 'CONSISTENT' },
+} as unknown as TraceInput
+
+describe('buildEvidenceCard', () => {
+  it('assembles prediction, measurement, rung, solo, and counts', () => {
+    const model = buildEvidenceCard(
+      [
+        chapter({ input: SOLVED_INPUT }),
+        chapter({
+          id: 'L1T1',
+          title: 'Reality check',
+          input: {
+            ...SOLVED_INPUT,
+            coach: {
+              phase: 'done',
+              text: 'Q?',
+              provider: 'prototype-fake',
+              rung: 'R1',
+              history: [{ rung: 'R2', text: 'E', provider: 'deterministic' }],
+            },
+          },
+        }),
+        chapter({ id: 'L1T2', title: 'Solo', solo: true, input: SOLVED_INPUT }),
+      ],
+      { total: 3, metaCalls: 0, rejections: 0, fallbacks: 1 },
+      'http://127.0.0.1:5173',
+    )
+    expect(model).not.toBeNull()
+    expect(model?.lesson).toBe('Light the bulb')
+    expect(model?.prediction).toContain('The gap breaks the loop.')
+    expect(model?.measurement).toContain('L1 0.6 A · 3.6 W')
+    expect(model?.measurement).toContain('matched')
+    expect(model?.reality).toContain('L1 0.6 A · 3.6 W')
+    expect(model?.rung).toBe('R2')
+    expect(model?.solo).toContain('L2 0.6 A · 3.6 W')
+    const lines = cardLines(model ?? fail('model is null'))
+    expect(lines.some((line) => line.includes('Reality check: L1 0.6 A'))).toBe(true)
+    expect(lines.some((line) => line.includes('Trace: 3 calls · 0 Meta'))).toBe(true)
+    expect(lines.some((line) => line.includes('1 fallback') && !line.includes('1 fallbacks'))).toBe(true)
+    expect(lines.at(-2)).toBe('Computed by a solver. Not an AI score.')
+    expect(lines.at(-1)).toBe('http://127.0.0.1:5173')
+  })
+
+  it('shows the reading alone when the verdict is unassessable', () => {
+    const model = buildEvidenceCard(
+      [
+        chapter({
+          input: { ...SOLVED_INPUT, verdict: { status: 'UNASSESSABLE', evidence: {} } },
+        }),
+      ],
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+      'http://x',
+    )
+    expect(model?.measurement).toBe('L1 0.6 A · 3.6 W')
+    expect(model?.reality).toBeNull()
+  })
+
+  it('omits solo and rung when the session never produced them', () => {
+    const model = buildEvidenceCard(
+      [chapter({ input: SOLVED_INPUT })],
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+      'http://x',
+    )
+    expect(model?.rung).toBeNull()
+    expect(model?.solo).toBeNull()
+    const lines = cardLines(model ?? fail('model is null'))
+    expect(lines.some((line) => line.startsWith('Solo:'))).toBe(false)
+    expect(lines).toContain('Coach: not asked')
+  })
+
+  it('returns null when no prediction was recorded', () => {
+    expect(
+      buildEvidenceCard(
+        [chapter({ input: null })],
+        { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+        'http://x',
+      ),
+    ).toBeNull()
+  })
+
+  it('wraps long lines without losing words', () => {
+    const rows = wrapLine('a b c d e f g h', 5)
+    expect(rows.join(' ')).toBe('a b c d e f g h')
+    expect(rows.every((row) => row.length <= 7)).toBe(true)
+  })
+})
+
+function fail(message: string): never {
+  throw new Error(message)
+}

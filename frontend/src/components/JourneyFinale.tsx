@@ -3,6 +3,7 @@ import { learningProgress, MISSING_CHAPTER } from '../journey/story'
 import { L1 } from '../lessons/l1'
 import { netlistPreviewSeed } from '../canvas/netlistPreview'
 import CircuitPreview from './CircuitPreview'
+import EvidenceCard from './EvidenceCard'
 import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
 
@@ -162,6 +163,7 @@ export default function JourneyFinale({
           </div>
         </div>
       </div>
+      <EvidenceCard chapters={chapters} />
       <details className="glass-panel p-4">
         <summary className="min-h-[44px] cursor-pointer content-center text-sm font-medium">
           See the full journey and measurements
