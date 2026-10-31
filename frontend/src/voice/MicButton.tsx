@@ -77,7 +77,7 @@ export default function MicButton({
       updateStatus(
         source === 'meta-voice-transcribe'
           ? 'Transcribed by Meta Voice Transcribe. Edit it if needed.'
-          : 'Transcript added. Edit it before continuing.',
+          : 'Transcript added by Browser speech. Edit it before continuing.',
       )
     } catch (error) {
       if (!(error instanceof ApiError)) {
