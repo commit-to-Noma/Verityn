@@ -105,18 +105,27 @@ class MetaVoiceTranscriber:
 def wav_seconds(audio):
     """Return the duration of a PCM WAV recording, or 0.0 when unknown.
 
-    Reads the header the browser encoder writes (44-byte RIFF header);
-    never guesses from the byte count alone.
+    Reads the fmt parameters and walks chunks to the data payload, so
+    converted files with filler chunks (afconvert emits FLLR) report
+    honestly; never guesses from the byte count alone.
     """
     if len(audio) < 44:
         return 0.0
     channels = int.from_bytes(audio[22:24], "little")
     sample_rate = int.from_bytes(audio[24:28], "little")
     bits = int.from_bytes(audio[34:36], "little")
-    data_bytes = int.from_bytes(audio[40:44], "little")
+    data_start, data_bytes = 0, 0
+    offset = 12
+    while offset + 8 <= len(audio):
+        chunk = audio[offset:offset + 4]
+        size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+        if chunk == b"data":
+            data_start, data_bytes = offset + 8, size
+            break
+        offset += 8 + size + (size % 2)
     if channels <= 0 or sample_rate <= 0 or bits <= 0 or data_bytes <= 0:
         return 0.0
     bytes_per_second = sample_rate * channels * bits / 8
     if bytes_per_second <= 0:
         return 0.0
-    return round(min(data_bytes, len(audio) - 44) / bytes_per_second, 2)
+    return round(min(data_bytes, len(audio) - data_start) / bytes_per_second, 2)

@@ -116,6 +116,13 @@ def test_wav_seconds_reads_header_or_admits_unknown():
     assert meta_voice.wav_seconds(b"short") == 0.0
 
 
+def test_wav_seconds_skips_filler_chunks():
+    plain = _real_wav(4800)
+    filler = b"FLLR" + (76).to_bytes(4, "little") + b"\x00" * 76
+    converted = plain[:36] + filler + plain[36:]
+    assert meta_voice.wav_seconds(converted) == 0.1
+
+
 def test_transcribe_rejects_recordings_over_two_megabytes():
     from app import MAX_VOICE_BYTES
 
