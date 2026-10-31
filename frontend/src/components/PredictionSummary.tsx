@@ -5,9 +5,12 @@ import { CHOICE_LABELS } from '../lessons/lesson'
 export default function PredictionSummary({
   prediction,
   hint,
+  hideHint = false,
 }: {
   prediction: Prediction
   hint: string
+  /** Solo shows the recap without the wiring guidance. */
+  hideHint?: boolean
 }) {
   return (
     <div className="rounded-2xl border border-glass-border p-4">
@@ -16,7 +19,7 @@ export default function PredictionSummary({
         {CHOICE_LABELS[prediction.choice]}
         {prediction.why.trim() === '' ? '' : `  -  “${prediction.why.trim()}”`}
       </p>
-      <p className="mt-1 text-sm text-ink-muted">{hint}</p>
+      {!hideHint && <p className="mt-1 text-sm text-ink-muted">{hint}</p>}
     </div>
   )
 }

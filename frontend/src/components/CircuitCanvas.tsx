@@ -855,9 +855,11 @@ function ClaimVerdict({
   // The netlist is null while unjudged: the ladder can only ask when visible,
   // and visibility implies a judged run, so no render-time memory is needed.
   const contradicted = state.phase === 'done' && state.verdict.status === 'CONTRADICTED'
+  // Solo renders its own four-beat result; the guidance idle card stays out.
+  const solo = renderDone !== undefined
   return (
     <>
-      {state.phase === 'idle' && (
+      {state.phase === 'idle' && !solo && (
         <div className="glass-panel p-4" aria-live="polite">
           <p className="text-ink-muted text-sm">
             {choice === 'not_sure'
@@ -2046,7 +2048,7 @@ function CanvasInner({
     <>
       {prediction && challenge && (
         <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
-          <PredictionSummary prediction={prediction} hint={challenge.fix.hint} />
+          <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
         </div>
       )}
       {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
