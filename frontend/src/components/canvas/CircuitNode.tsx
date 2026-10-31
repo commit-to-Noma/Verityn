@@ -31,6 +31,8 @@ export type CircuitNodeData = {
   polarity?: { positive: 'a' | 'b'; negative: 'a' | 'b' }
   /** Review provenance badge for vision-seeded replicas. */
   review?: 'verified' | 'needs-review' | 'learner-corrected'
+  /** Terminals with no wire; previews pulse a ring on these. */
+  loose?: ('a' | 'b')[]
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
@@ -62,8 +64,8 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         data.demonstrated === true ? 'component-demo' : ''
       }`}
     >
-      <Handle id="a" type="source" position={Position.Left} className="terminal-handle" aria-label="Terminal a" />
-      <Handle id="a" type="target" position={Position.Left} className="terminal-handle" aria-label="Terminal a input" />
+      <Handle id="a" type="source" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Terminal a" />
+      <Handle id="a" type="target" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Terminal a input" />
       <div className="flex flex-col items-center gap-1">
         {data.kind === 'battery' ? (
           <svg className="component-illustration battery-illustration" viewBox="0 0 92 64" aria-hidden="true">
@@ -188,8 +190,8 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
           {data.kind === 'battery' ? data.label : '10 Ω'}
         </span>
       )}
-      <Handle id="b" type="source" position={Position.Right} className="terminal-handle" aria-label="Terminal b" />
-      <Handle id="b" type="target" position={Position.Right} className="terminal-handle" aria-label="Terminal b input" />
+      <Handle id="b" type="source" position={Position.Right} className={`terminal-handle${data.loose?.includes('b') ? ' terminal-loose' : ''}`} aria-label="Terminal b" />
+      <Handle id="b" type="target" position={Position.Right} className={`terminal-handle${data.loose?.includes('b') ? ' terminal-loose' : ''}`} aria-label="Terminal b input" />
     </div>
   )
 }

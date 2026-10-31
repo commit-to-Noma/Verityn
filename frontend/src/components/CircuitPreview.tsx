@@ -26,6 +26,12 @@ export default function CircuitPreview({
   result?: SimulateResult | null
   className?: string
 }) {
+  const wired = new Set(
+    seed.edges.flatMap((edge) => [
+      `${edge.source}:${edge.sourceTerminal}`,
+      `${edge.target}:${edge.targetTerminal}`,
+    ]),
+  )
   const nodes: CircuitNodeType[] = seed.nodes
     .filter((node): node is typeof node & { kind: 'battery' | 'bulb' | 'switch' } =>
       isCircuitKind(node.kind),
@@ -37,6 +43,9 @@ export default function CircuitPreview({
       data: {
         kind: node.kind,
         label: node.id,
+        loose: (['a', 'b'] as const).filter(
+          (terminal) => !wired.has(`${node.id}:${terminal}`),
+        ),
         glow:
           node.kind === 'bulb' &&
           (result?.components[node.id]?.power ?? 0) > LIT_POWER_W
