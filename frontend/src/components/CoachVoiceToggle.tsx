@@ -9,6 +9,7 @@ export default function CoachVoiceToggle({
   onChange: (enabled: boolean) => void
 }) {
   return (
+    <span className="inline-flex items-center gap-2 self-start">
     <button
       type="button"
       aria-pressed={enabled}
@@ -22,7 +23,7 @@ export default function CoachVoiceToggle({
         }
         onChange(!enabled)
       }}
-      className={`inline-flex min-h-11 items-center gap-2 self-start rounded-full border px-3 text-sm font-medium transition ${
+      className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-sm font-medium transition ${
         enabled
           ? 'border-flow/50 bg-flow/10 text-flow'
           : 'border-glass-border text-ink-muted hover:text-ink'
@@ -35,5 +36,7 @@ export default function CoachVoiceToggle({
       )}
       Browser voice {enabled ? 'on' : 'muted'}
     </button>
+    <span className="text-ink-muted text-xs">not Meta</span>
+    </span>
   )
 }
