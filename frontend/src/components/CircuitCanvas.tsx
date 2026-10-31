@@ -2045,7 +2045,7 @@ function CanvasInner({
   const insightPane = (
     <>
       {prediction && challenge && (
-        <div className="lg:sticky lg:top-36 lg:z-20 lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl lg:backdrop-blur-xl">
+        <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
           <PredictionSummary prediction={prediction} hint={challenge.fix.hint} />
         </div>
       )}
@@ -2143,7 +2143,7 @@ function CanvasInner({
   )
 
   return (
-    <section aria-labelledby="canvas-heading" className="flex flex-col gap-4">
+    <section aria-labelledby="canvas-heading" className="flex scroll-mt-44 flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
