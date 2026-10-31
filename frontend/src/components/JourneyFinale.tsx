@@ -26,6 +26,7 @@ export default function JourneyFinale({
     transfer?.result?.ok === true &&
     transfer.verdict?.status === 'CONSISTENT' &&
     previewSeed !== null
+  const soloBuilt = transfer?.netlist !== null && transfer?.netlist !== undefined && previewSeed !== null
   const progress = learningProgress(chapters)
   const completedSteps = progress.filter((step) => step.complete).length
   const progressPercent = Math.round((completedSteps / progress.length) * 100)
@@ -65,9 +66,11 @@ export default function JourneyFinale({
               <p className="mb-2 text-xs text-ink-muted">
                 {verifiedTransfer
                   ? 'Your tested two-bulb circuit, completed without a coach.'
-                  : 'Available after a verified solo run.'}
+                  : soloBuilt
+                    ? 'Your tested wiring, completed without a coach.'
+                    : 'Available after a solo run.'}
               </p>
-              {verifiedTransfer ? (
+              {soloBuilt && transfer?.result !== null && transfer?.result !== undefined ? (
                 <CircuitPreview
                   seed={previewSeed}
                   label="Reconstructed solo circuit from the tested wiring"
@@ -84,7 +87,7 @@ export default function JourneyFinale({
               )}
             </section>
           </div>
-          {verifiedTransfer && transfer?.result !== null && transfer?.result !== undefined && (
+          {soloBuilt && transfer?.result !== null && transfer?.result !== undefined && (
             <div className="flex flex-wrap gap-2" aria-label="Final circuit measurements">
               {Object.entries(transfer.result.components)
                 .filter(([id]) => id.startsWith('L'))
