@@ -99,7 +99,7 @@ export default function SimulatePanel({ preset, onSelectPreset }: SimulatePanelP
           )}
         </button>
       </div>
-      {state.phase === 'done' && <SimulationResultView result={state.result} />}
+      {state.phase === 'done' && <SimulationResultView result={state.result} dev />}
       {state.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">
           <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />

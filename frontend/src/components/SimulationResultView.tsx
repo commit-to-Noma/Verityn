@@ -16,12 +16,21 @@ const ERROR_HINTS: Record<string, string> = {
 }
 
 /** Measurements for a solved circuit, or the invalid banner with offender ids. */
-export default function SimulationResultView({ result }: { result: SimulateResult }) {
+export default function SimulationResultView({
+  result,
+  dev = false,
+}: {
+  result: SimulateResult
+  /** Developer benches see wire rows and Raw JSON; learner views do not. */
+  dev?: boolean
+}) {
   return (
     <>
       {result.ok ? (
         <div className="glass-panel flex scroll-mt-44 flex-col gap-2 p-4" aria-live="polite" aria-label="Simulation result">
-          {Object.entries(result.components).map(([id, values]) => (
+          {Object.entries(result.components)
+            .filter(([id]) => dev || !id.startsWith('W'))
+            .map(([id, values]) => (
             <div key={id} className="flex items-baseline justify-between gap-4 text-sm">
               <span className="font-medium">{id}</span>
               <span className="text-ink-muted text-right text-sm">
@@ -67,12 +76,14 @@ export default function SimulationResultView({ result }: { result: SimulateResul
           )}
         </div>
       )}
-      <details className="text-xs">
-        <summary className="text-ink-muted cursor-pointer">Raw JSON</summary>
-        <pre className="border-glass-border text-ink-muted mt-2 max-h-48 overflow-auto rounded-[10px] border bg-canvas p-3 font-mono">
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      </details>
+      {dev && (
+        <details className="text-xs">
+          <summary className="text-ink-muted cursor-pointer">Raw JSON</summary>
+          <pre className="border-glass-border text-ink-muted mt-2 max-h-48 overflow-auto rounded-[10px] border bg-canvas p-3 font-mono">
+            {JSON.stringify(result, null, 2)}
+          </pre>
+        </details>
+      )}
     </>
   )
 }
