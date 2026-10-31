@@ -559,11 +559,23 @@ describe('transcribeAudio', () => {
 
   it('returns the trimmed transcript and records the trace', async () => {
     clearTraceEvents()
-    stubFetch(() => okResponse({ transcript: '  The switch is open. ', trace: TRACE }))
+    stubFetch(() => okResponse({
+      transcript: '  The switch is open. ', source: 'meta-voice-transcribe',
+      seconds: 1.2, trace: TRACE,
+    }))
     const result = await transcribeAudio(new FormData())
     expect(result.transcript).toBe('The switch is open.')
+    expect(result.source).toBe('meta-voice-transcribe')
+    expect(result.seconds).toBe(1.2)
     expect(result.trace).toEqual(TRACE)
     expect(traceEvents()).toEqual([TRACE])
+  })
+
+  it('rejects transcripts missing source metadata', async () => {
+    stubFetch(() => okResponse({ transcript: 'Hi.' }))
+    const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).code).toBe('UNREADABLE')
   })
 
   it('maps empty transcripts to EMPTY_TRANSCRIPT', async () => {

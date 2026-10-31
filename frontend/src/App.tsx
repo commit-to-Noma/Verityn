@@ -112,7 +112,7 @@ const COACH_INTRODUCTION =
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
   const [entered, setEntered] = useState(false)
-  const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(true)
+  const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(false)
   const [learnerReply, setLearnerReply] = useState('')
   const [l1Prediction, setL1Prediction] = useState<Prediction | null>(null)
   const [realityStarted, setRealityStarted] = useState(false)
@@ -193,7 +193,9 @@ export default function App() {
 
   const announceCoach = useCallback(
     (text: string) => {
-      if (coachVoiceEnabled) {
+      // Spoken playback is browser TTS, default off, and never part of the
+      // guided demo: the demo shows captions so it films silently.
+      if (coachVoiceEnabled && !demoRef.current.active) {
         return speakCoach(text)
       }
       showCoachText(text)

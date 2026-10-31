@@ -704,6 +704,8 @@ export async function proposeCircuit(
 
 export interface TranscribeResult {
   transcript: string
+  source: string
+  seconds: number
   trace?: TraceEvent
 }
 
@@ -754,7 +756,10 @@ export async function transcribeAudio(
   if (transcript === '') {
     throw new ApiError('payload', 'No speech was recognized.', null, 'EMPTY_TRANSCRIPT')
   }
+  if (typeof body.source !== 'string' || typeof body.seconds !== 'number') {
+    throw new ApiError('payload', 'Transcription returned an unreadable response.', null, 'UNREADABLE')
+  }
   const trace = guardTraceEvent(body.trace)
   recordTraceEvent(trace)
-  return { transcript, trace }
+  return { transcript, source: body.source, seconds: body.seconds, trace }
 }

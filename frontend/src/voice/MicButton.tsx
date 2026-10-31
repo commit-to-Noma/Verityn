@@ -71,10 +71,14 @@ export default function MicButton({
       const wav = encodeWav(recording.chunks, recording.context.sampleRate)
       const form = new FormData()
       form.append('audio', wav, 'recording.wav')
-      const { transcript } = await transcribeAudio(form)
+      const { transcript, source } = await transcribeAudio(form)
       onTranscript(transcript)
       setState('idle')
-      updateStatus('Transcript added. Edit it before continuing.')
+      updateStatus(
+        source === 'meta-voice-transcribe'
+          ? 'Transcribed by Meta Voice Transcribe. Edit it if needed.'
+          : 'Transcript added. Edit it before continuing.',
+      )
     } catch (error) {
       if (!(error instanceof ApiError)) {
         throw error

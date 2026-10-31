@@ -214,6 +214,9 @@ export default function PredictionScreen({
           />
           <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} />
         </div>
+        <p className="text-ink-muted text-xs">
+          Voice is optional. Audio is sent to Meta to be transcribed and is not saved.
+        </p>
         {micStatus !== '' && (
           <p className="text-ink-muted text-sm" aria-live="polite">
             {micStatus}

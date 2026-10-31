@@ -19,7 +19,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from verityn import coach, evaluator, fake_coach, meta_coach, meta_voice, solver, trace, vision  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
-MAX_VOICE_BYTES = 32 * 1024 * 1024
+# Recordings are 24 kHz mono 16-bit WAV: 30 s peaks near 1.44 MB, so
+# 2 MB admits the longest honest clip (~40 s) with framing headroom.
+MAX_VOICE_BYTES = 2 * 1024 * 1024
 MAX_COACH_MESSAGE_CHARS = 500
 
 
@@ -320,17 +322,22 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "error_code": MALFORMED_REQUEST,
                 "error_message": "The recording must be a WAV audio file.",
             }), 400
+        seconds = meta_voice.wav_seconds(audio)
         start = time.perf_counter()
         tool = getattr(active_voice, "model", "voice-transcribe")
         try:
             transcript = active_voice.transcribe(audio)
         except meta_voice.VoiceTranscriptionError as err:
+            app.logger.warning("voice transcribe failed: http_status=%s",
+                               err.status)
             return jsonify({
                 "error_code": "VOICE_TRANSCRIPTION_FAILED",
                 "error_message": str(err),
             }), 502
         return jsonify({
             "transcript": transcript,
+            "source": "meta-voice-transcribe",
+            "seconds": seconds,
             "trace": trace.build_trace(
                 tool=tool, input_kind="audio", output_kind="transcript",
                 serving="meta-voice", primary="meta-voice",

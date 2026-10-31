@@ -12,8 +12,8 @@ export default function CoachVoiceToggle({
     <button
       type="button"
       aria-pressed={enabled}
-      aria-label={enabled ? 'Mute coach voice' : 'Turn on coach voice'}
-      title={enabled ? 'Mute coach voice' : 'Turn on coach voice'}
+      aria-label={enabled ? 'Mute browser voice' : 'Turn on browser voice'}
+      title="Spoken playback uses your browser voice, not Meta"
       onClick={() => {
         if (enabled) {
           stopCoach()
@@ -33,7 +33,7 @@ export default function CoachVoiceToggle({
       ) : (
         <VolumeX className="h-4 w-4" aria-hidden="true" />
       )}
-      Coach voice {enabled ? 'on' : 'muted'}
+      Browser voice {enabled ? 'on' : 'muted'}
     </button>
   )
 }

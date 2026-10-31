@@ -1,4 +1,12 @@
-"""Meta Muse Voice Transcribe provider."""
+"""Meta Muse Voice Transcribe provider.
+
+Request contract verified against Meta's official cookbook recipe
+(``06_muse_voice/01_voice_api_fundamentals``): Bearer auth, multipart
+``request`` JSON part (``model``, ``audioEncoding: WAV``,
+``mode: PUSH_TO_TALK``) plus the ``audio`` file part, reading
+``transcript`` from the JSON response. The engine is native at 24 kHz,
+matching the browser encoder.
+"""
 
 import json
 import urllib.error
@@ -13,6 +21,10 @@ META_VOICE_TIMEOUT_S = 30
 
 class VoiceTranscriptionError(Exception):
     """A safe, user-facing transcription failure."""
+
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 class MetaVoiceTranscriber:
@@ -64,8 +76,14 @@ class MetaVoiceTranscriber:
             with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
                 payload = json.loads(response.read())
         except urllib.error.HTTPError as error:
+            if error.code == 401:
+                raise VoiceTranscriptionError(
+                    "The server's Meta credential was not accepted.",
+                    status=error.code,
+                ) from error
             raise VoiceTranscriptionError(
-                "Muse Voice Transcribe could not process this recording."
+                "Muse Voice Transcribe could not process this recording.",
+                status=error.code,
             ) from error
         except (urllib.error.URLError, TimeoutError) as error:
             raise VoiceTranscriptionError(
@@ -82,3 +100,23 @@ class MetaVoiceTranscriber:
                 "Muse Voice Transcribe returned an unreadable response."
             )
         return transcript.strip()
+
+
+def wav_seconds(audio):
+    """Return the duration of a PCM WAV recording, or 0.0 when unknown.
+
+    Reads the header the browser encoder writes (44-byte RIFF header);
+    never guesses from the byte count alone.
+    """
+    if len(audio) < 44:
+        return 0.0
+    channels = int.from_bytes(audio[22:24], "little")
+    sample_rate = int.from_bytes(audio[24:28], "little")
+    bits = int.from_bytes(audio[34:36], "little")
+    data_bytes = int.from_bytes(audio[40:44], "little")
+    if channels <= 0 or sample_rate <= 0 or bits <= 0 or data_bytes <= 0:
+        return 0.0
+    bytes_per_second = sample_rate * channels * bits / 8
+    if bytes_per_second <= 0:
+        return 0.0
+    return round(min(data_bytes, len(audio) - 44) / bytes_per_second, 2)

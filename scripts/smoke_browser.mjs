@@ -366,9 +366,13 @@ async function drive() {
   await waitFor(() => hasText('loose ends'), 'l1 predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
-  check('tap-to-talk offered', await hasText('Reply by voice'))
+  check('browser voice muted by default', await hasText('Browser voice muted'))
+  await clickButton('Browser voice muted')
+  await waitFor(() => hasText('Reply by voice'), 'tap-to-talk offered', 10000)
   await sleep(2500)
   check('no auto-listen loop', !(await hasText('Listening. Pausing will send')))
+  await clickButton('Browser voice on')
+  await waitFor(() => hasText('Browser voice muted'), 'voice restored to muted', 10000)
   await clickButton('No')
   await fillInput('predict-why', 'gap breaks the loop')
   await clickButton('Continue to fix it')
@@ -398,6 +402,7 @@ async function drive() {
   await fillInput('predict-why', 'complete loop lights')
   await clickButtonStarts('Continue')
   await waitFor(() => hasText('Ask the coach'), 'coach', 25000)
+  await clickButton('Browser voice muted')
   await clickButton('Ask the coach')
   await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
   check('trace drawer present', await hasText('What Meta did / What code checked'))
@@ -408,6 +413,9 @@ async function drive() {
   await clickButton('Show me the evidence (R2)')
   await waitFor(() => hasText('Evidence pointer'), 'r2', 20000)
   check('replay button on coach card', await ev(`!!document.querySelector('button[aria-label="Repeat coach message"]')`))
+  check('replay disclaims Meta', await ev(`document.querySelector('button[aria-label="Repeat coach message"]')?.getAttribute('title')`) === 'Repeat the latest coach message (browser voice, not Meta)')
+  await clickButton('Browser voice on')
+  await waitFor(() => hasText('Browser voice muted'), 'voice muted again', 10000)
 
   // Stuck-helper: closing the switch on the open-switch stage names the
   // problem instead of silently flipping the verdict.

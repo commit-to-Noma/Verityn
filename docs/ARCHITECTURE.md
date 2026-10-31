@@ -122,10 +122,12 @@ The backend sends WAV audio to Meta's documented
 using the server-only `MODEL_API_KEY`; it
 does not persist audio. Typing remains available if transcription or
 microphone access fails. Coach text is always visible. Speech playback uses
-an available browser/system voice, not Meta-generated audio; a browser voice
-with natural/enhanced quality is preferred when installed. Voice features
-require microphone permission and stay off unless the coach voice toggle enables
-them; Solo offers transcription only and makes zero coach calls.
+an available browser/system voice, not Meta-generated audio, and stays off
+unless the toggle enables it; the toggle and replay control are labelled
+"Browser voice, not Meta", and playback never speaks during the guided
+demo. Voice responses carry `source: meta-voice-transcribe` and the
+recording length in `seconds`. Uploads are capped at 2 MB: recordings are
+24 kHz mono 16-bit WAV, so a 30 s clip peaks near 1.44 MB.
 
 Diagnostics are sanitized by design: logs carry stage codes, HTTP
 statuses, and structural shape metadata only  -  never keys, prompts,

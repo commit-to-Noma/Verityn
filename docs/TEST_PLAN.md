@@ -31,6 +31,15 @@ on validation-stage failures, and failure responses carry
 `rejected:<code>`; the browser smoke opens the drawer and asserts a
 real served event names its tool and guard.
 
+M1 voice remainder: request contract verified against Meta's official
+cookbook recipe (endpoint, Bearer auth, `request`+`audio` multipart
+parts, `transcript` response); failures map HTTP status to safe errors
+(401 names the credential) with sanitized status-only logging. Voice
+responses carry `source`/`seconds`; uploads cap at 2 MB derived from
+the actual 24 kHz encoder rate. Browser playback defaults off, carries
+the not-Meta disclaimer, and never speaks in the demo; smoke toggles
+it on and off to prove both states.
+
 Gates: backend suite, frontend suite, `npm run lint` (0/0),
 `npm run build` (`tsc -b` + vite). UI acceptance (DESIGN_SPEC §9):
 no raw hex in components, keyboard path, focus visibility,
