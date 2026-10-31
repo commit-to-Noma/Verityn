@@ -419,7 +419,7 @@ export default function App() {
           },
           FINALE_ADVANCE_MS,
           false,
-          true,
+          false,
         )
       }
     },
