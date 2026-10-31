@@ -147,7 +147,7 @@ function loadLogo(url: string): Promise<HTMLImageElement | null> {
 /** Render the card to a PNG data URL entirely in the browser. */
 export async function renderEvidencePng(
   model: EvidenceCardModel,
-  logoUrl = '/brand/verityn-logo.png',
+  logoUrl = '/brand/verityn-mark.svg',
 ): Promise<string> {
   const canvas = document.createElement('canvas')
   canvas.width = CARD_WIDTH

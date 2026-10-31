@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="Verityn mark">
+  <rect x="4" y="4" width="112" height="112" rx="26" fill="#101a30"/>
+  <rect x="4" y="4" width="112" height="112" rx="26" fill="none" stroke="#22d3ee" stroke-opacity="0.35" stroke-width="3"/>
+  <path d="M32 34 L60 88 L88 34" fill="none" stroke="#22d3ee" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M48 56 l4 -9 l4 9 l4 -9 l4 9 l4 -9 l4 9" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="60" cy="88" r="5" fill="#fbbf24"/>
+</svg>
