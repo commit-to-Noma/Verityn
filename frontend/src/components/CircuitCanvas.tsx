@@ -861,7 +861,7 @@ function ClaimVerdict({
         <div className="glass-panel p-4" aria-live="polite">
           <p className="text-ink-muted text-sm">
             {choice === 'not_sure'
-              ? 'You chose Not sure, so there is no definite prediction to check.'
+              ? 'You chose Not sure. Run the circuit as it is.'
               : 'This prediction cannot be checked yet.'}
           </p>
         </div>
