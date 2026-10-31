@@ -27,6 +27,7 @@ import { LENS_ACCEPT, validateLensFile } from '../vision/upload'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
 import RealityTriptych from './RealityTriptych'
+import SketchPad from './SketchPad'
 
 /** Lens overlay splits out: only loaded when a sample opens. */
 const RealityLens = lazy(() => import('./RealityLens'))
@@ -414,6 +415,8 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
   const [lensResult, setLensResult] = useState<SimulateResult | null>(null)
   const controller = useRef<AbortController | null>(null)
   const nonce = useRef(0)
+  const [sketching, setSketching] = useState(false)
+  const sketchTrial = new URLSearchParams(window.location.search).has('sketch')
 
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -529,6 +532,25 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
       </div>
       <div className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Your diagram</h3>
+        {sketchTrial && !sketching && state.phase === 'idle' && (
+          <button
+            type="button"
+            onClick={() => setSketching(true)}
+            className="border-glass-border min-h-[44px] self-start rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Draw a sketch instead (trial)
+          </button>
+        )}
+        {sketchTrial && sketching && state.phase === 'idle' && (
+          <SketchPad
+            onExport={(image, size) => {
+              setSketching(false)
+              setState({ phase: 'selected', image, name: 'sketch.png', size })
+            }}
+            onCancel={() => setSketching(false)}
+          />
+        )}
+        {!(sketchTrial && sketching && state.phase === 'idle') && (
         <label className="glass-panel flex min-h-[44px] cursor-pointer items-center gap-3 p-4">
           <span className="border-glass-border rounded-[10px] border px-4 py-2 text-sm font-medium">
             {state.phase === 'idle' ? 'Choose an image' : 'Choose a different image'}
@@ -545,6 +567,7 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
             }}
           />
         </label>
+        )}
       </div>
       {(state.phase === 'selected' || state.phase === 'working') && (
         <div className="glass-panel flex flex-col gap-3 p-4">

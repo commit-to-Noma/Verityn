@@ -51,6 +51,13 @@ counts), omits Solo when not taken, and pairs readings with a verdict
 word only when assessable; the browser smoke asserts the card renders
 on the finale and the Download click resolves a real PNG render.
 
+M3 sketch pad (flagged, Gate A pending): `strokes` unit tests cover the
+undo reducer, pen-only filtering, and 1024-wide export geometry. The pad
+is reachable only with `?sketch=1`, exports a white-filled PNG through
+the existing `proposeCircuit` image field, and makes no vision call
+before Interpret. Gate A (10 iPad sketches, 7/10 usable-or-honest,
+zero confident-wrong) decides ship or cut by Mon 12:00.
+
 Gates: backend suite, frontend suite, `npm run lint` (0/0),
 `npm run build` (`tsc -b` + vite). UI acceptance (DESIGN_SPEC §9):
 no raw hex in components, keyboard path, focus visibility,
