@@ -33,6 +33,13 @@ export default function SimulationResultView({ result }: { result: SimulateResul
               </span>
             </div>
           ))}
+          {Object.entries(result.components).some(
+            ([id, values]) => id.startsWith('B') && (values.voltage < 0 || values.current < 0),
+          ) && (
+            <p className="text-ink-muted text-xs">
+              Negative signs show flow against the reference terminal, not a fault.
+            </p>
+          )}
         </div>
       ) : (
         <div className="glass-panel flex flex-col gap-2 p-4" role="alert">
