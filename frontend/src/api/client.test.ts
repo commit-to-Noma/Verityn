@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, evaluateClaim, explainResult, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
+import { ApiError, askCoach, converseWithCoach, evaluateClaim, explainResult, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -291,6 +291,35 @@ describe('askCoach', () => {
     expect(failure.kind).toBe('http')
     expect(failure.status).toBe(500)
     expect(failure.code).toBe('INTERNAL_ERROR')
+  })
+})
+
+describe('converseWithCoach', () => {
+  it('posts the utterance and validates a short response', async () => {
+    const mock = vi.fn(async () => okResponse({
+      reply: 'Thanks for sharing. What will you test?',
+      provider: 'meta-spark',
+    }))
+    vi.stubGlobal('fetch', mock)
+    await expect(
+      converseWithCoach('I think it will light.', 'Will the bulb light?'),
+    ).resolves.toEqual({
+      reply: 'Thanks for sharing. What will you test?',
+      provider: 'meta-spark',
+    })
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/api/coach/conversation')
+    expect(JSON.parse(init.body as string)).toEqual({
+      message: 'I think it will light.',
+      context: 'Will the bulb light?',
+    })
+  })
+
+  it('rejects malformed coach responses', async () => {
+    stubFetch(() => okResponse({ reply: 42, provider: 'meta-spark' }))
+    const failure = await converseWithCoach('Hello').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('payload')
   })
 })
 

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
+import { transcriptFill } from '../voice/spokenPrediction'
 import MicButton from '../voice/MicButton'
-import { speechSupport } from '../voice/speech'
+import CoachVoiceToggle from './CoachVoiceToggle'
 import CircuitPreview from './CircuitPreview'
-import CoachNote from './CoachNote'
 
 const CHOICES = Object.entries(CHOICE_LABELS) as [Choice, string][]
 
@@ -35,20 +35,23 @@ const CHOICE_ACTIVE: Record<Choice, { box: string; icon: string }> = {
 export default function PredictionScreen({
   challenge,
   eyebrow,
-  coachLine,
+  coachVoiceEnabled,
+  onCoachVoiceEnabledChange,
   onComplete,
   continueLabel = 'Continue to fix it',
   demo,
 }: {
   challenge: Challenge
   eyebrow: string
-  coachLine?: string
+  coachVoiceEnabled?: boolean
+  onCoachVoiceEnabledChange?: (enabled: boolean) => void
   onComplete: (prediction: Prediction) => void
   continueLabel?: string
   demo?: PredictionDemo
 }) {
   const [choice, setChoice] = useState<Choice | null>(null)
   const [why, setWhy] = useState('')
+  const [micStatus, setMicStatus] = useState('')
   const ready = canProceed(choice)
   const committed = useRef(false)
   const onCompleteRef = useRef(onComplete)
@@ -113,6 +116,19 @@ export default function PredictionScreen({
     }
   }
 
+  /** Spoken reason fills the Why field and pre-selects a clear choice; the
+   * learner still confirms with Continue. Interpretation is local keyword
+   * matching, and transcription never calls the coach, so Solo stays coach-free. */
+  const handleTranscript = (transcript: string) => {
+    manual()
+    const fill = transcriptFill(transcript)
+    setWhy(fill.why)
+    if (fill.choice !== null) {
+      setChoice(fill.choice)
+    }
+    setMicStatus(fill.status)
+  }
+
   return (
     <section
       aria-labelledby="predict-heading"
@@ -132,7 +148,12 @@ export default function PredictionScreen({
         />
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-      {coachLine !== undefined && <CoachNote>{coachLine}</CoachNote>}
+      {onCoachVoiceEnabledChange !== undefined && (
+        <CoachVoiceToggle
+          enabled={coachVoiceEnabled ?? false}
+          onChange={onCoachVoiceEnabledChange}
+        />
+      )}
       {challenge.brief !== undefined && (
         <div className="rounded-2xl border border-glass-border p-4" aria-label="Challenge brief">
           <p className="text-sm">{challenge.brief.setup}</p>
@@ -151,6 +172,13 @@ export default function PredictionScreen({
             key={value}
             type="button"
             aria-pressed={choice === value}
+            title={
+              value === 'yes'
+                ? 'Yes — I think the bulb will light'
+                : value === 'no'
+                  ? 'No — I think the bulb will stay dark'
+                  : 'Not sure — record my uncertainty and test anyway'
+            }
             onClick={() => {
               manual()
               setChoice(value)
@@ -168,7 +196,7 @@ export default function PredictionScreen({
       </div>
       <div className="flex flex-col gap-2">
         <label htmlFor="predict-why" className="text-sm font-medium">
-          Why do you think so? <span className="text-ink-muted font-normal">(one line)</span>
+          Why? <span className="text-ink-muted font-normal">(optional)</span>
         </label>
         <div className="relative">
           <input
@@ -180,22 +208,17 @@ export default function PredictionScreen({
               setWhy(event.target.value)
             }}
             maxLength={140}
-            placeholder="One line is enough"
+            placeholder="Add a reason, or leave this blank"
             autoComplete="off"
             className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 pr-12 text-base"
           />
-          <MicButton
-            onTranscript={(text) => {
-              manual()
-              setWhy((current) => (current.trim() === '' ? text : `${current} ${text}`))
-            }}
-          />
+          <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} />
         </div>
-        <p className="text-ink-muted text-sm">
-          {speechSupport().recognition
-            ? 'Speak your reasoning, or type it  -  the microphone is optional.'
-            : 'Type your reasoning below.'}
-        </p>
+        {micStatus !== '' && (
+          <p className="text-ink-muted text-sm" aria-live="polite">
+            {micStatus}
+          </p>
+        )}
         {why.trim() !== '' && (
           <p className="text-ink-muted text-sm" aria-live="polite">
             Your reasoning is recorded. We&apos;ll test it against the circuit.

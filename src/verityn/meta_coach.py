@@ -77,6 +77,29 @@ _EXPLAIN_JSON_SCHEMA = {
     },
 }
 
+_CONVERSATION_JSON_SCHEMA = {
+    "name": "coach_conversation",
+    "strict": True,
+    "schema": {
+        "type": "object",
+        "properties": {"reply": {"type": "string"}},
+        "required": ["reply"],
+        "additionalProperties": False,
+    },
+}
+
+_CONVERSATION_SYSTEM = (
+    "You are a warm, concise coach helping a beginner learn basic "
+    "battery-and-bulb circuits in a simulated Guided Lab. Respond to the "
+    "learner's latest words in one or two short sentences, using plain "
+    "language. Use the previous coach turn only to understand what they "
+    "are answering; do not repeat its question. If they give a prediction, "
+    "acknowledge it and remind them to select the matching on-screen choice. "
+    "Ask at most one helpful question. Do not claim to observe their circuit "
+    "or measurements. Do not invent results or take actions for them. "
+    "Encourage their own prediction and exploration."
+)
+
 _EXPLAIN_SYSTEM = (
     "You explain a circuit experiment the student just ran. "
     "Cite only numbers from the solver facts. Never invent "
@@ -127,6 +150,25 @@ def validate_explain_output(output, facts):
     if _numbers_outside_facts(cleaned, facts):
         raise CoachProviderError("Meta output rejected.", stage="validate",
                                  reason="number")
+    return cleaned
+
+
+def validate_conversation_output(output):
+    """Return a short learner-facing reply or reject malformed output."""
+    if not isinstance(output, dict):
+        raise CoachProviderError("Meta output malformed.", stage="parse",
+                                 shape=describe_shape(output))
+    reply = output.get("reply")
+    if not isinstance(reply, str) or not reply.strip():
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="not-reply")
+    cleaned = reply.strip()
+    if len(cleaned) > 400:
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="reply-too-long")
+    if _NUMBER.search(cleaned):
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="unsupported-number")
     return cleaned
 
 
@@ -375,6 +417,38 @@ class MetaSparkProvider:
         try:
             return validate_explain_output(
                 _parse_output(_chat_content(body)), facts or {})
+        except CoachProviderError as err:
+            if err.stage == "parse" and ",finish=" not in (err.shape or ""):
+                err.shape = _with_completion(err.shape or "unknown", body)
+            raise
+
+    def conversation_reply(self, message, context=""):
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": _CONVERSATION_SYSTEM},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Previous coach turn, for context only:\n{context}\n\n"
+                        f"Learner's latest words:\n{message}"
+                    ),
+                },
+            ],
+            "temperature": 0.4,
+            "reasoning_effort": META_REASONING_EFFORT,
+            "max_completion_tokens": 256,
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": _CONVERSATION_JSON_SCHEMA,
+            },
+        }
+        headers = {"Content-Type": "application/json",
+                   "Authorization": f"Bearer {self.api_key}"}
+        _, body = _post_json(f"{self.base_url}/chat/completions", payload,
+                             headers, self.timeout_s)
+        try:
+            return validate_conversation_output(_parse_output(_chat_content(body)))
         except CoachProviderError as err:
             if err.stage == "parse" and ",finish=" not in (err.shape or ""):
                 err.shape = _with_completion(err.shape or "unknown", body)

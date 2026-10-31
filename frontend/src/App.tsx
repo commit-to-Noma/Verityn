@@ -8,6 +8,7 @@ import { DEMO_SCRIPT } from './demo/script'
 
 /** Canvas weight splits out: stages show a brief fallback while it loads. */
 const CircuitCanvas = lazy(() => import('./components/CircuitCanvas'))
+const CoachConversation = lazy(() => import('./voice/CoachConversation'))
 const CANVAS_FALLBACK = <p className="text-ink-muted text-sm">Preparing the workbench…</p>
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
@@ -26,8 +27,15 @@ import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
-import { matchesExpected } from './lessons/lesson'
+import { createPrediction, LIT_POWER_W, matchesExpected } from './lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
+import {
+  showCoachText,
+  speakCoach,
+  stopCoach,
+  subscribeCoachSpeechFinished,
+} from './voice/coachVoice'
+import { spokenPredictionChoice } from './voice/spokenPrediction'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
 import {
   JOURNEY_PROGRESS_VERSION,
@@ -41,6 +49,8 @@ import {
 /** Demo-mode auto-advance delays; manual mode shows the gate with no timer. */
 const ADVANCE_BEAT_MS = 4000
 const COACHED_BEAT_MS = 2000
+const VOICE_ADVANCE_PAUSE_MS = 2200
+const FINALE_ADVANCE_MS = 5500
 
 type Chapter = 'l1' | 'reality' | 'transfer'
 
@@ -96,9 +106,14 @@ const STAGE_CONTENT: Record<Stage, null> = {
   finale: null,
 }
 
+const COACH_INTRODUCTION =
+  "Hi, I'm your coach. This is the Guided Lab: you'll make a prediction, build a circuit, and test it. First question: if you connect the two loose ends, what do you think will happen to the bulb?"
+
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
   const [entered, setEntered] = useState(false)
+  const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(true)
+  const [learnerReply, setLearnerReply] = useState('')
   const [l1Prediction, setL1Prediction] = useState<Prediction | null>(null)
   const [realityStarted, setRealityStarted] = useState(false)
   const [realityPrediction, setRealityPrediction] = useState<Prediction | null>(null)
@@ -119,6 +134,8 @@ export default function App() {
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
 
   const advanceTimer = useRef<number | null>(null)
+  const voiceAdvanceCleanup = useRef<(() => void) | null>(null)
+  const voiceAdvanceTimer = useRef(false)
   const autoRef = useRef(auto)
   const demoRef = useRef(demo)
   const completeRef = useRef(complete)
@@ -127,6 +144,7 @@ export default function App() {
   const autoBeforeDemo = useRef(false)
   /** The demo gate waits for R4; the presenter fallback keeps its old beat. */
   const realityR4 = useRef(false)
+  const realityBulbLit = useRef<boolean | null>(null)
   useEffect(() => {
     autoRef.current = auto
     demoRef.current = demo
@@ -173,7 +191,21 @@ export default function App() {
     snapshots,
   ])
 
+  const announceCoach = useCallback(
+    (text: string) => {
+      if (coachVoiceEnabled) {
+        return speakCoach(text)
+      }
+      showCoachText(text)
+      return false
+    },
+    [coachVoiceEnabled],
+  )
+
   const cancelAdvance = useCallback(() => {
+    voiceAdvanceCleanup.current?.()
+    voiceAdvanceCleanup.current = null
+    voiceAdvanceTimer.current = false
     if (advanceTimer.current !== null) {
       window.clearTimeout(advanceTimer.current)
       advanceTimer.current = null
@@ -181,38 +213,91 @@ export default function App() {
     setAutoPending(false)
   }, [])
 
+  const cancelVoiceAdvance = useCallback(() => {
+    const wasPending = voiceAdvanceCleanup.current !== null || voiceAdvanceTimer.current
+    voiceAdvanceCleanup.current?.()
+    voiceAdvanceCleanup.current = null
+    if (voiceAdvanceTimer.current && advanceTimer.current !== null) {
+      window.clearTimeout(advanceTimer.current)
+      advanceTimer.current = null
+    }
+    voiceAdvanceTimer.current = false
+    if (wasPending) {
+      setAutoPending(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!coachVoiceEnabled) {
+      cancelVoiceAdvance()
+    }
+  }, [coachVoiceEnabled, cancelVoiceAdvance])
+
   useEffect(
     () => () => {
       if (advanceTimer.current !== null) {
         window.clearTimeout(advanceTimer.current)
         advanceTimer.current = null
       }
+      voiceAdvanceCleanup.current?.()
+      voiceAdvanceCleanup.current = null
     },
     [],
   )
 
   const showGate = useCallback(
-    (gate: ChapterGate, delay: number) => {
+    (
+      gate: ChapterGate,
+      delay: number,
+      advanceAfterSpeech = false,
+      advanceAfterDelay = false,
+    ) => {
       cancelAdvance()
       setComplete(gate)
-      if (!demoRef.current.active) {
-        document
-          .querySelector('[aria-label="Evidence trace"]')
-          ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+      const advanceGate = () => {
+        advanceTimer.current = null
+        voiceAdvanceCleanup.current?.()
+        voiceAdvanceCleanup.current = null
+        voiceAdvanceTimer.current = false
+        setAutoPending(false)
+        setComplete(null)
+        gate.advance()
       }
       // A paused demo latches the gate but arms nothing; resume re-arms it.
       if (autoRef.current && !demoRef.current.paused) {
         setAutoPending(true)
-        advanceTimer.current = window.setTimeout(() => {
-          advanceTimer.current = null
-          setAutoPending(false)
-          setComplete(null)
-          gate.advance()
-        }, delay)
+        advanceTimer.current = window.setTimeout(advanceGate, delay)
+      } else if (advanceAfterSpeech && !demoRef.current.active) {
+        let unsubscribe: () => void = () => undefined
+        unsubscribe = subscribeCoachSpeechFinished(() => {
+          unsubscribe()
+          if (voiceAdvanceCleanup.current === unsubscribe) {
+            voiceAdvanceCleanup.current = null
+          }
+          setAutoPending(true)
+          voiceAdvanceTimer.current = true
+          advanceTimer.current = window.setTimeout(advanceGate, VOICE_ADVANCE_PAUSE_MS)
+        })
+        voiceAdvanceCleanup.current = unsubscribe
+      } else if (advanceAfterDelay && !demoRef.current.active) {
+        setAutoPending(true)
+        advanceTimer.current = window.setTimeout(advanceGate, delay)
       }
     },
     [cancelAdvance],
   )
+
+  useEffect(() => {
+    if (complete === null) {
+      return
+    }
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector('[aria-label="Chapter complete"]')
+        ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [complete])
 
   /** Demo beat helper: silent outside the demo, forward-only inside it. */
   const advanceDemoBeat = useCallback((beat: DemoBeat) => {
@@ -248,44 +333,70 @@ export default function App() {
 
   const handleL1Solved = useCallback(
     (result: SimulateResult) => {
+      const bulb = result.components.L1
       if (matchesExpected(result, L1.expectedFixed)) {
+        const spoken = announceCoach(
+          'The loop is complete and the bulb is lit. Check the simulator result; next we will test the open-switch case.',
+        )
         showGate(
           {
             chapter: 'l1',
-            title: 'Reality check passed',
-            detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
-            nextLabel: 'Continue to Reality Check →',
+            title: 'Circuit test complete',
+            detail: 'The loop is complete and the bulb is lit. The next test keeps the switch open.',
+            nextLabel: 'Test with the switch open',
             advance: () => {
+              announceCoach(
+                'Now predict what will happen with the switch open. Will the bulb light?',
+              )
               setRealityStarted(true)
               advanceDemoBeat('reality')
             },
           },
           ADVANCE_BEAT_MS,
+          spoken,
+        )
+      } else {
+        announceCoach(
+          bulb !== undefined && bulb.power > LIT_POWER_W
+            ? 'I see the bulb is lit, but this build is not complete yet. Check the open terminals and the full path, then test again.'
+            : 'I see the bulb stayed dark. Check whether the switch is open and whether each wire completes one path, then test again.',
         )
       }
     },
-    [showGate, advanceDemoBeat],
+    [showGate, advanceDemoBeat, announceCoach],
   )
 
   const handleRealitySolved = useCallback(
     (result: SimulateResult) => {
+      const bulb = result.components.L1
+      realityBulbLit.current = bulb !== undefined && bulb.power > LIT_POWER_W
       if (matchesExpected(result, L1.twist.expectedFixed)) {
+        const spoken = announceCoach(
+          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Next, you will try a new circuit on your own in Solo.',
+        )
         showGate(
           {
             chapter: 'reality',
             title: 'Reality check complete',
-            detail: 'Your circuit matches the expected result. Study the evidence, then continue.',
-            nextLabel: 'Continue to solo →',
+            detail: 'The open switch breaks the path, so the bulb stays off.',
+            nextLabel: 'Start the Solo challenge',
             advance: () => {
               setTransferStarted(true)
               advanceDemoBeat('solo')
             },
           },
           ADVANCE_BEAT_MS,
+          spoken,
+        )
+      } else {
+        announceCoach(
+          realityBulbLit.current
+            ? 'I see the bulb lit, so current is flowing. For this test, leave the switch open, then test the circuit again.'
+            : 'I see the bulb stayed dark. Compare that result with your prediction and check the switch before testing again.',
         )
       }
     },
-    [showGate, advanceDemoBeat],
+    [showGate, advanceDemoBeat, announceCoach],
   )
 
   const handleTransferSolved = useCallback(
@@ -295,8 +406,8 @@ export default function App() {
           {
             chapter: 'transfer',
             title: 'Solo complete',
-            detail: 'You solved it with the coach off. Review the evidence, then see your journey.',
-            nextLabel: 'See your journey →',
+            detail: 'The Solo circuit is verified. View your completed journey to finish the lab.',
+            nextLabel: 'View completed journey',
             advance: () => {
               setTransferDone(true)
               if (demoRef.current.active) {
@@ -304,7 +415,9 @@ export default function App() {
               }
             },
           },
-          ADVANCE_BEAT_MS,
+          FINALE_ADVANCE_MS,
+          false,
+          true,
         )
       }
     },
@@ -317,20 +430,26 @@ export default function App() {
       if (status !== 'CONTRADICTED') {
         return
       }
+      announceCoach(
+        realityBulbLit.current
+          ? 'The bulb lit, so current flowed. Compare that with your prediction and check that the switch is open for this test.'
+          : 'The bulb stayed off with the switch open. Compare that result with your prediction.',
+      )
       cancelAdvance()
       setComplete((gate) =>
         gate?.chapter === 'reality'
           ? {
               ...gate,
               title: 'Prediction did not match',
-              detail: 'Ask the coach above, then continue when ready.',
+              detail:
+                'Review the measurement. The coach is available for a hint, or you can continue on your own.',
               coach: 'invited',
             }
           : gate,
       )
       advanceDemoBeat('coach')
     },
-    [cancelAdvance, advanceDemoBeat],
+    [cancelAdvance, advanceDemoBeat, announceCoach],
   )
 
   const handleRealityCoached = useCallback(
@@ -387,9 +506,10 @@ export default function App() {
     [cancelAdvance, complete],
   )
 
-  /** Edits cancel a pending demo timer; the latched gate stays passable. */
+  /** Edits invalidate any result gate until the new circuit is tested. */
   const handleDirty = useCallback(() => {
     cancelAdvance()
+    setComplete(null)
   }, [cancelAdvance])
 
   const handleResumeJourney = useCallback(() => {
@@ -418,6 +538,7 @@ export default function App() {
   }, [cancelAdvance])
 
   const resetJourney = useCallback(() => {
+    stopCoach()
     cancelAdvance()
     checkpointSaveFailed.current = !clearBrowserCheckpoint()
     setCheckpointRead({
@@ -426,6 +547,7 @@ export default function App() {
     })
     setResumedCheckpoint(false)
     setL1Prediction(null)
+    setLearnerReply('')
     setRealityStarted(false)
     setRealityPrediction(null)
     setRealitySession(null)
@@ -442,7 +564,8 @@ export default function App() {
     setLensPage(false)
     setExperimentPage(false)
     setEntered(true)
-  }, [resetJourney])
+    announceCoach(COACH_INTRODUCTION)
+  }, [resetJourney, announceCoach])
 
   /** Enter the guided demo: a clean journey that performs itself. */
   const startDemo = useCallback(() => {
@@ -455,7 +578,8 @@ export default function App() {
     setExperimentPage(false)
     setEntered(true)
     setDemo((current) => demoTransition(current, { type: 'start' }))
-  }, [resetJourney])
+    announceCoach(COACH_INTRODUCTION)
+  }, [resetJourney, announceCoach])
 
   /** Leave demo mode, keep the journey exactly where it stands. */
   const endDemoToManual = useCallback(() => {
@@ -573,6 +697,9 @@ export default function App() {
           handleResumeJourney()
           return
         }
+        if (!entered) {
+          announceCoach(COACH_INTRODUCTION)
+        }
         setLensPage(false)
         setExperimentPage(false)
         setEntered(true)
@@ -582,7 +709,14 @@ export default function App() {
         setEntered(false)
       }
     },
-    [cancelAdvance, checkpointRead.checkpoint, endDemoToManual, entered, handleResumeJourney],
+    [
+      cancelAdvance,
+      checkpointRead.checkpoint,
+      announceCoach,
+      endDemoToManual,
+      entered,
+      handleResumeJourney,
+    ],
   )
 
   const handleExploreLens = useCallback(() => {
@@ -600,13 +734,20 @@ export default function App() {
   )
 
   const handleL1Predicted = (prediction: Prediction) => {
+    announceCoach(
+      'Got it. Connect the two open ends with one wire, then press Test to check your prediction.',
+    )
     setL1Prediction(prediction)
     advanceDemoBeat('build')
   }
 
   const handleRealityPredicted = (prediction: Prediction) => {
+    announceCoach(
+      'Got it. Leave the switch open and watch what happens when the lab tests the circuit.',
+    )
     setRealityPrediction(prediction)
     realityR4.current = false
+    realityBulbLit.current = null
     void (async () => {
       try {
         const recorded = await recordPrediction(
@@ -621,6 +762,27 @@ export default function App() {
         setRealitySession(null)
       }
     })()
+  }
+
+  const handleSpokenPrediction = (transcript: string): boolean => {
+    const choice = spokenPredictionChoice(transcript)
+    if (choice === null) {
+      return false
+    }
+    const prediction = createPrediction(
+      stage === 'reality-predict' ? L1.twist.id : L1.id,
+      choice,
+      transcript.trim().slice(0, 140),
+    )
+    if (stage === 'l1-predict') {
+      handleL1Predicted(prediction)
+      return true
+    }
+    if (stage === 'reality-predict') {
+      handleRealityPredicted(prediction)
+      return true
+    }
+    return false
   }
 
   // All three slots, always: skipped chapters render an honest placeholder.
@@ -807,6 +969,19 @@ export default function App() {
         </Suspense>
       }
     >
+      {['l1-predict', 'l1-build', 'reality-predict', 'reality-build'].includes(stage) &&
+        !demo.active && (
+          <Suspense fallback={null}>
+            <CoachConversation
+              enabled={
+                coachVoiceEnabled && (complete === null || complete.coach !== undefined)
+              }
+              learnerText={learnerReply}
+              onLearnerTextChange={setLearnerReply}
+              onPrediction={handleSpokenPrediction}
+            />
+          </Suspense>
+        )}
       {stage === 'intro' && (
         <LabIntro
           onEnter={handleStartJourney}
@@ -828,7 +1003,8 @@ export default function App() {
         <PredictionScreen
           challenge={L1}
           eyebrow="Predict · Light the bulb"
-          coachLine="I'm your coach. Commit to a prediction first  -  I stay quiet until you've tested it."
+          coachVoiceEnabled={coachVoiceEnabled}
+          onCoachVoiceEnabledChange={setCoachVoiceEnabled}
           onComplete={handleL1Predicted}
           demo={l1Demo}
         />
@@ -840,13 +1016,16 @@ export default function App() {
             key="l1"
             seed={L1.seed}
             eyebrow="Build · Light the bulb"
-            instructions="Connect the two glowing terminal dots to complete the loop."
+            instructions="Connect the two open ends with one wire, then press Test to check your prediction."
             onSolved={handleL1Solved}
             onDirty={handleDirty}
             onEvidence={handleEvidence}
             layout="split"
             prediction={l1Prediction}
             challenge={L1}
+            coachVoiceEnabled={coachVoiceEnabled}
+            onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+            autoStruggleHint
             demoBuild={demo.active ? DEMO_SCRIPT.l1Build : null}
             demoPaused={demo.paused}
             demoSignal={demo.signal}
@@ -860,7 +1039,8 @@ export default function App() {
         <PredictionScreen
           challenge={L1.twist}
           eyebrow="Reality Check · The open switch"
-          coachLine="New circuit, same rule: predict first. If the model disagrees, I'll have one question for you."
+          coachVoiceEnabled={coachVoiceEnabled}
+          onCoachVoiceEnabledChange={setCoachVoiceEnabled}
           onComplete={handleRealityPredicted}
           demo={realityDemo}
         />
@@ -885,8 +1065,12 @@ export default function App() {
             layout="split"
             prediction={realityPrediction}
             challenge={L1.twist}
+            coachVoiceEnabled={coachVoiceEnabled}
+            onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+            expectSwitchOpen
             autoDemonstrate={auto && !demo.paused}
             autoAsk={demo.active && !demo.paused}
+            autoInitialHint
             demoSignal={demo.signal}
             demoAutoUndo={demo.active && !demo.paused}
             onDemoTakeover={endDemoToManual}
@@ -899,7 +1083,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode  -  the AI coach is off for this challenge. Trust your reasoning.
+              Solo mode  -  there is no coach for this challenge. Trust your reasoning.
             </p>
           </div>
           <PredictionScreen
@@ -915,7 +1099,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode  -  the AI coach is off for this challenge. Predict, build, and check
+              Solo mode  -  there is no coach for this challenge. Predict, build, and check
               against the simulator.
             </p>
           </div>
@@ -946,8 +1130,6 @@ export default function App() {
       {stage === 'finale' && (
         <JourneyFinale
           chapters={finaleChapters}
-          onTryLab={handleDemoManual}
-          onReplayDemo={startDemo}
           onReturnHub={() => handleNavigate('hub')}
           onExploreLens={() => {
             jumpToLens()

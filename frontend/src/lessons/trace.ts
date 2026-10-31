@@ -65,8 +65,8 @@ export interface TraceStep {
   body: TraceBody
 }
 
-/** Fixed trace copy for solo challenges, where the coach stays off. */
-export const SOLO_COACH_MESSAGE = 'Solo mode  -  the AI coach is off. Your reasoning and the simulator are enough.'
+/** Fixed trace copy for solo challenges, which do not include a coach. */
+export const SOLO_COACH_MESSAGE = 'Solo mode  -  there is no coach. Your reasoning and the simulator are enough.'
 
 export interface TraceInput {
   prediction: Prediction | null

@@ -1,0 +1,414 @@
+import { useEffect, useRef, useState } from 'react'
+import { LoaderCircle, Mic, Square } from 'lucide-react'
+import { ApiError, converseWithCoach } from '../api/client'
+import { latestCoachStatement, speakCoach, subscribeCoachStatement } from './coachVoice'
+import { encodeWav } from './audio'
+
+type ConversationState =
+  | 'ready'
+  | 'listening'
+  | 'transcribing'
+  | 'no-speech'
+  | 'denied'
+  | 'unavailable'
+
+const SILENCE_MS = 1800
+const MAX_TURN_MS = 20_000
+const SPEECH_RMS_THRESHOLD = 0.015
+
+interface Recording {
+  stream: MediaStream
+  context: AudioContext
+  source: MediaStreamAudioSourceNode
+  processor: ScriptProcessorNode
+  silentOutput: GainNode
+  chunks: Float32Array[]
+  sampleRate: number
+  sawVoice: boolean
+}
+
+function isPermissionError(error: unknown): boolean {
+  return error instanceof DOMException &&
+    (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
+}
+
+/** Automatic, pause-detected voice turns for the coached Guided Lab. */
+export default function CoachConversation({
+  enabled,
+  learnerText,
+  onLearnerTextChange,
+  onPrediction,
+}: {
+  enabled: boolean
+  learnerText: string
+  onLearnerTextChange: (transcript: string) => void
+  onPrediction?: (transcript: string) => boolean
+}) {
+  const [state, setState] = useState<ConversationState>('ready')
+  const [status, setStatus] = useState('')
+  const [coachText, setCoachText] = useState(latestCoachStatement)
+  const lastCoachStatementRef = useRef(latestCoachStatement())
+  const recordingRef = useRef<Recording | null>(null)
+  const enabledRef = useRef(enabled)
+  const busyRef = useRef(false)
+  const mountedRef = useRef(true)
+  const requestRef = useRef<AbortController | null>(null)
+  const startRef = useRef<() => void>(() => undefined)
+  const stopRef = useRef<(transcribe: boolean) => void>(() => undefined)
+  const onPredictionRef = useRef(onPrediction)
+  const lastTranscriptRef = useRef('')
+  const pendingStartRef = useRef<number | null>(null)
+  const silenceTimerRef = useRef<number | null>(null)
+  const maxTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    enabledRef.current = enabled
+    if (!enabled) {
+      stopRef.current(false)
+    }
+  }, [enabled])
+  useEffect(() => {
+    onPredictionRef.current = onPrediction
+  }, [onPrediction])
+
+  useEffect(
+    () =>
+      subscribeCoachStatement((text) => {
+        if (pendingStartRef.current !== null) {
+          window.clearTimeout(pendingStartRef.current)
+          pendingStartRef.current = null
+        }
+        if (recordingRef.current !== null) {
+          stopRef.current(false)
+        }
+        lastCoachStatementRef.current = text
+        setCoachText(text)
+      }),
+    [],
+  )
+
+  // Tap-to-talk: listening starts only from the Reply button. An earlier
+  // auto-listen on every finished utterance looped coach speech back into
+  // the microphone, so speech-finished no longer arms the mic here.
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      if (pendingStartRef.current !== null) {
+        window.clearTimeout(pendingStartRef.current)
+      }
+      stopRef.current(false)
+      requestRef.current?.abort()
+    }
+  }, [])
+
+  const release = (recording: Recording) => {
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current)
+      silenceTimerRef.current = null
+    }
+    if (maxTimerRef.current !== null) {
+      window.clearTimeout(maxTimerRef.current)
+      maxTimerRef.current = null
+    }
+    recording.processor.onaudioprocess = null
+    recording.source.disconnect()
+    recording.processor.disconnect()
+    recording.silentOutput.disconnect()
+    recording.stream.getTracks().forEach((track) => track.stop())
+    if (recording.context.state !== 'closed') {
+      void recording.context.close()
+    }
+  }
+
+  const transcribe = async (recording: Recording) => {
+    recordingRef.current = null
+    release(recording)
+    if (!recording.sawVoice) {
+      setState('no-speech')
+      setStatus('I did not hear speech. You can try speaking again.')
+      return
+    }
+
+    busyRef.current = true
+    setState('transcribing')
+    setStatus('Transcribing your reply with Meta Muse Voice Transcribe…')
+    const request = new AbortController()
+    requestRef.current = request
+    try {
+      const wav = encodeWav(recording.chunks, recording.sampleRate)
+      const form = new FormData()
+      form.append('audio', wav, 'coach-reply.wav')
+      const response = await fetch('/api/voice/transcribe', {
+        method: 'POST',
+        body: form,
+        signal: request.signal,
+      })
+      let payload: unknown
+      try {
+        payload = await response.json()
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return
+        }
+        setState('unavailable')
+        setStatus('The transcription service returned an unreadable response.')
+        return
+      }
+      if (!response.ok) {
+        const message =
+          typeof payload === 'object' &&
+          payload !== null &&
+          'error_message' in payload &&
+          typeof payload.error_message === 'string'
+            ? payload.error_message
+            : 'Meta Muse Voice Transcribe is unavailable.'
+        setState('unavailable')
+        setStatus(message)
+        return
+      }
+      const transcript =
+        typeof payload === 'object' &&
+        payload !== null &&
+        'transcript' in payload &&
+        typeof payload.transcript === 'string'
+          ? payload.transcript.trim()
+          : ''
+      if (transcript === '') {
+        setState('no-speech')
+        setStatus('No words were recognized. You can try again or type instead.')
+        return
+      }
+
+      onLearnerTextChange(transcript)
+      if (onPredictionRef.current?.(transcript) === true) {
+        lastTranscriptRef.current = transcript
+        setStatus('')
+        return
+      }
+      if (transcript === lastTranscriptRef.current) {
+        // The mic likely caught its own echo: say so instead of looping
+        // the same turn through the coach again.
+        setState('no-speech')
+        setStatus('Heard the same reply twice. Type instead if the mic is echoing.')
+        return
+      }
+      lastTranscriptRef.current = transcript
+      setStatus('The coach is thinking…')
+      const result = await converseWithCoach(
+        transcript,
+        lastCoachStatementRef.current,
+        request.signal,
+      )
+      setCoachText(result.reply)
+      setStatus('')
+      if (enabledRef.current) {
+        speakCoach(result.reply)
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return
+      } else if (error instanceof ApiError) {
+        setState('unavailable')
+        setStatus(error.message)
+      } else if (error instanceof TypeError) {
+        setState('unavailable')
+        setStatus('Could not reach the transcription service. Check that the backend is running.')
+      } else {
+        throw error
+      }
+    } finally {
+      if (requestRef.current === request) {
+        requestRef.current = null
+      }
+      busyRef.current = false
+      if (mountedRef.current) {
+        setState((current) => current === 'transcribing' ? 'ready' : current)
+      }
+    }
+  }
+
+  const stop = (shouldTranscribe: boolean) => {
+    const recording = recordingRef.current
+    if (recording === null) {
+      return
+    }
+    if (shouldTranscribe) {
+      void transcribe(recording)
+    } else {
+      recordingRef.current = null
+      release(recording)
+      busyRef.current = false
+    }
+  }
+  const start = async () => {
+    if (!enabledRef.current || busyRef.current || recordingRef.current !== null) {
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') {
+      setState('unavailable')
+      setStatus('Microphone capture is unavailable in this browser.')
+      return
+    }
+    busyRef.current = true
+    if (pendingStartRef.current !== null) {
+      window.clearTimeout(pendingStartRef.current)
+      pendingStartRef.current = null
+    }
+    setStatus('Requesting microphone permission…')
+    let stream: MediaStream | null = null
+    let context: AudioContext | null = null
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (!mountedRef.current || !enabledRef.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        busyRef.current = false
+        return
+      }
+      context = new AudioContext()
+      if (context.state === 'suspended') {
+        await context.resume()
+      }
+      if (!mountedRef.current || !enabledRef.current) {
+        stream.getTracks().forEach((track) => track.stop())
+        await context.close()
+        busyRef.current = false
+        return
+      }
+      const source = context.createMediaStreamSource(stream)
+      const processor = context.createScriptProcessor(4096, 1, 1)
+      const silentOutput = context.createGain()
+      silentOutput.gain.value = 0
+      const recording: Recording = {
+        stream,
+        context,
+        source,
+        processor,
+        silentOutput,
+        chunks: [],
+        sampleRate: context.sampleRate,
+        sawVoice: false,
+      }
+      processor.onaudioprocess = (event) => {
+        const samples = event.inputBuffer.getChannelData(0).slice()
+        recording.chunks.push(samples)
+        let energy = 0
+        for (const sample of samples) {
+          energy += sample * sample
+        }
+        const rms = Math.sqrt(energy / samples.length)
+        if (rms >= SPEECH_RMS_THRESHOLD) {
+          recording.sawVoice = true
+          if (silenceTimerRef.current !== null) {
+            window.clearTimeout(silenceTimerRef.current)
+          }
+          silenceTimerRef.current = window.setTimeout(
+            () => stopRef.current(true),
+            SILENCE_MS,
+          )
+        }
+      }
+      source.connect(processor)
+      processor.connect(silentOutput)
+      silentOutput.connect(context.destination)
+      recordingRef.current = recording
+      maxTimerRef.current = window.setTimeout(
+        () => stopRef.current(true),
+        MAX_TURN_MS,
+      )
+      busyRef.current = false
+      setState('listening')
+      setStatus('Listening. Pausing will send this turn to Meta for transcription.')
+    } catch (error) {
+      busyRef.current = false
+      stream?.getTracks().forEach((track) => track.stop())
+      if (context !== null && context.state !== 'closed') {
+        void context.close()
+      }
+      if (mountedRef.current) {
+        setState(isPermissionError(error) ? 'denied' : 'unavailable')
+        setStatus(
+          isPermissionError(error)
+            ? 'Microphone permission was denied. Allow it in your browser settings to speak with the coach.'
+            : 'The microphone could not start. Check your browser and microphone settings.',
+        )
+      }
+    }
+  }
+  useEffect(() => {
+    startRef.current = () => void start()
+    stopRef.current = stop
+  })
+
+  const displayState = enabled ? state : 'ready'
+  const visibleStatus = enabled
+    ? state === 'denied' || state === 'unavailable' || state === 'no-speech'
+      ? status
+      : displayState === 'listening'
+        ? 'Listening…'
+        : displayState === 'transcribing'
+          ? 'Thinking…'
+          : ''
+    : ''
+  return (
+    <section
+      aria-label="Coach conversation"
+      className="glass-panel flex flex-wrap items-center justify-between gap-3 p-3"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">
+          {displayState === 'listening' ? 'Listening' : 'Coach conversation'}
+        </p>
+        {visibleStatus !== '' && (
+          <p className="text-ink-muted text-xs" role="status" aria-live="polite">
+            {visibleStatus}
+          </p>
+        )}
+        {learnerText !== '' && (
+          <p className="mt-2 text-sm" aria-live="polite">
+            <span className="font-semibold">You:</span> {learnerText}
+          </p>
+        )}
+        {coachText !== '' && (
+          <p className="mt-1 text-sm" aria-live="polite">
+            <span className="font-semibold">Coach:</span> {coachText}
+          </p>
+        )}
+      </div>
+      {displayState === 'listening' ? (
+        <button
+          type="button"
+          onClick={() => stopRef.current(true)}
+          aria-label="Stop listening and send reply"
+          className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-bad/50 px-3 text-sm"
+        >
+          <Square className="h-4 w-4" aria-hidden="true" />
+          Stop
+        </button>
+      ) : displayState === 'transcribing' ? (
+        <LoaderCircle className="h-5 w-5 animate-spin text-flow" aria-label="Transcribing" />
+      ) : (displayState === 'no-speech' ||
+        displayState === 'denied' ||
+        displayState === 'unavailable') && enabled ? (
+        <button
+          type="button"
+          onClick={() => void start()}
+          className="inline-flex min-h-11 items-center gap-2 rounded-[10px] border border-glass-border px-3 text-sm"
+        >
+          <Mic className="h-4 w-4" aria-hidden="true" />
+          Try mic
+        </button>
+      ) : displayState === 'ready' && enabled && coachText !== '' ? (
+        <button
+          type="button"
+          onClick={() => void start()}
+          aria-label="Reply to the coach by voice"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-[10px] border border-glass-border px-3 text-sm"
+        >
+          <Mic className="h-4 w-4" aria-hidden="true" />
+          Reply by voice
+        </button>
+      ) : null}
+    </section>
+  )
+}

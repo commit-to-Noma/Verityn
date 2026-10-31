@@ -10,7 +10,7 @@ Sections 11–13 carry the locked submission roadmap (deadline Nov 4, 9:00 PM ET
 
 ## 1. Principles
 - The canvas gets the most space and the least decoration.
-- Colour has one job each: cyan = current/primary action, amber = light, violet = AI coach, green/coral/grey = verdicts.
+- Colour has one job each: cyan = current/primary action, amber = light, violet = coach, green/coral/grey = verdicts.
 - Verdicts always carry an icon and a word. Colour is never the only signal.
 - Numbers (amps, volts, watts) are always monospace.
 - Honest wording: "Consistent with the model", "Contradicted by the model", "Can't assess". Never "wrong" or "you have a misconception".
@@ -24,7 +24,7 @@ Sections 11–13 carry the locked submission roadmap (deadline Nov 4, 9:00 PM ET
 | `text-ink`, `text-ink-muted` | Main / secondary text |
 | `text-flow`, `bg-flow` | Current, wires, primary buttons |
 | `text-light`, `bg-light` | Bulbs, lit state |
-| `text-coach`, `bg-coach` | AI coach identity only |
+| `text-coach`, `bg-coach` | Coach identity only |
 | `text-ok`, `text-bad`, `text-unknown` (+ `-tint` fills) | Verdicts |
 | `text-on-accent` | Text on filled cyan/amber/violet buttons |
 
@@ -142,7 +142,7 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
   verdict icon + word; coach content always carries its provider badge
   (`Meta Muse`, `Fallback coach`, never one for the other).
 - Solo/transfer stages show a persistent restrained note that the AI
-  coach is off; no coaching controls render there at all.
+  no coach is available; no coaching controls render there at all.
 - Evidence Trace steps are titled Prediction, Circuit built,
   Simulation, Comparison, Coach. Comparison notes name their basis
   ("Judged by the deterministic evaluator…", "Compared with the
@@ -166,9 +166,11 @@ Motion: UI changes 150ms; bulb glow-up 500ms; particles continuous, speed capped
 
 ## 13. Roadmap: voice and Snap & Build UI (Priorities 2 and 4)
 
-- Voice Why input (P4): optional mic button beside the Why field,
-  hidden when unavailable; transcript lands in the same one-line
-  field, editable before submit. Typed input always works.
+- Voice Why input (P4): the mic records a short WAV only after the learner
+  starts it, then sends it through the backend to Meta Muse Voice Transcribe.
+  The transcript lands in the editable Why field; typed input always works.
+  A separate preference controls browser speech playback for coach replies;
+  it never hides the coach text or disables coaching.
 - Snap & Build (P2): upload control plus a JSON netlist preview panel
   with explicit Confirm / Discard actions. Nothing model-proposed
   reaches the solver or canvas without confirmation; the preview is

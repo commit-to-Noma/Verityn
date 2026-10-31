@@ -9,14 +9,10 @@ import JourneyStory from './JourneyStory'
 /** Finale: show the verified circuit first, with detailed evidence on demand. */
 export default function JourneyFinale({
   chapters,
-  onTryLab,
-  onReplayDemo,
   onReturnHub,
   onExploreLens,
 }: {
   chapters: ChapterRecap[]
-  onTryLab: () => void
-  onReplayDemo: () => void
   onReturnHub: () => void
   onExploreLens: () => void
 }) {
@@ -67,7 +63,7 @@ export default function JourneyFinale({
               <h4 className="mb-1 text-sm font-semibold">Your solo test · complete loop</h4>
               <p className="mb-2 text-xs text-ink-muted">
                 {verifiedTransfer
-                  ? 'Your tested two-bulb circuit, with the coach off.'
+                  ? 'Your tested two-bulb circuit, completed without a coach.'
                   : 'Available after a verified solo run.'}
               </p>
               {verifiedTransfer ? (
@@ -111,16 +107,16 @@ export default function JourneyFinale({
           )}
         </article>
         <div className="flex min-w-0 flex-col gap-3">
-          <section aria-label="Progress you demonstrated" className="flex flex-col gap-2">
+          <section aria-label="Your learning path" className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold">Progress you demonstrated</h3>
+              <h3 className="font-semibold">Your learning path</h3>
               <span className="text-ink-muted text-xs">
-                {completedSteps} of {progress.length} circuits tested
+                {completedSteps}/{progress.length} challenges
               </span>
             </div>
             <div
               role="progressbar"
-              aria-label="Circuits tested"
+              aria-label="Challenges tested"
               aria-valuemin={0}
               aria-valuemax={progress.length}
               aria-valuenow={completedSteps}
@@ -139,31 +135,16 @@ export default function JourneyFinale({
                       <span className="text-flow mr-1.5">{String(index + 1).padStart(2, '0')}</span>
                       {step.title}
                     </h4>
-                    <span className="text-ink-muted shrink-0 text-[11px]">
-                      {step.complete ? 'Evidence captured' : 'Not reached'}
-                    </span>
+                    {!step.complete && (
+                      <span className="text-ink-muted shrink-0 text-[11px]">Not reached</span>
+                    )}
                   </div>
-                  <p className="mt-2 text-sm">{step.evidence}</p>
-                  <p className="text-ink-muted mt-1 text-sm">{step.learning}</p>
+                  <p className="mt-2 text-sm">{step.summary}</p>
                 </li>
               ))}
             </ol>
           </section>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onTryLab}
-              className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-            >
-              Start a new guided run
-            </button>
-            <button
-              type="button"
-              onClick={onReplayDemo}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Replay guided demo
-            </button>
             <button
               type="button"
               onClick={onExploreLens}

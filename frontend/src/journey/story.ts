@@ -2,6 +2,8 @@ import { providerBadge } from '../api/client'
 import { CHOICE_LABELS, LIT_POWER_W } from '../lessons/lesson'
 import type { TraceInput } from '../lessons/trace'
 import { formatReading } from '../components/format'
+import { L1 } from '../lessons/l1'
+import { TRANSFER } from '../lessons/transfer'
 
 export interface ChapterRecap {
   id: string
@@ -18,8 +20,7 @@ export interface StoryNode {
 
 export interface LearningMilestone {
   title: string
-  evidence: string
-  learning: string
+  summary: string
   complete: boolean
 }
 
@@ -131,7 +132,7 @@ export function finaleNarrative(chapters: ChapterRecap[]): string[] {
       ).length
       const count = lit === 1 ? '1 bulb lit' : `${lit} bulbs lit`
       lines.push(
-        `You then completed a new circuit independently (${count}) and tested your prediction without AI coaching.`,
+        `You then completed a new circuit independently (${count}) and tested your prediction without coach prompts.`,
       )
     } else {
       lines.push(
@@ -152,113 +153,121 @@ export function evidenceCards(chapters: ChapterRecap[]): StoryNode[] {
   ]
 }
 
-function bulbMeasurements(input: TraceInput | null | undefined): {
-  id: string
-  current: number
-  power: number
-}[] {
-  const result = input?.result
-  if (input?.netlist == null || result?.ok !== true) {
-    return []
-  }
-  return input.netlist.components
-    .filter((component) => component.type === 'bulb')
-    .map((bulb) => ({
-      id: bulb.id,
-      current: result.components[bulb.id]?.current ?? 0,
-      power: result.components[bulb.id]?.power ?? 0,
-    }))
+function addedConnections(input: TraceInput | null | undefined, seedWireIds: Set<string>): string[] {
+  return (
+    input?.netlist?.components
+      .filter((component) => component.type === 'wire' && !seedWireIds.has(component.id))
+      .map((wire) => `${wire.a} ↔ ${wire.b}`) ?? []
+  )
 }
 
-function measuredBulbText(
-  bulbs: ReturnType<typeof bulbMeasurements>,
+function predictionText(input: TraceInput | null | undefined): string {
+  return input?.prediction === null || input?.prediction === undefined
+    ? 'No prediction recorded'
+    : `Predicted ${CHOICE_LABELS[input.prediction.choice]}`
+}
+
+/** Plain-language prediction clause, quoting the learner's own reason. */
+function youPredicted(
+  input: TraceInput | null | undefined,
+  subject: Record<'yes' | 'no' | 'not_sure', string>,
 ): string {
-  return bulbs
-    .map(
-      (bulb) =>
-        `${bulb.id}: ${formatReading(bulb.current)} A, ${formatReading(bulb.power)} W`,
-    )
-    .join('; ')
+  const prediction = input?.prediction
+  if (prediction === null || prediction === undefined) {
+    return 'You made no prediction'
+  }
+  const why = prediction.why.trim()
+  const short = why.length > 48 ? `${why.slice(0, 47)}…` : why
+  const reason = why === '' ? '' : ` (“${short}”)`
+  return `You predicted ${subject[prediction.choice]}${reason}`
 }
 
-/** Explain what each completed part of the journey demonstrated, using saved solver evidence. */
+function verdictPhrase(input: TraceInput | null | undefined): string {
+  switch (input?.verdict?.status) {
+    case 'CONSISTENT':
+      return 'your prediction matched'
+    case 'CONTRADICTED':
+      return 'your prediction was challenged'
+    default:
+      return ''
+  }
+}
+
+/** What the learner actually tried with the switch demonstration, if anything. */
+function demonstrationPhrase(input: TraceInput | null | undefined): string {
+  const phases = new Set(input?.demonstrations?.map((event) => event.phase) ?? [])
+  if (!phases.has('applied')) {
+    return ''
+  }
+  const target =
+    input?.netlist?.components.find((component) => component.type === 'switch')?.id ??
+    'the switch'
+  if (phases.has('observed') && phases.has('undone')) {
+    return ` You tried closing ${target}, watched the bulb light, then put the open switch back.`
+  }
+  if (phases.has('observed')) {
+    return ` You tried closing ${target} and watched the bulb light.`
+  }
+  return ` You tried closing ${target}.`
+}
+
+function bulbReadingText(input: TraceInput | null | undefined, bulbId: string): string {
+  const reading = input?.result?.components[bulbId]
+  return reading === undefined
+    ? `${bulbId}: no reading`
+    : `${bulbId} ${formatReading(reading.current)} A · ${formatReading(reading.power)} W`
+}
+
+/** Compact learner-specific recap, grounded in their prediction, wiring, and readings. */
 export function learningProgress(chapters: ChapterRecap[]): LearningMilestone[] {
   const [first, reality, solo] = chapters
   const firstInput = first?.input
-  const firstBulbs = bulbMeasurements(firstInput)
-  const firstLit = firstBulbs.some((bulb) => bulb.power > LIT_POWER_W)
-
   const realityInput = reality?.input
-  const realityBulbs = bulbMeasurements(realityInput)
   const openSwitch = realityInput?.netlist?.components.find(
     (component) => component.type === 'switch' && component.closed === false,
   )
-  const realityVerdict = realityInput?.verdict?.status
-  const verdictReflection =
-    realityVerdict === 'CONSISTENT'
-      ? ' Your prediction matched the measurement.'
-      : realityVerdict === 'CONTRADICTED'
-        ? ' The measurement challenged your prediction.'
-        : ''
-
   const soloInput = solo?.input
-  const soloBulbs = bulbMeasurements(soloInput)
-  const soloVerified =
-    soloInput?.verdict?.status === 'CONSISTENT' && soloInput.result?.ok === true
+  const firstConnections = addedConnections(
+    firstInput,
+    new Set(L1.seed.edges.map((edge) => edge.id)),
+  )
+  const soloConnections = addedConnections(
+    soloInput,
+    new Set(TRANSFER.seed.edges.map((edge) => edge.id)),
+  )
 
+  const firstVerdict = verdictPhrase(firstInput)
+  const realityVerdict = verdictPhrase(realityInput)
+  const soloVerdict = verdictPhrase(soloInput)
   return [
     {
-      title: 'Build a complete path',
-      evidence:
+      title: 'Complete the loop',
+      summary:
         firstInput?.result?.ok === true
-          ? `Your starting prediction was ${firstInput.prediction === null ? 'not recorded' : `“${CHOICE_LABELS[firstInput.prediction.choice]}”`}. After the repair, the simulator measured ${measuredBulbText(firstBulbs) || 'no bulb readings'}.`
+          ? `${youPredicted(firstInput, { yes: 'the open circuit would light the bulb', no: 'the open circuit would stay dark', not_sure: 'you were not sure about the open circuit' })}. You connected ${firstConnections.length > 0 ? 'the missing return wire' : 'the circuit'}; the simulator measured ${bulbReadingText(firstInput, 'L1')}${firstVerdict === '' ? '.' : `, and ${firstVerdict}.`}`
           : firstInput?.prediction !== null && firstInput?.prediction !== undefined
-            ? 'Your prediction was recorded; a completed-circuit measurement was not.'
-            : 'No completed-circuit measurement was recorded.',
-      learning:
-        firstInput?.result?.ok !== true
-          ? 'Complete and test the circuit to see what the measurements show.'
-          : firstBulbs.length === 0
-            ? 'The solver did not return a bulb reading to interpret.'
-          : firstLit
-            ? 'The repaired circuit carried current and lit the bulb in this run. This reading is for the repaired loop, not the original open gap.'
-            : 'The tested repaired circuit did not light a bulb. Use the readings to decide what to inspect next.',
+            ? `${predictionText(firstInput)}; circuit not tested yet.`
+            : 'Not reached yet.',
       complete: firstInput?.result?.ok === true,
     },
     {
-      title: 'Test the idea against reality',
-      evidence:
+      title: 'Test the open switch',
+      summary:
         realityInput?.result?.ok === true
-          ? `${openSwitch?.id ?? 'The open switch'} open: ${measuredBulbText(realityBulbs) || 'no bulb readings were returned'}.${verdictReflection}`
+          ? `${youPredicted(realityInput, { yes: 'the bulb would light with the switch open', no: 'the bulb would stay dark with the switch open', not_sure: 'you were not sure about the open switch' })}. ${openSwitch?.id ?? 'The switch'} stayed open and the simulator measured ${bulbReadingText(realityInput, 'L1')}${realityVerdict === '' ? '.' : `, so ${realityVerdict}.`}${demonstrationPhrase(realityInput)}`
           : realityInput?.prediction !== null && realityInput?.prediction !== undefined
-            ? 'Your reality-check prediction was recorded; its solver measurement is not available.'
-            : 'No reality-check measurement was recorded.',
-      learning:
-        realityInput?.result?.ok !== true
-          ? 'Run the wired circuit to compare your prediction with measured current and power.'
-          : realityBulbs.length === 0
-            ? 'The solver did not return a bulb reading to interpret.'
-            : realityBulbs.every((bulb) => bulb.current === 0)
-            ? openSwitch === undefined
-              ? 'The tested bulbs had zero current in this run. Inspect the wiring and switch state before drawing a conclusion.'
-              : `With ${openSwitch.id} open, the bulbs had zero current in this run. This circuit did not provide a complete conducting path.`
-            : 'The tested bulbs carried current in this run. Compare the switch state and wiring with your prediction.',
+            ? `${predictionText(realityInput)}; circuit not tested yet.`
+            : 'Not reached yet.',
       complete: realityInput?.result?.ok === true,
     },
     {
-      title: 'Transfer the idea independently',
-      evidence:
+      title: 'Wire the second bulb solo',
+      summary:
         soloInput?.result?.ok === true
-          ? `${measuredBulbText(soloBulbs) || 'The solver returned no bulb readings'}. Coach off.${soloVerified ? ' Prediction matched.' : ''}`
+          ? `${youPredicted(soloInput, { yes: 'both bulbs would light on your own', no: 'the second bulb would stay dark', not_sure: 'you were not sure about the second bulb' })}. You wired ${soloConnections.length > 0 ? 'the second bulb into the loop' : 'the solo circuit'} without a coach; the simulator measured ${bulbReadingText(soloInput, 'L2')}${soloVerdict === '' ? '.' : `, and ${soloVerdict}.`}`
           : soloInput?.prediction !== null && soloInput?.prediction !== undefined
-            ? 'Your solo prediction was recorded; an independent solver result is not available.'
-            : 'No independent solo result was recorded.',
-      learning:
-        soloInput?.result?.ok !== true
-          ? 'Build and test the new circuit with the coach off to show what you can transfer.'
-          : soloVerified
-            ? 'Your prediction matched this simulator run on a new circuit without coach prompts. That is evidence from this task, not a measure of overall mastery.'
-            : 'You tested a new circuit without coach prompts. Compare its readings with your prediction to decide what to try next.',
+            ? `${predictionText(soloInput)}; solo circuit not tested yet.`
+            : 'Not reached yet.',
       complete: soloInput?.result?.ok === true,
     },
   ]

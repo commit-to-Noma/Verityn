@@ -53,8 +53,8 @@ time to see the result.
 - [x] Coach failure card with retry; transport failures never retry silently.
 - [x] Closed-vocabulary demonstrations with preview, apply, undo, fresh solver
   run, measured visual change, and Evidence Trace entry.
-- [x] Optional voice playback and microphone Why input; typed input remains
-  reliable and primary.
+- [x] Optional Meta Muse Voice Transcribe microphone input and separate
+  coach-audio toggle; coach text and typed input remain available.
 - [x] Reality Lens two-panel review: original image beside an editable proposed
   circuit, reveal animation, and original/detected/model view modes.
 - [x] Component/connection provenance, polarity where known, and explicit
@@ -133,11 +133,17 @@ the proposal is reviewable; Discard returns to the prior state.
 
 ### Voice, Solo, and finale
 
-Listen is optional playback. Microphone input is editable before submission;
-permission denial, unsupported browser, silence, and recognition failure retain
-typed input. Solo shows `Coach off` and no coach controls. Finale shows
-Prediction, Simulator evidence, Independent transfer, and a factual Evidence
-Trace, never mastery or learning-gain claims.
+Listen is optional playback. Every prediction screen (L1, Reality Check, Solo)
+offers a microphone button beside the Why field: the transcript fills the Why
+text and a clear spoken answer pre-selects Yes/No/Not sure, but the learner
+still confirms with Continue. Interpretation is local keyword matching;
+transcription calls only `/api/voice/transcribe`, never the coach, so Solo
+stays coach-free. Permission denial, unsupported browser, silence, and
+recognition failure retain typed input. Solo shows `Coach off` and no coach
+controls. Finale shows Prediction, Simulator evidence, Independent transfer,
+a personalized learning path narrated from saved predictions, wiring, readings,
+and demonstrations, and a factual Evidence Trace, never mastery or
+learning-gain claims.
 
 Required modal/gate states: prediction commit, invalid circuit, coach
 unavailable/retry, demonstration preview/apply/undo, unsupported or
@@ -169,7 +175,7 @@ measured V/A/W against the safe limit.
 | Coach | Ask a bounded Socratic question or point to allowed evidence | Decide eligibility, rung, facts, fallback, and UI state |
 | Demonstration | Request an allowed action | Validate against stage/netlist, mutate state, rerun solver |
 | Vision | Propose component/connection evidence | Validate schema, topology, provenance, polarity, confirmation, handoff |
-| Voice | Transcribe or synthesize text | Keep transcript editable, handle permissions, never require voice |
+| Voice | Muse Voice Transcribe converts a learner-recorded WAV to text | Keep transcript editable; keep typing and visible coach text available; coach speech is a separate browser playback preference |
 | Solver | None | Compute current, voltage, power, validity, verdict, bulb conditions, and applied ratings |
 | Experiment explain | Explain measured facts, ask one question, suggest one safe test | Solve server-side first, reject numbers outside the facts, never auto-call |
 
@@ -350,10 +356,10 @@ Phase 4; the Undo keying stays).
   lens proposals read `Proposal by Meta Muse Spark · Verityn
   Solver measures only after you confirm`. Samples and fallback
   keep their honest labels.
-- [x] Voice is explicit and optional: a support-aware ready
-  line, an announced Listening state with a stop control,
-  editable transcripts, no autoplay, and a verified
-  type-only fallback when recognition is missing.
+- [x] Voice is explicit and optional: learner-started WAV recording (30 s
+  limit) transcribed by Meta Muse Voice Transcribe into editable text;
+  audio is not stored. Coach text always stays visible. A separate toggle
+  controls audible replies via browser speech synthesis.
 - [x] Gates before demo transitions stay result-first (manual
   mode never auto-advances); smoke covers result-with-gate,
   pause/resume, replay, takeover, and solo zero-coach.

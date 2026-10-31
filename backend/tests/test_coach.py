@@ -49,10 +49,15 @@ class CountingProvider:
 
     def __init__(self):
         self.calls = []
+        self.conversation_calls = []
 
     def r1_question(self, *, choice, why, facts=None):
         self.calls.append((choice, why))
         return fake_coach.route_template(choice, why)
+
+    def conversation_reply(self, message, context=""):
+        self.conversation_calls.append((message, context))
+        return "Thanks for explaining. What would you like to test next?"
 
 
 @pytest.fixture
@@ -90,6 +95,47 @@ def test_predict_mints_session_and_echoes(client):
     assert first["session_id"] != second["session_id"]
     assert first["challenge_id"] == TWIST
     assert first["choice"] == "yes"
+
+
+def test_conversation_endpoint_sends_bounded_message_to_coach(spy_client):
+    client, provider = spy_client
+    response = client.post("/api/coach/conversation",
+                           json={
+                               "message": "I think it will light.",
+                               "context": "Will it light?",
+                           })
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "reply": "Thanks for explaining. What would you like to test next?",
+        "provider": "spy",
+    }
+    assert provider.conversation_calls == [
+        ("I think it will light.", "Will it light?"),
+    ]
+
+
+@pytest.mark.parametrize("message", ["", "  ", 42, "x" * 501, None])
+def test_conversation_endpoint_rejects_invalid_message(client, message):
+    response = client.post("/api/coach/conversation", json={"message": message})
+    assert response.status_code == 400
+    assert response.get_json()["error_code"] == "MALFORMED_REQUEST"
+
+
+def test_conversation_endpoint_rejects_invalid_context(client):
+    response = client.post("/api/coach/conversation",
+                           json={"message": "Hello", "context": 42})
+    assert response.status_code == 400
+    assert response.get_json()["error_code"] == "MALFORMED_REQUEST"
+
+
+def test_conversation_endpoint_uses_fallback_when_provider_fails():
+    app = create_app(fake_coach.FakeCoachProvider(fail=True),
+                     fallback=fake_coach.FakeCoachProvider())
+    response = app.test_client().post(
+        "/api/coach/conversation", json={"message": "I think it will light."})
+    assert response.status_code == 200
+    assert response.get_json()["provider"] == "prototype-fake"
+    assert "Thanks for sharing" in response.get_json()["reply"]
 
 
 def test_predict_continues_session_and_binds_twist(client):

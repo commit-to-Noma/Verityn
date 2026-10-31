@@ -164,9 +164,9 @@ function StepBody({ body }: { body: TraceBody }) {
 export default function EvidenceTrace({ input }: { input: TraceInput }) {
   const steps = buildTrace(input)
   return (
-    <section aria-label="Evidence trace" aria-live="polite" className="flex flex-col gap-3">
-      <h3 className="text-lg font-semibold">Evidence trace</h3>
-      <ol className="flex flex-col gap-3">
+    <details aria-label="Evidence trace" className="group">
+      <summary className="cursor-pointer text-lg font-semibold">Evidence trace</summary>
+      <ol className="mt-3 flex flex-col gap-3">
         {steps.map((step, index) => (
           <li key={step.id} className="glass-panel flex gap-3 p-4">
             <span
@@ -182,6 +182,6 @@ export default function EvidenceTrace({ input }: { input: TraceInput }) {
           </li>
         ))}
       </ol>
-    </section>
+    </details>
   )
 }

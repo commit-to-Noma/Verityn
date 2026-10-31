@@ -16,13 +16,15 @@ describe('L1 lesson pack', () => {
   it('identifies the lesson and question', () => {
     expect(L1.id).toBe('L1')
     expect(L1.title).toBe('Light the bulb')
-    expect(L1.question).toBe('The circuit has an open gap. Will current flow and light the bulb?')
+    expect(L1.question).toBe(
+      'If you connect the two loose ends, what do you think will happen to the bulb?',
+    )
   })
 
   it('briefs the original setup and the repair task', () => {
     expect(L1.brief).toEqual({
-      setup: 'Original setup: open circuit → bulb stays dark.',
-      task: 'Your task: repair the circuit and test your prediction.',
+      setup: 'This circuit has a gap, so the bulb is off.',
+      task: 'Add one wire to close the loop, then watch the simulator test your prediction.',
     })
   })
 

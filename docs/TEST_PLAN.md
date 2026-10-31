@@ -68,11 +68,16 @@ the honest fallback for browser rehearsal.
    when solver current > 0 and frozen on edit (state tests);
    highlight IDs validated against solver evidence (unknown IDs
    dropped); reduced-motion path renders identical facts.
-4. **Voice, demonstrations & visual coaching.** Transcripts treated as plain
-   Why text through existing guards; permission/unsupported/silence failures
-   preserve typed input; demonstration actions validated against the live
-   canvas netlist; apply/undo reruns the solver; highlight IDs validated;
-   unknown IDs are dropped without guessing.
+4. **Voice, demonstrations & visual coaching.** Speech-finish events start
+   the microphone only in coached lab stages; silence ends a bounded turn;
+   transcription and conversational replies surface permission/service
+   failures; mute stops speech and listening; Solo and demo do not auto-listen.
+   Clear spoken prediction choices advance without requiring a second tap,
+   while ambiguous replies remain conversational and typed predictions stay
+   manual. Evidence traces start collapsed; Solo wiring is visually separated.
+   Demonstration actions are validated
+   against the live canvas netlist; apply/undo reruns the solver; highlight IDs
+   are validated; unknown IDs are dropped without guessing.
 
 ## 5. What we report (README results)
 
@@ -290,7 +295,7 @@ Phase 4 result acceptance (all in the real browser unless noted):
   model-as-authority label survives (source-audited and
   unit-tested).
 - Solo renders four beats (prediction, change, per-bulb
-  measurement, factual suggestion) with coach off and zero
+  measurement, factual suggestion) with no coach and zero
   `/api/coach/*` calls; the seed netlist and terminal IDs are
   unchanged and every node fits a fresh 390 px mount.
 - Finale order is evidence cards → factual narrative →
@@ -305,6 +310,21 @@ Phase 4 result acceptance (all in the real browser unless noted):
   with stop control, editable transcripts, replay-via-Listen,
   no autoplay; recognition stripped in-browser falls back to
   a disabled mic, type-only helper, and intact typing.
+- Why-field mic on all three prediction screens fills the
+  reason and pre-selects a clear spoken choice without
+  committing (`transcriptFill` unit tests); smoke asserts the
+  mic renders on L1 and Solo and that Solo still makes zero
+  coach calls. Finale learning path narrates the saved
+  prediction, wiring, readings, and any applied demonstration
+  per chapter (`story` unit tests + smoke `learning path
+  personal`). Lesson build copy names the manual Test action;
+  no learner-facing text claims automatic testing. Coach
+  conversation is tap-to-talk (`Reply by voice`, no
+  auto-listen, echo transcript rejected) with identical
+  repeats skipped in `speakCoach`; smoke asserts the Reply
+  control and no auto-listen. Reality Check shows a stuck
+  notice naming a closed switch (`closedSwitchNotice` unit
+  tests + smoke excursion).
 - Chapter gates keep results visible before any transition;
   manual mode never auto-advances; smoke still covers
   result-with-gate, pause/resume, replay, takeover, and both

@@ -62,10 +62,12 @@ plan.
   Reality Lens, Meta Muse Spark, Verityn Solver). The existing
   side-arrow, keyboard, screen-reader, reduced-motion, and
   no-auto-rotation interactions are preserved.
-- Voice (optional, never required): browser speech synthesis
-  reads coach messages with captions and replay; microphone
-  dictation fills the Why field as editable text with honest
-  unsupported/denied states.
+- Voice (optional, never required): tap-to-talk coach replies and a
+  microphone in every Why box. Meta Muse Voice Transcribe turns each
+  recording into editable text; a clear spoken answer pre-selects the
+  matching choice but never submits. Spoken coach playback is browser
+  speech synthesis (Meta Muse Voice Transcribe is not text-to-speech).
+  Typing and manual lab controls remain available.
 - Deterministic MNA solver (`src/verityn/solver.py`): battery,
   resistor, bulb (fixed 10 Ω), switch, and wire circuits;
   rejected circuits return an error code plus offender ids,
@@ -74,6 +76,7 @@ plan.
   CONTRADICTED, or UNASSESSABLE with model-derived evidence.
 - Flask API: `POST /api/simulate`, `POST /api/evaluate`,
   `POST /api/coach/predict`, `POST /api/coach/ask`,
+  `POST /api/coach/conversation`, `POST /api/voice/transcribe`,
   `POST /api/coach/explain`, `POST /api/vision/propose`.
   Judged outcomes return HTTP 200; malformed requests return
   HTTP 400 `MALFORMED_REQUEST`; errors are JSON, never

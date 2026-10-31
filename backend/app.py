@@ -1,11 +1,9 @@
 """Verityn backend.
 
-Milestones 1-8: health, circuit simulation, prediction evaluation,
-and prototype coaching. Deterministic Flask layer over src/verityn/:
-prototype coach only, no network calls, in-memory sessions only.
-Judged outcomes always return HTTP 200; only malformed
-requests return HTTP 400, and unknown routes or methods return JSON
-errors. Stack traces never leave the server.
+Deterministic Flask layer over src/verityn/: solver and evaluator
+outcomes remain local; coach, vision, and voice providers are configured
+separately. Voice audio is forwarded to Meta only after a learner starts
+a microphone recording. Stack traces never leave the server.
 """
 
 import os
@@ -17,9 +15,11 @@ from werkzeug.exceptions import BadRequest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from verityn import coach, evaluator, fake_coach, meta_coach, solver, vision  # noqa: E402
+from verityn import coach, evaluator, fake_coach, meta_coach, meta_voice, solver, vision  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
+MAX_VOICE_BYTES = 32 * 1024 * 1024
+MAX_COACH_MESSAGE_CHARS = 500
 
 
 def _result_to_dict(result):
@@ -63,7 +63,8 @@ def _malformed_request(message):
     }), 400
 
 
-def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
+def create_app(provider=None, fallback=None, vision_provider=None,
+               voice_provider=None) -> Flask:
     app = Flask(__name__)
 
     def _quiet_log_exception(exc_info):
@@ -76,6 +77,7 @@ def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
     active_provider = provider or fake_coach.FakeCoachProvider()
     active_fallback = fallback
     active_vision = vision_provider
+    active_voice = voice_provider
 
     @app.get("/api/health")
     def health():
@@ -144,6 +146,46 @@ def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
             store, session_id, netlist, active_provider,
             fallback=active_fallback, rung=rung))
 
+    @app.post("/api/coach/conversation")
+    def coach_conversation():
+        body = _read_json_object()
+        if body is None:
+            return _malformed_request("Request body must be a JSON object.")
+        message = body.get("message")
+        if (not isinstance(message, str) or not message.strip()
+                or len(message) > MAX_COACH_MESSAGE_CHARS):
+            return _malformed_request(
+                f"Message must contain 1 to {MAX_COACH_MESSAGE_CHARS} characters.")
+        context = body.get("context", "")
+        if not isinstance(context, str) or len(context) > MAX_COACH_MESSAGE_CHARS:
+            return _malformed_request(
+                f"Context must contain at most {MAX_COACH_MESSAGE_CHARS} characters.")
+        try:
+            reply = active_provider.conversation_reply(message.strip(), context)
+            reply_provider = active_provider.name
+        except coach.CoachProviderError as err:
+            if active_fallback is None:
+                app.logger.warning(
+                    "coach conversation failed: stage=%s http_status=%s "
+                    "shape=%s reason=%s",
+                    err.stage, err.http_status, err.shape, err.reason)
+                return jsonify({
+                    "error_code": "COACH_UNAVAILABLE",
+                    "error_message": "The coach could not respond. Please try again.",
+                }), 502
+            try:
+                reply = active_fallback.conversation_reply(message.strip(), context)
+                reply_provider = active_fallback.name
+            except coach.CoachProviderError as fallback_error:
+                app.logger.warning(
+                    "coach conversation fallback failed: stage=%s",
+                    fallback_error.stage)
+                return jsonify({
+                    "error_code": "COACH_UNAVAILABLE",
+                    "error_message": "The coach could not respond. Please try again.",
+                }), 502
+        return jsonify({"reply": reply, "provider": reply_provider})
+
     @app.post("/api/coach/explain")
     def coach_explain():
         body = _read_json_object()
@@ -180,6 +222,44 @@ def create_app(provider=None, fallback=None, vision_provider=None) -> Flask:
                         "assumptions": vision.ASSUMPTIONS,
                         "provider": active_vision.name})
 
+    @app.post("/api/voice/transcribe")
+    def voice_transcribe():
+        if active_voice is None:
+            return jsonify({
+                "error_code": "VOICE_UNAVAILABLE",
+                "error_message": "Muse Voice Transcribe is not configured.",
+            }), 503
+        audio_file = request.files.get("audio")
+        if audio_file is None:
+            return jsonify({
+                "error_code": MALFORMED_REQUEST,
+                "error_message": "Upload a WAV recording in the audio field.",
+            }), 400
+        if request.content_length is not None and request.content_length > MAX_VOICE_BYTES:
+            return jsonify({
+                "error_code": "VOICE_TOO_LARGE",
+                "error_message": "The recording is too large to transcribe.",
+            }), 413
+        audio = audio_file.read(MAX_VOICE_BYTES + 1)
+        if len(audio) > MAX_VOICE_BYTES:
+            return jsonify({
+                "error_code": "VOICE_TOO_LARGE",
+                "error_message": "The recording is too large to transcribe.",
+            }), 413
+        if not audio.startswith(b"RIFF") or audio[8:12] != b"WAVE":
+            return jsonify({
+                "error_code": MALFORMED_REQUEST,
+                "error_message": "The recording must be a WAV audio file.",
+            }), 400
+        try:
+            transcript = active_voice.transcribe(audio)
+        except meta_voice.VoiceTranscriptionError as err:
+            return jsonify({
+                "error_code": "VOICE_TRANSCRIPTION_FAILED",
+                "error_message": str(err),
+            }), 502
+        return jsonify({"transcript": transcript})
+
     @app.errorhandler(404)
     def not_found(_error):
         return jsonify({"error_code": "NOT_FOUND",
@@ -211,6 +291,8 @@ if __name__ == "__main__":
                 api_key=os.environ["MODEL_API_KEY"]),
             fallback=fake_coach.FakeCoachProvider(),
             vision_provider=vision.MetaVisionProvider(
+                api_key=os.environ["MODEL_API_KEY"]),
+            voice_provider=meta_voice.MetaVoiceTranscriber(
                 api_key=os.environ["MODEL_API_KEY"]),
         )
     # Debug mode stays off: the interactive debugger must never run.

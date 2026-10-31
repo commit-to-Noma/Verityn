@@ -21,6 +21,7 @@ import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } fro
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import { toNetlist } from '../canvas/toNetlist'
 import { openTerminals } from '../canvas/openTerminals'
+import { closedSwitchNotice, nextTerminalInstruction } from '../canvas/terminalGuidance'
 import type { CoachServerAction } from '../api/client'
 import type { Demonstration } from '../coach/actions'
 import {
@@ -36,6 +37,8 @@ import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
 import SpeakButton from '../voice/SpeakButton'
+import { speakCoach } from '../voice/coachVoice'
+import CoachVoiceToggle from './CoachVoiceToggle'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
@@ -80,6 +83,8 @@ function reducedMotion(): boolean {
 function formatLatency(ms: number): string {
   return ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`
 }
+
+/** Stuck-helper copy lives in terminalGuidance so unit tests cover it. */
 
 function isValidWire(edge: Edge | Connection): boolean {
   if (!edge.source || !edge.target || !edge.sourceHandle || !edge.targetHandle) {
@@ -218,9 +223,11 @@ function CoachAsk({
   onDemonstrate,
   autoDemonstrate,
   autoAsk = false,
+  autoInitialHint = false,
   demoSignal = 0,
   demoAppliedBefore = false,
   contradicted,
+  coachVoiceEnabled,
   ladderMemory,
   onLadderChange,
 }: {
@@ -239,6 +246,8 @@ function CoachAsk({
   autoDemonstrate?: boolean
   /** Guided demo: ask each rung after a readable beat, through the real endpoint. */
   autoAsk?: boolean
+  /** Automatically offer the first coach hint after a contradicted prediction. */
+  autoInitialHint?: boolean
   /** Guided demo: a change hurries the pending ask or demonstration apply. */
   demoSignal?: number
   /** A demonstration already ran on this canvas: never auto-apply twice,
@@ -246,6 +255,7 @@ function CoachAsk({
   demoAppliedBefore?: boolean
   /** False hides the ladder without unmounting, so served rungs survive verdict flips. */
   contradicted: boolean
+  coachVoiceEnabled: boolean
   /** Canvas-owned memory that rehydrates the ladder after a verdict-subtree remount. */
   ladderMemory: { current: LadderMemory }
   /** Writes ladder progress back to canvas memory; the child never mutates the prop. */
@@ -362,6 +372,9 @@ function CoachAsk({
             reply: null,
             actions: answer.actions,
           }
+          if (coachVoiceEnabled) {
+            speakCoach(answer.text)
+          }
           onActionsRef.current?.(answer.actions)
           const cards = [...rungsRef.current.filter((entry) => entry.rung !== served), card].sort(
             (a, b) => (RUNG_ORDER[a.rung] ?? 99) - (RUNG_ORDER[b.rung] ?? 99),
@@ -451,13 +464,31 @@ function CoachAsk({
     demoSignal,
   ])
 
+  useEffect(() => {
+    if (
+      !autoInitialHint ||
+      autoAsk ||
+      !contradicted ||
+      netlist === null ||
+      session === null ||
+      rungs.length > 0 ||
+      status.phase !== 'idle'
+    ) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      askRef.current?.('R1')
+    }, 900)
+    return () => window.clearTimeout(timer)
+  }, [autoInitialHint, autoAsk, contradicted, netlist, session, rungs.length, status.phase])
+
   if (!contradicted) {
     return null
   }
 
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
-      {rungs.map((card) => {
+      {rungs.map((card, index) => {
         const caption = rungCaption(card.provider)
         const draft = drafts[card.rung] ?? ''
         const reflective = card.rung === 'R1' || card.rung === 'R4'
@@ -474,7 +505,7 @@ function CoachAsk({
             <p className="text-base">{card.text}</p>
             {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
             <div>
-              <SpeakButton text={card.text} />
+              {index === rungs.length - 1 && <SpeakButton enabled={coachVoiceEnabled} />}
             </div>
             {card.rung === 'R2' &&
               demonstration !== null &&
@@ -619,7 +650,7 @@ function CoachAsk({
       )}
       {nextRung === null && status.phase === 'idle' && (
         <p className="text-ink-muted text-xs">
-          Ladder complete  -  the solo stage runs with the coach off.
+          Ladder complete  -  Solo has no coach; your reasoning leads here.
         </p>
       )}
     </div>
@@ -782,12 +813,14 @@ function ClaimVerdict({
   onRetry,
   onCoached,
   onCoachInteract,
-  coachEnabled,
+  coachAvailable,
+  coachVoiceEnabled,
   demonstration,
   onDemonstrate,
   onActions,
   autoDemonstrate,
   autoAsk,
+  autoInitialHint,
   demoSignal,
   demoAppliedBefore,
   renderDone,
@@ -802,12 +835,14 @@ function ClaimVerdict({
   onRetry: () => void
   onCoached?: (outcome: CoachTraceOutcome) => void
   onCoachInteract?: () => void
-  coachEnabled: boolean
+  coachAvailable: boolean
+  coachVoiceEnabled: boolean
   demonstration?: Demonstration | null
   onDemonstrate?: (demo: Demonstration) => void
   onActions?: (actions: CoachServerAction[]) => void
   autoDemonstrate?: boolean
   autoAsk?: boolean
+  autoInitialHint?: boolean
   demoSignal?: number
   demoAppliedBefore?: boolean
   /** Solo mode renders the four-beat result instead of the plain verdict card. */
@@ -856,7 +891,7 @@ function ClaimVerdict({
           </button>
         </div>
       )}
-      {coachEnabled && (
+      {coachAvailable && (
         <CoachAsk
           session={session}
           netlist={state.phase === 'done' ? state.netlist : null}
@@ -867,9 +902,11 @@ function ClaimVerdict({
           onDemonstrate={onDemonstrate}
           autoDemonstrate={autoDemonstrate}
           autoAsk={autoAsk}
+          autoInitialHint={autoInitialHint}
           demoSignal={demoSignal}
           demoAppliedBefore={demoAppliedBefore}
           contradicted={contradicted}
+          coachVoiceEnabled={coachVoiceEnabled}
           ladderMemory={ladderMemory}
           onLadderChange={onLadderChange}
         />
@@ -898,6 +935,10 @@ function CanvasInner({
   choice,
   claim,
   coachSession,
+  coachVoiceEnabled = false,
+  onCoachVoiceEnabledChange,
+  autoStruggleHint = false,
+  expectSwitchOpen = false,
   onSolved,
   onDirty,
   onVerdict,
@@ -922,6 +963,7 @@ function CanvasInner({
   onPeerSelect,
   autoDemonstrate = false,
   autoAsk = false,
+  autoInitialHint = false,
   demoSignal = 0,
   demoBuild = null,
   demoPaused = false,
@@ -934,6 +976,10 @@ function CanvasInner({
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
+  coachVoiceEnabled?: boolean
+  onCoachVoiceEnabledChange?: (enabled: boolean) => void
+  autoStruggleHint?: boolean
+  expectSwitchOpen?: boolean
   onSolved?: (result: SimulateResult, netlist: Netlist) => void
   /** Locks Test + auto-run until review confirms; the string is the reason. */
   simulateLocked?: string | null
@@ -945,6 +991,7 @@ function CanvasInner({
   autoDemonstrate?: boolean
   /** Guided demo: ask each ladder rung after a beat, through the real endpoint. */
   autoAsk?: boolean
+  autoInitialHint?: boolean
   /** Guided demo: a change hurries the pending build, ask, or undo. */
   demoSignal?: number
   /** Guided demo: scripted repair wires, applied through the normal path. */
@@ -1042,6 +1089,7 @@ function CanvasInner({
   /** True while the demo or a consented demonstration mutates the canvas;
    * only a real manual edit takes the demo over. */
   const programmatic = useRef(false)
+  const struggleHintGiven = useRef(false)
   const noteManualEdit = () => {
     if (!programmatic.current) {
       onDemoTakeoverRef.current?.()
@@ -1049,6 +1097,26 @@ function CanvasInner({
   }
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  useEffect(() => {
+    if (
+      !autoStruggleHint ||
+      solo ||
+      !coachVoiceEnabled ||
+      runState.phase !== 'idle' ||
+      demoBuild !== null ||
+      struggleHintGiven.current
+    ) {
+      return
+    }
+    const timer = window.setTimeout(() => {
+      struggleHintGiven.current = true
+      speakCoach(
+        'Need a hint? Follow the open glowing dots: connect the battery back through the bulb to make a complete loop.',
+      )
+    }, 15_000)
+    return () => window.clearTimeout(timer)
+  }, [autoStruggleHint, solo, coachVoiceEnabled, runState.phase, demoBuild, edges, nodes])
 
   const invalidate = () => {
     controller.current?.abort()
@@ -1350,12 +1418,13 @@ function CanvasInner({
         ? 'Start by placing a battery on the canvas.'
         : !nodes.some((node) => node.data.kind === 'bulb')
           ? 'Add a bulb, then connect its terminals into the circuit.'
-          : unwiredTerminals.length === 2
-            ? `Next, connect ${unwiredTerminals[0]} to ${unwiredTerminals[1]}.`
-            : unwiredTerminals.length > 0
-              ? `Open terminals: ${unwiredTerminals.join(', ')}. Connect the appropriate terminals to complete the path.`
+          : unwiredTerminals.length > 0
+            ? nextTerminalInstruction(
+                unwiredTerminals,
+                nodes.map((node) => ({ id: node.id, kind: node.data.kind })),
+              )
               : loopClosed
-                ? 'All parts are connected. Test the circuit to see what the simulator measures.'
+                ? 'All parts are connected. The lab will test the circuit automatically.'
                 : 'All terminals have wires, but the parts are not in one complete path. Check for disconnected components.'
 
   /** Preset Test: a runRequest change runs once through the normal path.
@@ -1953,6 +2022,21 @@ function CanvasInner({
           <ResultBanner result={runState.result} netlist={runState.netlist} />
         </div>
       )}
+      {(() => {
+        const notice = closedSwitchNotice(
+          nodes
+            .filter((node) => node.data.kind === 'switch')
+            .map((node) => ({ id: node.id, closed: node.data.closed ?? true })),
+          expectSwitchOpen,
+          runState.phase === 'done',
+          demoUndo !== null,
+        )
+        return notice === null ? null : (
+          <p className="rounded-[10px] border border-unsure/50 px-3 py-2 text-sm" role="note">
+            {notice}
+          </p>
+        )
+      })()}
     </>
   )
   const insightPane = (
@@ -1973,12 +2057,14 @@ function CanvasInner({
             onRetry={run}
             onCoached={handleCoached}
             onCoachInteract={onCoachInteract}
-            coachEnabled={!solo}
+            coachAvailable={!solo}
+            coachVoiceEnabled={coachVoiceEnabled}
             demonstration={demonstration}
             onDemonstrate={handleDemonstrate}
             onActions={setServerActions}
             autoDemonstrate={autoDemonstrate}
             autoAsk={autoAsk}
+            autoInitialHint={autoInitialHint}
             demoSignal={demoSignal}
             demoAppliedBefore={demoEvents.some((event) => event.phase === 'applied')}
             renderDone={
@@ -2062,9 +2148,17 @@ function CanvasInner({
             {title}
           </h2>
         </div>
-        <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-          {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {!solo && onCoachVoiceEnabledChange !== undefined && (
+            <CoachVoiceToggle
+              enabled={coachVoiceEnabled}
+              onChange={onCoachVoiceEnabledChange}
+            />
+          )}
+          <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
+            {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+          </span>
+        </div>
       </div>
       {layout === 'split' ? (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
@@ -2089,6 +2183,8 @@ export default function CircuitCanvas({
   choice,
   claim,
   coachSession,
+  coachVoiceEnabled,
+  onCoachVoiceEnabledChange,
   onSolved,
   onDirty,
   onVerdict,
@@ -2113,6 +2209,9 @@ export default function CircuitCanvas({
   onPeerSelect,
   autoDemonstrate,
   autoAsk,
+  autoInitialHint,
+  autoStruggleHint,
+  expectSwitchOpen,
   demoSignal,
   demoBuild,
   demoPaused,
@@ -2125,6 +2224,10 @@ export default function CircuitCanvas({
   choice?: Choice
   claim?: { type: string; component: string }
   coachSession?: string | null
+  coachVoiceEnabled?: boolean
+  onCoachVoiceEnabledChange?: (enabled: boolean) => void
+  autoStruggleHint?: boolean
+  expectSwitchOpen?: boolean
   onSolved?: (result: SimulateResult, netlist: Netlist) => void
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
@@ -2149,6 +2252,7 @@ export default function CircuitCanvas({
   onPeerSelect?: (id: string | null) => void
   autoDemonstrate?: boolean
   autoAsk?: boolean
+  autoInitialHint?: boolean
   demoSignal?: number
   demoBuild?: CanvasDemoBuild | null
   demoPaused?: boolean
@@ -2164,6 +2268,10 @@ export default function CircuitCanvas({
         choice={choice}
         claim={claim}
         coachSession={coachSession}
+        coachVoiceEnabled={coachVoiceEnabled}
+        onCoachVoiceEnabledChange={onCoachVoiceEnabledChange}
+        autoStruggleHint={autoStruggleHint}
+        expectSwitchOpen={expectSwitchOpen}
         onSolved={onSolved}
         onDirty={onDirty}
         onVerdict={onVerdict}
@@ -2188,6 +2296,7 @@ export default function CircuitCanvas({
         onPeerSelect={onPeerSelect}
         autoDemonstrate={autoDemonstrate}
         autoAsk={autoAsk}
+        autoInitialHint={autoInitialHint}
         demoSignal={demoSignal}
         demoBuild={demoBuild}
         demoPaused={demoPaused}

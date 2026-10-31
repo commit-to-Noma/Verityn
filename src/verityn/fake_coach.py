@@ -205,3 +205,16 @@ class FakeCoachProvider:
                                   error_code=error_code, switches=switches,
                                   bulbs=bulbs, conditions=conditions,
                                   batteries=batteries)
+
+    def conversation_reply(self, message, context=""):
+        if self.fail:
+            raise CoachProviderError("Fake provider forced failure.",
+                                     stage="transport")
+        if "first question" in context.lower():
+            return ("Thanks for sharing. Choose the prediction button that "
+                    "matches what you said so we can test it in the simulator.")
+        if any(word in message.lower() for word in ("help", "stuck", "confused")):
+            return ("No worries. Look for the glowing open terminals and build "
+                    "one complete loop.")
+        return ("Thanks for sharing your thinking. What do you expect the "
+                "circuit to do when you test it?")

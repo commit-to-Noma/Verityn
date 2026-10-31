@@ -86,20 +86,38 @@ prediction-correctness-based, so a wrong guess never deadlocks.
 | Job | Model | Guardrails |
 |---|---|---|
 | Draft one R1 guiding question | Spark 1.3, `response_format` JSON Schema | Closed id enum, question-form, leak list, facts-only numbers; reject → template |
+| Reply to a learner's spoken Guided Lab turn | Spark 1.3, `response_format` JSON Schema | Bounded learner text; concise circuit-learning coach prompt; validated short reply; fixed fallback |
 | (P2) Read a schematic/photo into a candidate netlist | Spark Vision | JSON preview; learner must review and confirm; solver only ever sees confirmed netlists |
-| (P4) Transcribe voice explanations | Voice Transcribe | Transcript is input text only; never a verdict |
+| Transcribe learner speech | Meta Muse Voice Transcribe 1.0 via `POST /api/voice/transcribe` | Browser captures a short turn and stops after silence; backend forwards WAV; transcript is input text, never a verdict |
 
-Not used: open chat, emotion detection, growth scoring, second-opinion
-models, decorative image generation.
+Not used: unbounded open chat, emotion detection, growth scoring,
+second-opinion models, decorative image generation.
 
 ## 5. Failure behaviour
 
 1. All models up: full experience with Meta-drafted questions.
 2. Spark down, slow, or credits gone: template fallback serves; solver,
    evaluator, gates, and transfer unaffected.
-3. All AI off: the whole loop still completes, including solo transfer.
+3. Model providers unavailable: the whole loop still completes, including solo transfer.
 4. Backend down: the UI shows transport errors with retry; nothing is
    faked locally.
+
+Guided Lab conversation is tap-to-talk: the learner presses Reply by voice,
+speaks one turn, and the turn submits after 1.8 seconds of silence; each turn
+is capped at 20 seconds and the microphone never auto-starts. The Why box on
+every prediction screen has its own mic: the transcript fills the reason and a
+clear spoken Yes / No / Not sure pre-selects the matching choice, but the
+learner still confirms with Continue. Ambiguous replies remain conversational,
+while typed answers and choice buttons remain available.
+The backend sends WAV audio to Meta's documented
+[`/v1/asr/transcribe` endpoint](https://dev.meta.ai/docs/api-reference/voice/transcribe)
+using the server-only `MODEL_API_KEY`; it
+does not persist audio. Typing remains available if transcription or
+microphone access fails. Coach text is always visible. Speech playback uses
+an available browser/system voice, not Meta-generated audio; a browser voice
+with natural/enhanced quality is preferred when installed. Voice features
+require microphone permission and stay off unless the coach voice toggle enables
+them; Solo offers transcription only and makes zero coach calls.
 
 Diagnostics are sanitized by design: logs carry stage codes, HTTP
 statuses, and structural shape metadata only  -  never keys, prompts,
@@ -118,8 +136,10 @@ response bodies, or model text.
    (P = I²R); wire current animation gated on solver current > 0,
    frozen on open switches; highlights restricted to validated solver
    IDs. Presentation only  -  no new-truth claims.
-4. **Voice & visual coaching.** Transcribed Why input; coach highlights
-   validated against the canvas netlist. Optional; typed input stays.
+4. **Voice & visual coaching.** Spoken turns become text via Muse
+   Transcribe; concise coach replies use Spark and remain visible.
+   Coach highlights are validated against the canvas netlist. Optional;
+   typed input stays.
 
 Infrastructure: Meta Model API stays primary. Open-weight hosting
 (Baseten/Modal) is deferred until the browser demo is rock-solid.

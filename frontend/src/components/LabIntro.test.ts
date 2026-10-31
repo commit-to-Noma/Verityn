@@ -41,16 +41,15 @@ describe('homepage copy', () => {
       'solver',
     ])
     expect(HOMEPAGE_ENTRIES).toEqual({
-      demo: 'Watch the guided walkthrough',
+      demo: 'Watch a walkthrough',
       startLab: 'Start your own lab',
       laboratory: 'Explore the laboratory',
-      tools: 'Explore the five tools',
       realityLens: 'Open Reality Lens',
     })
   })
 
   it('offers a clear, real guided demo from the homepage', () => {
-    expect(HOMEPAGE_ENTRIES.demo).toBe('Watch the guided walkthrough')
+    expect(HOMEPAGE_ENTRIES.demo).toBe('Watch a walkthrough')
     expect(HOMEPAGE_ENTRIES.startLab).toBe('Start your own lab')
   })
 })

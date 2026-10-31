@@ -1,7 +1,6 @@
 import { CircleCheckBig } from 'lucide-react'
 
-/** Chapter gate: the learner pauses on the evidence, then continues.
- * Demo mode adds an auto-advance timer; the button always works. */
+/** Chapter gate: evidence stays visible and the learner can always continue. */
 export default function ChapterComplete({
   title,
   detail,
@@ -16,7 +15,11 @@ export default function ChapterComplete({
   onContinue: () => void
 }) {
   return (
-    <div className="glass-panel evidence-reveal flex flex-col gap-3 p-4" aria-live="polite">
+    <div
+      className="glass-panel evidence-reveal flex flex-col gap-3 p-4"
+      aria-label="Chapter complete"
+      aria-live="polite"
+    >
       <div className="flex items-center gap-3">
         <CircleCheckBig className="h-6 w-6 shrink-0 text-ok" aria-hidden="true" />
         <div>
@@ -34,8 +37,8 @@ export default function ChapterComplete({
         </button>
         {auto && (
           <p className="auto-note text-sm text-ink-muted">
-            <span aria-hidden="true">Auto-continuing…</span>
-            <span className="sr-only">Automatic demo advance is on.</span>
+            <span aria-hidden="true">Moving on shortly…</span>
+            <span className="sr-only">The next lab step will open shortly.</span>
           </p>
         )}
       </div>

@@ -53,6 +53,42 @@ def test_verified_model_constants():
     assert meta_coach.MetaSparkProvider.name == "meta-spark"
 
 
+def test_conversation_reply_uses_structured_meta_response(monkeypatch, provider):
+    seen = {}
+
+    def reply(url, payload, headers, timeout):
+        seen.update(url=url, payload=payload, headers=headers, timeout=timeout)
+        return 200, chat_response({"reply": "Good thinking. What could you test?"})
+
+    monkeypatch.setattr(meta_coach, "_post_json", reply)
+    assert provider.conversation_reply(
+        "I think the bulb will light.",
+        "First question: will the bulb light?",
+    ) == (
+        "Good thinking. What could you test?")
+    assert seen["url"] == f"{meta_coach.META_API_BASE}/chat/completions"
+    assert seen["payload"]["messages"][1]["content"] == (
+        "Previous coach turn, for context only:\n"
+        "First question: will the bulb light?\n\n"
+        "Learner's latest words:\n"
+        "I think the bulb will light.")
+    assert seen["payload"]["response_format"]["json_schema"]["name"] == (
+        "coach_conversation")
+    assert seen["headers"]["Authorization"] == "Bearer test-key-1"
+
+
+@pytest.mark.parametrize("output", [
+    None,
+    {},
+    {"reply": ""},
+    {"reply": "x" * 401},
+    {"reply": "The result is 6 volts."},
+])
+def test_invalid_conversation_reply_is_rejected(output):
+    with pytest.raises(coach.CoachProviderError):
+        meta_coach.validate_conversation_output(output)
+
+
 @pytest.mark.parametrize("api_key", ["", None])
 def test_missing_key_fails_fast(api_key):
     with pytest.raises(ValueError):

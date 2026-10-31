@@ -1,10 +1,10 @@
 {
   "id": "L1",
   "title": "Light the bulb",
-  "question": "The circuit has an open gap. Will current flow and light the bulb?",
+  "question": "If you connect the two loose ends, what do you think will happen to the bulb?",
   "brief": {
-    "setup": "Original setup: open circuit → bulb stays dark.",
-    "task": "Your task: repair the circuit and test your prediction."
+    "setup": "This circuit has a gap, so the bulb is off.",
+    "task": "Add one wire to close the loop, then watch the simulator test your prediction."
   },
   "start": {
     "components": [

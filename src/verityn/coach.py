@@ -121,10 +121,9 @@ def find_leak(text):
 
 
 class CoachProvider(Protocol):
-    """Narrow provider contract: one rung, one question.
+    """Narrow provider contract for lesson and bounded conversational coaching.
 
-    M8 ships the fake implementation; M9a adds the real one behind the
-    same contract. The eligibility logic below does not change.
+    Eligibility remains deterministic even when a model drafts the words.
     """
 
     name: str
@@ -150,6 +149,10 @@ class CoachProvider(Protocol):
         conditions maps bulb ids to assessed conditions and batteries
         maps battery ids to volts; both come from the server solve.
         """
+        ...
+
+    def conversation_reply(self, message: str, context: str = "") -> str:
+        """Return a short response to one learner turn in the Guided Lab."""
         ...
 
 

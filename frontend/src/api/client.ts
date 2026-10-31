@@ -451,6 +451,28 @@ export async function askCoach(
   )
 }
 
+export interface CoachConversationResult {
+  reply: string
+  provider: string
+}
+
+/** POST /api/coach/conversation with a bounded learner utterance. */
+export async function converseWithCoach(
+  message: string,
+  context = '',
+  signal?: AbortSignal,
+): Promise<CoachConversationResult> {
+  const body = await postJson('/api/coach/conversation', { message, context }, signal)
+  if (
+    !isRecord(body) ||
+    typeof body.reply !== 'string' ||
+    typeof body.provider !== 'string'
+  ) {
+    throw new ApiError('payload', 'Unexpected response from the coach.')
+  }
+  return { reply: body.reply, provider: body.provider }
+}
+
 function guardCoachExplainResult(body: unknown): CoachExplainResult {
   if (
     !isRecord(body) ||

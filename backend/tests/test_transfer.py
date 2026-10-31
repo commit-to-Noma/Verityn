@@ -1,7 +1,7 @@
 """Transfer tests: the solo second-bulb challenge against the real solver.
 
 The transfer is a new parallel-branch task, not a relabelled Twist: the
-learner predicts about L2, wires it across L1 with no AI coach, and the
+learner predicts about L2, wires it across L1 with no coach, and the
 evaluator judges the built circuit. The pack's start rejection, fixed
 numbers, canvas shape, and verdicts are all proven here, and the coach
 API demonstrably has no room for the transfer challenge id.

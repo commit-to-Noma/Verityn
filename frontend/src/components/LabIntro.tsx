@@ -14,7 +14,7 @@ const LAB_LOOP = [
   { step: 'Make a claim', doing: 'Predict what will happen before any help unlocks.' },
   { step: 'Build or bring a model', doing: 'Wire a circuit on the canvas or confirm a Reality Lens proposal.' },
   { step: 'Test with the simulator', doing: 'Current, power, and validity are measured, not guessed.' },
-  { step: 'Explain the evidence', doing: 'Answer the coach, then prove it solo with AI off.' },
+  { step: 'Explain the evidence', doing: 'Answer the coach, then prove it independently in Solo.' },
 ] as const
 
 const IMPACT_CASES = [
@@ -131,11 +131,7 @@ function FieldIcon({ field }: { field: STEMFieldId }) {
   )
 }
 
-function STEMOrbit({
-  onEnterEngineering,
-}: {
-  onEnterEngineering: () => void
-}) {
+function STEMOrbit() {
   const [selectedId, setSelectedId] = useState<STEMFieldId>('engineering')
   const selected = STEM_FIELDS.find((field) => field.id === selectedId) ?? STEM_FIELDS[2]
   const [rotation, setRotation] = useState(0)
@@ -394,15 +390,6 @@ function STEMOrbit({
           </div>
           <p className="mt-1 max-w-sm text-xs text-ink-muted">{selected.description}</p>
         </div>
-        {selected.status === 'live' && (
-          <button
-            type="button"
-            onClick={onEnterEngineering}
-            className="bg-flow text-on-accent min-h-[44px] shrink-0 rounded-[10px] px-4 text-sm font-semibold"
-          >
-            {HOMEPAGE_ENTRIES.startLab} <span aria-hidden="true">→</span>
-          </button>
-        )}
       </div>
     </section>
   )
@@ -454,16 +441,7 @@ export default function LabIntro({
             {HOMEPAGE_HEADLINE}
           </h2>
           <p className="max-w-md text-base text-ink-muted">{HOMEPAGE_SUBHEAD}</p>
-          <div className="flex flex-wrap gap-3">
-            {resumeAvailable && onResume !== undefined && (
-              <button
-                type="button"
-                onClick={onResume}
-                className="border-glass-border flex min-h-[48px] items-center rounded-[12px] border px-5 text-sm font-semibold text-ink transition-colors hover:bg-glass/60 focus-visible:outline-2 focus-visible:outline-flow"
-              >
-                Resume saved lab
-              </button>
-            )}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <button
               type="button"
               onClick={onEnter}
@@ -479,29 +457,28 @@ export default function LabIntro({
               <Play className="h-4 w-4" aria-hidden="true" />
               {HOMEPAGE_ENTRIES.demo}
             </button>
-            <button
-              type="button"
-              onClick={() => scrollToId('laboratory-turntable')}
-              className="flex min-h-[48px] items-center rounded-[12px] border border-flow/40 px-5 text-sm font-semibold text-flow transition-colors hover:bg-flow/10 focus-visible:outline-2 focus-visible:outline-flow"
-            >
-              {HOMEPAGE_ENTRIES.tools}
-            </button>
+            {resumeAvailable && onResume !== undefined && (
+              <button
+                type="button"
+                onClick={onResume}
+                className="min-h-[44px] px-1 text-sm font-medium text-flow underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-flow"
+              >
+                Resume saved lab
+              </button>
+            )}
           </div>
           {resumeAvailable && (
             <p className="max-w-md text-sm text-ink-muted">
-              Progress is saved only in this browser. Resume the last step, or start a fresh run; unfinished circuits restart from their lesson setup.
+              Progress is saved in this browser. Unfinished circuits restart from their lesson setup.
             </p>
           )}
-          <p className="max-w-md text-sm text-ink-muted">
-            The walkthrough runs through a sample journey automatically. Start your own lab to make predictions and build each circuit yourself.
-          </p>
           {storageNotice && (
             <p className="max-w-md text-sm text-unsure" role="status">
               {storageNotice}
             </p>
           )}
         </div>
-        <STEMOrbit onEnterEngineering={onEnter} />
+        <STEMOrbit />
       </div>
 
       <div id="laboratory-turntable" className="flex w-full scroll-mt-6 flex-col items-center gap-4">
