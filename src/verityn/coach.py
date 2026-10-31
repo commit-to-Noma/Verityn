@@ -491,6 +491,7 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         return _refused(NOT_ASSESSABLE,
                         "The claim cannot be judged against this circuit.")
     facts = solver_facts(result)
+    primary_error = None
     if rung in ("R2", "R4"):
         builder = r2_pointer if rung == "R2" else r4_prompt
         text = builder(claim_component=claim["component"], facts=facts,
@@ -507,12 +508,13 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
                         err.stage, err.http_status, err.shape, err.reason)
             if fallback is None:
                 raise
+            primary_error = err.stage
             text = fallback.r1_question(choice=recorded["choice"],
                                         why=recorded["why"], facts=facts)
             serving = fallback.name
     if rung not in served:
         served.append(rung)
-    return {
+    response = {
         "eligible": True,
         "rung": rung,
         "text": text,
@@ -521,6 +523,9 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         "actions": suggest_actions(netlist=netlist, facts=facts,
                                    claim_component=claim["component"]),
     }
+    if primary_error is not None:
+        response["primary_error"] = primary_error
+    return response
 
 
 def explain_result(netlist, provider, fallback=None):
@@ -559,6 +564,7 @@ def explain_result(netlist, provider, fallback=None):
             "component_ids": component_ids, "switches": switches,
             "bulbs": bulbs, "conditions": conditions,
             "batteries": batteries}
+    primary_error = None
     try:
         text = provider.explain(**call)
         serving = provider.name
@@ -568,12 +574,16 @@ def explain_result(netlist, provider, fallback=None):
                     err.stage, err.http_status, err.shape, err.reason)
         if fallback is None:
             raise
+        primary_error = err.stage
         text = fallback.explain(**call)
         serving = fallback.name
-    return {
+    response = {
         "eligible": True,
         "text": text,
         "provider": serving,
         "valid": valid,
         "error_code": error_code,
     }
+    if primary_error is not None:
+        response["primary_error"] = primary_error
+    return response

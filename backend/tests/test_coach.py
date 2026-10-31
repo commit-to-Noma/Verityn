@@ -105,10 +105,10 @@ def test_conversation_endpoint_sends_bounded_message_to_coach(spy_client):
                                "context": "Will it light?",
                            })
     assert response.status_code == 200
-    assert response.get_json() == {
-        "reply": "Thanks for explaining. What would you like to test next?",
-        "provider": "spy",
-    }
+    body = response.get_json()
+    assert body["reply"] == "Thanks for explaining. What would you like to test next?"
+    assert body["provider"] == "spy"
+    assert body["trace"]["output"] == "conversation-reply"
     assert provider.conversation_calls == [
         ("I think it will light.", "Will it light?"),
     ]

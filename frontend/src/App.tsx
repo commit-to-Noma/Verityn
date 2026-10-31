@@ -1,6 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ChapterComplete from './components/ChapterComplete'
-import JourneyFinale from './components/JourneyFinale'
 import DemoBar from './demo/DemoBar'
 import type { DemoBeat, DemoState } from './demo/machine'
 import { IDLE_DEMO, demoTransition } from './demo/machine'
@@ -9,6 +8,7 @@ import { DEMO_SCRIPT } from './demo/script'
 /** Canvas weight splits out: stages show a brief fallback while it loads. */
 const CircuitCanvas = lazy(() => import('./components/CircuitCanvas'))
 const CoachConversation = lazy(() => import('./voice/CoachConversation'))
+const JourneyFinale = lazy(() => import('./components/JourneyFinale'))
 const CANVAS_FALLBACK = <p className="text-ink-muted text-sm">Preparing the workbench…</p>
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
@@ -1128,13 +1128,15 @@ export default function App() {
         </div>
       )}
       {stage === 'finale' && (
-        <JourneyFinale
-          chapters={finaleChapters}
-          onReturnHub={() => handleNavigate('hub')}
-          onExploreLens={() => {
-            jumpToLens()
-          }}
-        />
+        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing your recap…</p>}>
+          <JourneyFinale
+            chapters={finaleChapters}
+            onReturnHub={() => handleNavigate('hub')}
+            onExploreLens={() => {
+              jumpToLens()
+            }}
+          />
+        </Suspense>
       )}
       {STAGE_CONTENT[stage] /* exhaustiveness: every stage renders above */}
     </JourneyShell>

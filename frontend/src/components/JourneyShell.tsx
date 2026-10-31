@@ -3,6 +3,7 @@ import type { ShellLocation, Stage } from '../journey/stages'
 import { SHELL_NAV, progressIndex } from '../journey/stages'
 import HealthStatus from './HealthStatus'
 import JourneyProgress from './JourneyProgress'
+import TracePanel from './TracePanel'
 
 /** Laboratory frame: brand header, persistent nav, workspace, dev controls. */
 export default function JourneyShell({
@@ -121,7 +122,8 @@ export default function JourneyShell({
         {notice}
         {children}
       </main>
-      <footer>
+      <footer className="flex flex-col gap-4">
+        <TracePanel />
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">
             Presenter &amp; developer controls

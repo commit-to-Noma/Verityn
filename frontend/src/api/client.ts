@@ -1,5 +1,42 @@
 /** Typed client for the Verityn Flask API (M4 contracts, mirrored exactly). */
 
+import { recordTraceEvent } from '../trace/session'
+
+export interface TraceEvent {
+  tool: string
+  input: string
+  output: string
+  guard: string
+  decided_by: string
+  ms: number
+  t: string
+}
+
+/** Trace metadata is additive: malformed events are dropped, never fatal. */
+export function guardTraceEvent(body: unknown): TraceEvent | undefined {
+  if (
+    !isRecord(body) ||
+    typeof body.tool !== 'string' ||
+    typeof body.input !== 'string' ||
+    typeof body.output !== 'string' ||
+    typeof body.guard !== 'string' ||
+    typeof body.decided_by !== 'string' ||
+    typeof body.ms !== 'number' ||
+    typeof body.t !== 'string'
+  ) {
+    return undefined
+  }
+  return {
+    tool: body.tool,
+    input: body.input,
+    output: body.output,
+    guard: body.guard,
+    decided_by: body.decided_by,
+    ms: body.ms,
+    t: body.t,
+  }
+}
+
 export interface ApiComponent {
   id: string
   type: 'battery' | 'resistor' | 'bulb' | 'switch' | 'wire'
@@ -289,6 +326,7 @@ export type CoachAskResult =
       provider: string
       claim: Claim
       actions: CoachServerAction[]
+      trace?: TraceEvent
     }
   | { eligible: false; reason_code: string; message: string }
 
@@ -298,6 +336,7 @@ export interface CoachExplainResult {
   provider: string
   valid: boolean
   error_code: string | null
+  trace?: TraceEvent
 }
 
 /** Provider value to honest badge text. Fake output is never Meta. */
@@ -409,6 +448,8 @@ function guardCoachAskResult(body: unknown): CoachAskResult {
     ) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
+    const trace = guardTraceEvent(body.trace)
+    recordTraceEvent(trace)
     return {
       eligible: true,
       rung: body.rung,
@@ -416,6 +457,7 @@ function guardCoachAskResult(body: unknown): CoachAskResult {
       provider: body.provider,
       claim: guardClaim(body.claim),
       actions: body.actions.map(guardServerAction),
+      trace,
     }
   }
   if (typeof body.reason_code !== 'string' || typeof body.message !== 'string') {
@@ -454,6 +496,7 @@ export async function askCoach(
 export interface CoachConversationResult {
   reply: string
   provider: string
+  trace?: TraceEvent
 }
 
 /** POST /api/coach/conversation with a bounded learner utterance. */
@@ -470,7 +513,9 @@ export async function converseWithCoach(
   ) {
     throw new ApiError('payload', 'Unexpected response from the coach.')
   }
-  return { reply: body.reply, provider: body.provider }
+  const trace = guardTraceEvent(body.trace)
+  recordTraceEvent(trace)
+  return { reply: body.reply, provider: body.provider, trace }
 }
 
 function guardCoachExplainResult(body: unknown): CoachExplainResult {
@@ -484,12 +529,15 @@ function guardCoachExplainResult(body: unknown): CoachExplainResult {
   ) {
     throw new ApiError('payload', 'Unexpected response from the server.')
   }
+  const trace = guardTraceEvent(body.trace)
+  recordTraceEvent(trace)
   return {
     eligible: true,
     text: body.text,
     provider: body.provider,
     valid: body.valid,
     error_code: body.error_code,
+    trace,
   }
 }
 
@@ -542,6 +590,7 @@ export interface VisionProposeResult {
   proposal: VisionProposal
   assumptions: string[]
   provider: string
+  trace?: TraceEvent
 }
 
 function isVisionEndpoint(value: unknown): value is VisionEndpoint {
@@ -635,10 +684,13 @@ function guardVisionProposeResult(body: unknown): VisionProposeResult {
   ) {
     throw new ApiError('payload', 'Unexpected response from the server.')
   }
+  const trace = guardTraceEvent(body.trace)
+  recordTraceEvent(trace)
   return {
     proposal: guardVisionProposal(body.proposal),
     assumptions: body.assumptions,
     provider: body.provider,
+    trace,
   }
 }
 
@@ -648,4 +700,61 @@ export async function proposeCircuit(
   signal?: AbortSignal,
 ): Promise<VisionProposeResult> {
   return guardVisionProposeResult(await postJson('/api/vision/propose', { image }, signal))
+}
+
+export interface TranscribeResult {
+  transcript: string
+  trace?: TraceEvent
+}
+
+/** POST /api/voice/transcribe; the transcript stays editable learner input. */
+export async function transcribeAudio(
+  form: FormData,
+  signal?: AbortSignal,
+): Promise<TranscribeResult> {
+  let res: Response
+  try {
+    res = await fetch('/api/voice/transcribe', { method: 'POST', body: form, signal })
+  } catch (err) {
+    if (signal?.aborted) {
+      throw err
+    }
+    reportBackendHealth('down')
+    throw new ApiError('network', 'Could not reach the transcription service.')
+  }
+  if (res.status === 502 || res.status === 503 || res.status === 504) {
+    reportBackendHealth('down')
+    throw new ApiError('network', 'Could not reach the transcription service.', res.status, null)
+  }
+  reportBackendHealth('up')
+  let body: unknown = null
+  try {
+    body = await res.json()
+  } catch {
+    body = null
+  }
+  if (!res.ok) {
+    if (isRecord(body) && typeof body.error_code === 'string') {
+      throw new ApiError(
+        'http',
+        typeof body.error_message === 'string' && body.error_message
+          ? body.error_message
+          : 'Meta Muse Voice Transcribe is unavailable.',
+        res.status,
+        body.error_code,
+      )
+    }
+    throw new ApiError('http', 'Meta Muse Voice Transcribe is unavailable.', res.status, null)
+  }
+  if (!isRecord(body)) {
+    throw new ApiError('payload', 'Transcription returned an unreadable response.', null, 'UNREADABLE')
+  }
+  const transcript =
+    typeof body.transcript === 'string' ? body.transcript.trim() : ''
+  if (transcript === '') {
+    throw new ApiError('payload', 'No speech was recognized.', null, 'EMPTY_TRANSCRIPT')
+  }
+  const trace = guardTraceEvent(body.trace)
+  recordTraceEvent(trace)
+  return { transcript, trace }
 }

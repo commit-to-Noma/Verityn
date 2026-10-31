@@ -8,6 +8,7 @@ a microphone recording. Stack traces never leave the server.
 
 import os
 import sys
+import time
 from pathlib import Path
 
 from flask import Flask, jsonify, request
@@ -15,11 +16,23 @@ from werkzeug.exceptions import BadRequest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from verityn import coach, evaluator, fake_coach, meta_coach, meta_voice, solver, vision  # noqa: E402
+from verityn import coach, evaluator, fake_coach, meta_coach, meta_voice, solver, trace, vision  # noqa: E402
 
 MALFORMED_REQUEST = "MALFORMED_REQUEST"
 MAX_VOICE_BYTES = 32 * 1024 * 1024
 MAX_COACH_MESSAGE_CHARS = 500
+
+
+def _elapsed_ms(start):
+    return int(round((time.perf_counter() - start) * 1000))
+
+
+def _tool_for(serving, primary, fallback=None):
+    """Display id for a serving provider: model id when Meta, else its name."""
+    for candidate in (primary, fallback):
+        if candidate is not None and serving == candidate.name:
+            return getattr(candidate, "model", serving)
+    return serving
 
 
 def _result_to_dict(result):
@@ -142,9 +155,19 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         if rung not in coach.VALID_RUNGS:
             return _malformed_request(
                 "Rung must be one of R1, R2, R4.")
-        return jsonify(coach.derive_eligibility(
+        start = time.perf_counter()
+        response = coach.derive_eligibility(
             store, session_id, netlist, active_provider,
-            fallback=active_fallback, rung=rung))
+            fallback=active_fallback, rung=rung)
+        if response.get("eligible") is True:
+            serving = response["provider"]
+            response["trace"] = trace.build_trace(
+                tool=_tool_for(serving, active_provider, active_fallback),
+                input_kind="text", output_kind="structured-hint",
+                serving=serving, primary=active_provider.name,
+                ms=_elapsed_ms(start),
+                failed_stage=response.get("primary_error"))
+        return jsonify(response)
 
     @app.post("/api/coach/conversation")
     def coach_conversation():
@@ -160,6 +183,8 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         if not isinstance(context, str) or len(context) > MAX_COACH_MESSAGE_CHARS:
             return _malformed_request(
                 f"Context must contain at most {MAX_COACH_MESSAGE_CHARS} characters.")
+        start = time.perf_counter()
+        failed_stage = None
         try:
             reply = active_provider.conversation_reply(message.strip(), context)
             reply_provider = active_provider.name
@@ -172,7 +197,14 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 return jsonify({
                     "error_code": "COACH_UNAVAILABLE",
                     "error_message": "The coach could not respond. Please try again.",
+                    "trace": trace.rejection_trace(
+                        tool=_tool_for(active_provider.name, active_provider,
+                                       active_fallback),
+                        input_kind="text", output_kind="conversation-reply",
+                        reason=err.reason or err.stage,
+                        ms=_elapsed_ms(start)),
                 }), 502
+            failed_stage = err.stage
             try:
                 reply = active_fallback.conversation_reply(message.strip(), context)
                 reply_provider = active_fallback.name
@@ -183,8 +215,23 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 return jsonify({
                     "error_code": "COACH_UNAVAILABLE",
                     "error_message": "The coach could not respond. Please try again.",
+                    "trace": trace.rejection_trace(
+                        tool=_tool_for(active_fallback.name, active_provider,
+                                       active_fallback),
+                        input_kind="text", output_kind="conversation-reply",
+                        reason=fallback_error.reason or fallback_error.stage,
+                        ms=_elapsed_ms(start)),
                 }), 502
-        return jsonify({"reply": reply, "provider": reply_provider})
+        return jsonify({
+            "reply": reply,
+            "provider": reply_provider,
+            "trace": trace.build_trace(
+                tool=_tool_for(reply_provider, active_provider,
+                               active_fallback),
+                input_kind="text", output_kind="conversation-reply",
+                serving=reply_provider, primary=active_provider.name,
+                ms=_elapsed_ms(start), failed_stage=failed_stage),
+        })
 
     @app.post("/api/coach/explain")
     def coach_explain():
@@ -194,8 +241,17 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         netlist = body.get("netlist")
         if not isinstance(netlist, dict):
             return _malformed_request("Request needs a netlist object.")
-        return jsonify(coach.explain_result(
-            netlist, active_provider, fallback=active_fallback))
+        start = time.perf_counter()
+        response = coach.explain_result(
+            netlist, active_provider, fallback=active_fallback)
+        serving = response["provider"]
+        response["trace"] = trace.build_trace(
+            tool=_tool_for(serving, active_provider, active_fallback),
+            input_kind="text", output_kind="structured-explanation",
+            serving=serving, primary=active_provider.name,
+            ms=_elapsed_ms(start),
+            failed_stage=response.get("primary_error"))
+        return jsonify(response)
 
     @app.post("/api/vision/propose")
     def vision_propose():
@@ -209,6 +265,8 @@ def create_app(provider=None, fallback=None, vision_provider=None,
             data_url = vision.parse_data_url(body.get("image"))
         except vision.VisionRequestError:
             return _malformed_request("Invalid image payload.")
+        start = time.perf_counter()
+        tool = getattr(active_vision, "model", active_vision.name)
         try:
             proposal = active_vision.propose(data_url)
         except coach.CoachProviderError as err:
@@ -217,10 +275,21 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "shape=%s reason=%s",
                 err.stage, err.http_status, err.shape, err.reason)
             return jsonify({"error_code": "INTERNAL_ERROR",
-                            "error_message": "Unexpected server error."}), 500
+                            "error_message": "Unexpected server error.",
+                            "trace": trace.rejection_trace(
+                                tool=tool, input_kind="image",
+                                output_kind="proposal",
+                                reason=err.reason or err.stage,
+                                ms=_elapsed_ms(start))}), 500
         return jsonify({"proposal": proposal,
                         "assumptions": vision.ASSUMPTIONS,
-                        "provider": active_vision.name})
+                        "provider": active_vision.name,
+                        "trace": trace.build_trace(
+                            tool=tool, input_kind="image",
+                            output_kind="proposal",
+                            serving=active_vision.name,
+                            primary=active_vision.name,
+                            ms=_elapsed_ms(start))})
 
     @app.post("/api/voice/transcribe")
     def voice_transcribe():
@@ -251,6 +320,8 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "error_code": MALFORMED_REQUEST,
                 "error_message": "The recording must be a WAV audio file.",
             }), 400
+        start = time.perf_counter()
+        tool = getattr(active_voice, "model", "voice-transcribe")
         try:
             transcript = active_voice.transcribe(audio)
         except meta_voice.VoiceTranscriptionError as err:
@@ -258,7 +329,13 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "error_code": "VOICE_TRANSCRIPTION_FAILED",
                 "error_message": str(err),
             }), 502
-        return jsonify({"transcript": transcript})
+        return jsonify({
+            "transcript": transcript,
+            "trace": trace.build_trace(
+                tool=tool, input_kind="audio", output_kind="transcript",
+                serving="meta-voice", primary="meta-voice",
+                ms=_elapsed_ms(start), decided_by="none"),
+        })
 
     @app.errorhandler(404)
     def not_found(_error):

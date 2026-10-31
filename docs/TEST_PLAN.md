@@ -21,8 +21,15 @@ prototype output from being labelled Meta AI.
 Frontend (`npm test`, vitest, no DOM harness): API client guards and
 error classification, canvas-to-netlist conversion, lesson gates and
 verdict derivation, Evidence Trace builder, pack consistency (shape,
-seed conversion, hint honesty). Component wiring is verified by
+seed conversion, hint honesty), trace store (record/cap/counts) and
+trace guards. Component wiring is verified by
 inspection plus the browser journey below.
+
+M2 trace: backend `test_trace.py` proves every AI route attaches a
+shaped event (or none on refusal), failover credits the validator only
+on validation-stage failures, and failure responses carry
+`rejected:<code>`; the browser smoke opens the drawer and asserts a
+real served event names its tool and guard.
 
 Gates: backend suite, frontend suite, `npm run lint` (0/0),
 `npm run build` (`tsc -b` + vite). UI acceptance (DESIGN_SPEC §9):

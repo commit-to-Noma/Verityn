@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, askCoach, converseWithCoach, evaluateClaim, explainResult, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, visionProviderBadge } from './client'
+import { ApiError, askCoach, converseWithCoach, evaluateClaim, explainResult, guardTraceEvent, proposeCircuit, providerBadge, recordPrediction, simulate, subscribeBackendHealth, transcribeAudio, visionProviderBadge } from './client'
+import { clearTraceEvents, traceEvents } from '../trace/session'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -321,6 +322,18 @@ describe('converseWithCoach', () => {
     expect(failure).toBeInstanceOf(ApiError)
     expect((failure as ApiError).kind).toBe('payload')
   })
+
+  it('carries the trace and records the session event', async () => {
+    clearTraceEvents()
+    const trace = {
+      tool: 'prototype-fake', input: 'text', output: 'conversation-reply',
+      guard: 'fallback:template', decided_by: 'none', ms: 4, t: '2026-10-31T00:00:00+00:00',
+    }
+    stubFetch(() => okResponse({ reply: 'Hi.', provider: 'prototype-fake', trace }))
+    const result = await converseWithCoach('Hello')
+    expect(result.trace).toEqual(trace)
+    expect(traceEvents()).toEqual([trace])
+  })
 })
 
 describe('explainResult', () => {
@@ -515,5 +528,70 @@ describe('providerBadge', () => {
     expect(providerBadge('deterministic', 'R2')).toBe('Evidence pointer')
     expect(providerBadge('deterministic', 'R4')).toBe('Confirmation check')
     expect(providerBadge('deterministic')).toBe('Guide')
+  })
+})
+
+describe('guardTraceEvent', () => {
+  const TRACE = {
+    tool: 'muse-spark-1.3', input: 'text', output: 'structured-hint',
+    guard: 'accepted', decided_by: 'validator', ms: 842, t: '2026-10-31T00:00:00+00:00',
+  }
+
+  it('passes a complete event through', () => {
+    expect(guardTraceEvent(TRACE)).toEqual(TRACE)
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['mistyped ms', { ...TRACE, ms: '842' }],
+    ['mistyped guard', { ...TRACE, guard: null }],
+    ['not an object', []],
+  ])('drops malformed traces without throwing: %s', (_label, body) => {
+    expect(guardTraceEvent(body)).toBeUndefined()
+  })
+})
+
+describe('transcribeAudio', () => {
+  const TRACE = {
+    tool: 'muse-voice-transcribe-1.0', input: 'audio', output: 'transcript',
+    guard: 'accepted', decided_by: 'none', ms: 900, t: '2026-10-31T00:00:00+00:00',
+  }
+
+  it('returns the trimmed transcript and records the trace', async () => {
+    clearTraceEvents()
+    stubFetch(() => okResponse({ transcript: '  The switch is open. ', trace: TRACE }))
+    const result = await transcribeAudio(new FormData())
+    expect(result.transcript).toBe('The switch is open.')
+    expect(result.trace).toEqual(TRACE)
+    expect(traceEvents()).toEqual([TRACE])
+  })
+
+  it('maps empty transcripts to EMPTY_TRANSCRIPT', async () => {
+    stubFetch(() => okResponse({ transcript: '   ' }))
+    const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).code).toBe('EMPTY_TRANSCRIPT')
+  })
+
+  it('maps unreadable bodies to UNREADABLE', async () => {
+    stubFetch(() => okResponse([42]))
+    const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).code).toBe('UNREADABLE')
+  })
+
+  it('carries server error messages on http failures', async () => {
+    stubFetch(() => errResponse(400, { error_code: 'MALFORMED_REQUEST', error_message: 'Upload a WAV recording.' }))
+    const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('http')
+    expect((failure as ApiError).message).toBe('Upload a WAV recording.')
+  })
+
+  it('maps gateway failures to network errors', async () => {
+    stubFetch(() => errResponse(502, { error_code: 'VOICE_TRANSCRIPTION_FAILED' }))
+    const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).kind).toBe('network')
   })
 })

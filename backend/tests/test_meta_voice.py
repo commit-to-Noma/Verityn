@@ -45,7 +45,9 @@ def test_transcribe_validates_upload_and_returns_transcript():
         data={"audio": (io.BytesIO(_wav()), "recording.wav", "audio/wav")},
     )
     assert response.status_code == 200
-    assert response.get_json() == {"transcript": "The switch is open."}
+    body = response.get_json()
+    assert body["transcript"] == "The switch is open."
+    assert body["trace"]["output"] == "transcript"
     assert provider.audio == _wav()
 
 

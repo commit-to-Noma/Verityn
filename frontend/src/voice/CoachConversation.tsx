@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, Square } from 'lucide-react'
-import { ApiError, converseWithCoach } from '../api/client'
+import { ApiError, converseWithCoach, transcribeAudio } from '../api/client'
 import { latestCoachStatement, speakCoach, subscribeCoachStatement } from './coachVoice'
 import { encodeWav } from './audio'
 
@@ -139,44 +139,29 @@ export default function CoachConversation({
       const wav = encodeWav(recording.chunks, recording.sampleRate)
       const form = new FormData()
       form.append('audio', wav, 'coach-reply.wav')
-      const response = await fetch('/api/voice/transcribe', {
-        method: 'POST',
-        body: form,
-        signal: request.signal,
-      })
-      let payload: unknown
+      let transcript: string
       try {
-        payload = await response.json()
+        ;({ transcript } = await transcribeAudio(form, request.signal))
       } catch (error) {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return
         }
+        if (!(error instanceof ApiError)) {
+          throw error
+        }
+        if (error.code === 'EMPTY_TRANSCRIPT') {
+          setState('no-speech')
+          setStatus('No words were recognized. You can try again or type instead.')
+          return
+        }
         setState('unavailable')
-        setStatus('The transcription service returned an unreadable response.')
-        return
-      }
-      if (!response.ok) {
-        const message =
-          typeof payload === 'object' &&
-          payload !== null &&
-          'error_message' in payload &&
-          typeof payload.error_message === 'string'
-            ? payload.error_message
-            : 'Meta Muse Voice Transcribe is unavailable.'
-        setState('unavailable')
-        setStatus(message)
-        return
-      }
-      const transcript =
-        typeof payload === 'object' &&
-        payload !== null &&
-        'transcript' in payload &&
-        typeof payload.transcript === 'string'
-          ? payload.transcript.trim()
-          : ''
-      if (transcript === '') {
-        setState('no-speech')
-        setStatus('No words were recognized. You can try again or type instead.')
+        setStatus(
+          error.kind === 'http' || error.code === 'UNREADABLE'
+            ? error.code === 'UNREADABLE'
+              ? 'The transcription service returned an unreadable response.'
+              : error.message
+            : 'Could not reach the transcription service. Check that the backend is running.',
+        )
         return
       }
 

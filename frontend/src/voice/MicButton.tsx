@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, Square } from 'lucide-react'
+import { ApiError, transcribeAudio } from '../api/client'
 import { encodeWav } from './audio'
 
 type MicState =
@@ -70,51 +71,25 @@ export default function MicButton({
       const wav = encodeWav(recording.chunks, recording.context.sampleRate)
       const form = new FormData()
       form.append('audio', wav, 'recording.wav')
-      const response = await fetch('/api/voice/transcribe', {
-        method: 'POST',
-        body: form,
-      })
-      let payload: unknown
-      try {
-        payload = await response.json()
-      } catch {
-        setState('unavailable')
-        updateStatus('Transcription returned an unreadable response. Type your reason instead.')
-        return
-      }
-      if (!response.ok) {
-        const message =
-          typeof payload === 'object' &&
-          payload !== null &&
-          'error_message' in payload &&
-          typeof payload.error_message === 'string'
-            ? payload.error_message
-            : 'Meta Muse Voice Transcribe is unavailable.'
-        setState('unavailable')
-        updateStatus(`${message} Type your reason instead.`)
-        return
-      }
-      const transcript =
-        typeof payload === 'object' &&
-        payload !== null &&
-        'transcript' in payload &&
-        typeof payload.transcript === 'string'
-          ? payload.transcript.trim()
-          : ''
-      if (transcript === '') {
-        setState('no-speech')
-        updateStatus('No speech was recognized. Try again or type your reason.')
-        return
-      }
+      const { transcript } = await transcribeAudio(form)
       onTranscript(transcript)
       setState('idle')
       updateStatus('Transcript added. Edit it before continuing.')
     } catch (error) {
-      if (!(error instanceof TypeError)) {
+      if (!(error instanceof ApiError)) {
         throw error
       }
+      if (error.code === 'EMPTY_TRANSCRIPT') {
+        setState('no-speech')
+        updateStatus('No speech was recognized. Try again or type your reason.')
+        return
+      }
       setState('unavailable')
-      updateStatus('Could not reach the transcription service. Type your reason instead.')
+      updateStatus(
+        error.kind === 'http' || error.code === 'UNREADABLE'
+          ? `${error.message} Type your reason instead.`
+          : 'Could not reach the transcription service. Type your reason instead.',
+      )
     }
   }
 

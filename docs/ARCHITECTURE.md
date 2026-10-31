@@ -93,6 +93,14 @@ prediction-correctness-based, so a wrong guess never deadlocks.
 Not used: unbounded open chat, emotion detection, growth scoring,
 second-opinion models, decorative image generation.
 
+Every AI-route response carries a `trace` event (`tool`, `input`,
+`output`, `guard`, `decided_by`, `ms`, `t`): Meta output that passed
+validation is `accepted`; deterministic rungs are `accepted` by the
+solver; served templates are `fallback:template`; unserved failures are
+`rejected:<code>`. Refusals carry no trace. The shell footer renders
+the session's real events in the "What Meta did / What code checked"
+drawer, closed by default.
+
 ## 5. Failure behaviour
 
 1. All models up: full experience with Meta-drafted questions.
