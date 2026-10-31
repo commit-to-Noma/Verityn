@@ -71,6 +71,7 @@ export default function CircuitPreview({
           zoomOnScroll={false}
           panOnDrag={false}
           fitView
+          fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
           colorMode="dark"
           aria-label={label}
         />
