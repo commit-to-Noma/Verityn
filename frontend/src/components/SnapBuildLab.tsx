@@ -4,9 +4,10 @@ import type { SimulateResult, VisionProposeResult } from '../api/client'
 import { ApiError, proposeCircuit, visionProviderBadge } from '../api/client'
 import type { ImageGeometry } from '../canvas/layout'
 import { layoutProposalFromGeometry } from '../canvas/layout'
-import { LIT_POWER_W, type LessonSeed } from '../lessons/lesson'
+import { type LessonSeed } from '../lessons/lesson'
 import type { LensSample } from '../lens/samples'
 import { LENS_SAMPLES } from '../lens/samples'
+import { showTriptych } from '../lens/triptych'
 import {
   DEFAULT_LENS_VIEW,
   LENS_VIEW_MODES,
@@ -25,7 +26,7 @@ import {
 import { LENS_ACCEPT, validateLensFile } from '../vision/upload'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
-import ReadoutValue from './ReadoutValue'
+import RealityTriptych from './RealityTriptych'
 
 /** Lens overlay splits out: only loaded when a sample opens. */
 const RealityLens = lazy(() => import('./RealityLens'))
@@ -50,6 +51,7 @@ function ReviewPanels({
   result,
   nonce,
   confirmed,
+  testedResult,
   onConfirm,
   onTested,
   onReset,
@@ -59,6 +61,7 @@ function ReviewPanels({
   result: VisionProposeResult
   nonce: number
   confirmed: boolean
+  testedResult: SimulateResult | null
   onConfirm: () => void
   onTested: (result: SimulateResult) => void
   onReset: () => void
@@ -331,6 +334,7 @@ function ReviewPanels({
                 key={`review-${nonce}`}
                 layout="stacked"
                 importRequest={{ seed, uncertainIds, nonce }}
+                reportRejections
                 simulateLocked={
                   confirmed ? null : 'Confirm the model below before testing it against the simulator.'
                 }
@@ -388,45 +392,16 @@ function ReviewPanels({
           Try another image
         </button>
       </div>
-    </div>
-  )
-}
-
-/** Proof moment: the confirmed proposal's fresh solver measurements, nothing else. */
-function LensProof({ result, bulbIds }: { result: SimulateResult; bulbIds: string[] }) {
-  // Every value comes from the fresh solver response for the confirmed circuit.
-  const measured = bulbIds.filter((id) => result.components[id] !== undefined)
-  return (
-    <div className="glow-card evidence-reveal flex flex-col gap-2 p-5" role="status">
-      <p className="text-sm font-semibold">Confirmed circuit tested</p>
-      {measured.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {measured.map((id) => {
-            const reading = result.components[id]
-            if (reading === undefined) {
-              return null
-            }
-            return (
-              <li key={id} className="glass-panel flex flex-col gap-0.5 rounded-[10px] p-3">
-                <p className="font-mono text-sm font-medium">{id}</p>
-                <p className="text-sm">
-                  <ReadoutValue value={reading.current} unit="A" />
-                </p>
-                <p className="text-sm">
-                  <ReadoutValue value={reading.power} unit="W" />
-                </p>
-                <p className="text-ink-muted text-xs">
-                  {reading.power > LIT_POWER_W ? 'Bulb lit' : 'Bulb dark'}
-                </p>
-              </li>
-            )
-          })}
-        </ul>
-      ) : (
-        <p className="text-sm">The simulator solved your confirmed circuit with no faults.</p>
+      {showTriptych(confirmed, testedResult) && testedResult !== null && (
+        <RealityTriptych
+          image={image}
+          seed={seed}
+          result={testedResult}
+          bulbIds={proposal.components
+            .filter((component) => component.type === 'bulb')
+            .map((component) => component.id)}
+        />
       )}
-      <p className="text-sm">The solver measured this confirmed circuit.</p>
-      <p className="text-ink-muted text-xs">Measured by Verityn Solver</p>
     </div>
   )
 }
@@ -711,6 +686,7 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
             result={state.result}
             nonce={state.nonce}
             confirmed={confirmed}
+            testedResult={lensResult}
             onConfirm={() => setConfirmed(true)}
             onTested={(result) => {
               setTested(true)
@@ -719,14 +695,6 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
             onReset={reset}
           />
         </div>
-      )}
-      {state.phase === 'proposed' && confirmed && lensResult !== null && lensResult.ok && (
-        <LensProof
-          result={lensResult}
-          bulbIds={state.result.proposal.components
-            .filter((component) => component.type === 'bulb')
-            .map((component) => component.id)}
-        />
       )}
     </section>
   )

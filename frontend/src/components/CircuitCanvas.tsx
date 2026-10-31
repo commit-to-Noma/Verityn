@@ -939,6 +939,7 @@ function CanvasInner({
   onCoachVoiceEnabledChange,
   autoStruggleHint = false,
   expectSwitchOpen = false,
+  reportRejections = false,
   onSolved,
   onDirty,
   onVerdict,
@@ -980,6 +981,7 @@ function CanvasInner({
   onCoachVoiceEnabledChange?: (enabled: boolean) => void
   autoStruggleHint?: boolean
   expectSwitchOpen?: boolean
+  reportRejections?: boolean
   onSolved?: (result: SimulateResult, netlist: Netlist) => void
   /** Locks Test + auto-run until review confirms; the string is the reason. */
   simulateLocked?: string | null
@@ -1360,9 +1362,10 @@ function CanvasInner({
         setRunState({ phase: 'done', result, netlist })
         ranOnceRef.current = true
         // Lessons only report solved runs; the free bench also reports
-        // rejections (history + explanations need them). The verdict
-        // block below stays lesson-gated on choice && claim.
-        if (result.ok || mode === 'experiment') {
+        // rejections (history + explanations need them), as does any
+        // canvas that opts in (the lens triptych shows rejections too).
+        // The verdict block below stays lesson-gated on choice && claim.
+        if (result.ok || mode === 'experiment' || reportRejections) {
           onSolved?.(result, netlist)
           const verdictClaim = choice && claim ? choiceToClaim(choice, claim) : null
           if (verdictClaim) {
@@ -1399,7 +1402,7 @@ function CanvasInner({
         })
       }
     })()
-  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode])
+  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode, reportRejections])
 
   const loopClosed = isClosedLoop(nodes, edges)
   const unwiredTerminals = openTerminals(
@@ -2212,6 +2215,7 @@ export default function CircuitCanvas({
   autoInitialHint,
   autoStruggleHint,
   expectSwitchOpen,
+  reportRejections,
   demoSignal,
   demoBuild,
   demoPaused,
@@ -2228,6 +2232,7 @@ export default function CircuitCanvas({
   onCoachVoiceEnabledChange?: (enabled: boolean) => void
   autoStruggleHint?: boolean
   expectSwitchOpen?: boolean
+  reportRejections?: boolean
   onSolved?: (result: SimulateResult, netlist: Netlist) => void
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
@@ -2272,6 +2277,7 @@ export default function CircuitCanvas({
         onCoachVoiceEnabledChange={onCoachVoiceEnabledChange}
         autoStruggleHint={autoStruggleHint}
         expectSwitchOpen={expectSwitchOpen}
+        reportRejections={reportRejections}
         onSolved={onSolved}
         onDirty={onDirty}
         onVerdict={onVerdict}

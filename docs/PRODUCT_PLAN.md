@@ -129,7 +129,11 @@ Apply/Keep exploring or Undo. Model text cannot write arbitrary canvas state.
 Reality Lens is explicitly two-panel: source image on the left, proposed
 interactive circuit on the right. Original/detection/model view toggles expose
 what was seen; uncertain parts are marked for review; Confirm is disabled until
-the proposal is reviewable; Discard returns to the prior state.
+the proposal is reviewable; Discard returns to the prior state. After a
+confirmed upload is tested, a triptych shows the photo, the confirmed
+circuit, and the solver measurement (or the validator code with its fix);
+nothing numeric renders before confirmation, and no SAM overlay is claimed
+for uploads.
 
 ### Voice, Solo, and finale
 

@@ -526,7 +526,9 @@ async function drive() {
   await waitFor(() => hasText('Verityn Solver will test'), 'lens confirmed')
   await waitFor(() => hasText('Confirmed circuit tested'), 'lens proof', 25000)
   check('proof cites open-switch reading', await hasText('Bulb dark') && await hasText('0.0 A'))
-  check('proof attribution', await hasText('Measured by Verityn Solver'))
+  check('proof attribution', await hasText("Computed by Verityn's solver."))
+  check('triptych photo panel', await hasText('Your photo or sketch'))
+  check('triptych reading panel', await hasText('Confirmed circuit') && await hasText('Proposed by Meta, reviewed by you.'))
   await clickButton('Try another image')
   await waitFor(() => hasText('Choose an image'), 'lens reset')
   visionStubs.push(JSON.stringify({
@@ -540,6 +542,32 @@ async function drive() {
   await waitFor(() => hasText('does not look like a supported circuit'), 'lens unsupported', 20000)
   check('unsupported guidance', await hasText('Try a schematic or photo'))
   check('no fake replica', !(await hasText('Interactive circuit replica')))
+  visionStubs.push(JSON.stringify({
+    proposal: {
+      status: 'ready',
+      components: [
+        { id: 'B1', type: 'battery', closed: null, polarity: { positive: 'a', negative: 'b' }, evidence: { region_id: 'r-b', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'L1', type: 'bulb', closed: null, polarity: null, evidence: { region_id: 'r-l', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+      ],
+      connections: [
+        { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: false, evidence: { region_id: 'r-w' } },
+      ],
+    },
+    assumptions: [],
+    provider: 'fixture-stub',
+  }))
+  await uploadLensFile(switchImage)
+  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens reselect invalid')
+  await clickButton('Interpret with Meta Spark')
+  await waitFor(() => hasText('Original diagram'), 'lens invalid review', 20000)
+  await waitFor(() => hasText('Confirm the model below before testing'), 'lens invalid lock', 20000)
+  await clickButton('Confirm model')
+  await waitFor(() => hasText('Verityn Solver will test'), 'lens invalid confirmed')
+  await clickButton('Test circuit')
+  await waitFor(() => hasText('DANGLING_TERMINAL'), 'lens invalid code', 25000)
+  check('invalid shows solver label', await hasText("Computed by Verityn's solver."))
+  await clickButton('Try another image')
+  await waitFor(() => hasText('Choose an image'), 'lens reset invalid')
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
   await clickButton('← Back to guided journey')
   await waitFor(() => hasText('JOURNEY COMPLETE'), 'back to finale')

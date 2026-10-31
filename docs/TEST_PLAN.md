@@ -40,6 +40,11 @@ the actual 24 kHz encoder rate. Browser playback defaults off, carries
 the not-Meta disclaimer, and never speaks in the demo; smoke toggles
 it on and off to prove both states.
 
+M4 triptych: `triptych` unit tests gate the panels on confirm-plus-test
+and separate numbers from rejections; the browser smoke stubs vision at
+the network layer (zero live calls) and asserts the valid triptych, the
+invalid validator-code panel, and no proof before confirm.
+
 Gates: backend suite, frontend suite, `npm run lint` (0/0),
 `npm run build` (`tsc -b` + vite). UI acceptance (DESIGN_SPEC §9):
 no raw hex in components, keyboard path, focus visibility,
