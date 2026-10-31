@@ -25,11 +25,8 @@ export interface PredictionDemo {
   onTakeover: () => void
 }
 
-const CHOICE_ACTIVE: Record<Choice, { box: string; icon: string }> = {
-  yes: { box: 'border-ok bg-ok/10', icon: 'text-ok' },
-  no: { box: 'border-bad bg-bad/10', icon: 'text-bad' },
-  not_sure: { box: 'border-unsure bg-unsure/10', icon: 'text-unsure' },
-}
+/** One neutral selected state: a prediction is a choice, not a grade. */
+const CHOICE_ACTIVE = { box: 'border-flow bg-flow/10', icon: 'text-flow' }
 
 /** Think-first gate: the learner predicts before touching the canvas. */
 export default function PredictionScreen({
@@ -184,11 +181,11 @@ export default function PredictionScreen({
               setChoice(value)
             }}
             className={`flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-[10px] border text-sm font-medium transition ${
-              choice === value ? CHOICE_ACTIVE[value].box : 'border-glass-border'
+              choice === value ? CHOICE_ACTIVE.box : 'border-glass-border'
             }`}
           >
             {choice === value && (
-              <Check className={`h-4 w-4 ${CHOICE_ACTIVE[value].icon}`} aria-hidden="true" />
+              <Check className={`h-4 w-4 ${CHOICE_ACTIVE.icon}`} aria-hidden="true" />
             )}
             {label}
           </button>
