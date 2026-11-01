@@ -108,7 +108,7 @@ const STAGE_CONTENT: Record<Stage, null> = {
 }
 
 const COACH_INTRODUCTION =
-  "Hi, I'm your coach. Predict first — then build the circuit and test it."
+  'Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'
 
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
@@ -349,7 +349,7 @@ export default function App() {
             nextLabel: 'Test with the switch open',
             advance: () => {
               announceCoach(
-                'Now predict what will happen with the switch open. Will the bulb light?',
+                'Next, consider the open-switch circuit. Will the bulb light? Make your prediction, then test it.',
               )
               setRealityStarted(true)
               advanceDemoBeat('reality')
@@ -742,7 +742,7 @@ export default function App() {
 
   const handleL1Predicted = (prediction: Prediction) => {
     announceCoach(
-      'Got it. Connect the two open ends with one wire, then press Test to check your prediction.',
+      'Now connect the loose ends to complete the loop, then test your prediction.',
     )
     setL1Prediction(prediction)
     advanceDemoBeat('build')
@@ -750,7 +750,7 @@ export default function App() {
 
   const handleRealityPredicted = (prediction: Prediction) => {
     announceCoach(
-      'Got it. Leave the switch open and watch what happens when the lab tests the circuit.',
+      'Now test the circuit with the switch open and see whether the bulb lights.',
     )
     setRealityPrediction(prediction)
     realityR4.current = false
@@ -1102,7 +1102,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode  -  there is no coach for this challenge. Trust your reasoning.
+              For this Solo challenge, build the second-bulb circuit yourself and test your prediction.
             </p>
           </div>
           <PredictionScreen
@@ -1119,8 +1119,7 @@ export default function App() {
         <div className="flex flex-col gap-4">
           <div className="glass-panel p-4" role="note">
             <p className="text-sm text-ink-muted">
-              Solo mode  -  there is no coach for this challenge. Predict, build, and check
-              against the simulator.
+              For this Solo challenge, build the second-bulb circuit yourself and test your prediction.
             </p>
           </div>
           <Suspense fallback={CANVAS_FALLBACK}>

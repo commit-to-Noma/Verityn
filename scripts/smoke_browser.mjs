@@ -384,6 +384,10 @@ async function drive() {
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
+  check(
+    'guided lab opens with the task',
+    await hasText('Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'),
+  )
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
   check('coach dock shows the current line', await ev(`!!document.querySelector('[aria-label="Coach dock"] p[aria-live="polite"]')`))
