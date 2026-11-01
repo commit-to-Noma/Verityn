@@ -64,5 +64,7 @@ describe('JourneyFinale', () => {
     expect(markup).toContain('Try it in the Experiment Bay')
     expect(markup).toContain('aria-label="Try Light the bulb in the Experiment Bay"')
     expect(markup).toContain('Restart the lab')
+    expect(markup).toContain('<summary class="min-h-[44px] cursor-pointer content-center text-sm font-medium">Share your result</summary>')
+    expect(markup).toContain('A shareable record of this session.')
   })
 })

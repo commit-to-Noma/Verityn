@@ -404,10 +404,6 @@ export default function JourneyFinale({
         </button>
       </div>
 
-      <EvidenceCard
-        chapters={chapters}
-        reflection={includeReflection ? reflection : null}
-      />
       <details className="glass-panel p-4">
         <summary className="min-h-[44px] cursor-pointer content-center text-sm font-medium">
           See the full session trace
@@ -425,6 +421,17 @@ export default function JourneyFinale({
               )}
             </article>
           ))}
+        </div>
+      </details>
+      <details className="glass-panel p-4">
+        <summary className="min-h-[44px] cursor-pointer content-center text-sm font-medium">
+          Share your result
+        </summary>
+        <div className="mt-4">
+          <EvidenceCard
+            chapters={chapters}
+            reflection={includeReflection ? reflection : null}
+          />
         </div>
       </details>
     </section>
