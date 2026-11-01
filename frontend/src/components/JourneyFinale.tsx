@@ -13,6 +13,7 @@ import MicButton from '../voice/MicButton'
 import { useProofMode } from '../proof/store'
 import { finaleRevealDelay } from '../journey/finaleMotion'
 import PredictionVerdictLine from './PredictionVerdictLine'
+import { batterySupplyLine } from '../journey/readings'
 
 const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
 
@@ -54,10 +55,12 @@ function readingsFor(input: TraceInput | null): string[] {
     if (reading === undefined) {
       return []
     }
-    const label =
-      component.type === 'battery'
-        ? 'Battery'
-        : `Bulb ${bulbIndexes.get(component.id) ?? 1}`
+    if (component.type === 'battery') {
+      return [
+        batterySupplyLine(reading.voltage, reading.current, reading.power),
+      ]
+    }
+    const label = `Bulb ${bulbIndexes.get(component.id) ?? 1}`
     return [
       `${label}: ${formatReading(reading.voltage)} V · ${formatReading(reading.current)} A · ${formatReading(reading.power)} W`,
     ]
