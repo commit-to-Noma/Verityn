@@ -90,12 +90,12 @@ describe('shellLocation', () => {
 })
 
 describe('SHELL_NAV', () => {
-  it('exposes hub, lab, experiment, and lens in order, all enabled', () => {
+  it('exposes hub, lab, lens, and experiment in order, all enabled', () => {
     expect(SHELL_NAV.map((item) => item.label)).toEqual([
       'Hub',
       'Guided Lab',
-      'Experiment Bay',
       'Reality Lens',
+      'Experiment Bay',
       'Meta Muse Spark',
       'Verityn Solver',
     ])
@@ -105,16 +105,16 @@ describe('SHELL_NAV', () => {
     expect(SHELL_NAV.map(({ id, destination }) => [id, destination])).toEqual([
       ['hub', 'hub'],
       ['lab', 'lab'],
-      ['experiment', 'experiment'],
       ['lens', 'lens'],
+      ['experiment', 'experiment'],
       ['coach', 'lab'],
       ['solver', 'experiment'],
     ])
     expect(SHELL_NAV.filter((item) => item.primary).map((item) => item.id)).toEqual([
       'hub',
       'lab',
-      'experiment',
       'lens',
+      'experiment',
     ])
   })
 })

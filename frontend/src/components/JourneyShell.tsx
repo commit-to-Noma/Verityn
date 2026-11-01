@@ -37,35 +37,54 @@ export default function JourneyShell({
 }) {
   const mobileMenu = useRef<HTMLDetailsElement>(null)
   const proof = useProofMode()
-  const renderNavigationItems = () =>
-    SHELL_NAV.map((item) => (
-      <button
-        key={item.id}
-        type="button"
-        disabled={item.disabled === true}
-        aria-current={item.primary && location === item.destination ? 'page' : undefined}
-        aria-disabled={item.disabled === true}
-        title={item.disabled === true ? 'The next workspace  -  not built yet.' : undefined}
-        onClick={() => {
-          mobileMenu.current?.removeAttribute('open')
-          onNavigate(item.destination)
-        }}
-        className={`flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
-          item.primary && location === item.destination
-            ? 'bg-glass-strong text-ink'
-            : item.disabled === true
-              ? 'cursor-not-allowed text-ink-muted opacity-60'
-              : 'text-ink-muted hover:text-ink'
-        }`}
-      >
-        {item.label}
-        {item.badge !== undefined && (
-          <span className="border-glass-border rounded-full border px-2 py-0.5 text-[11px]">
-            {item.badge}
-          </span>
-        )}
-      </button>
-    ))
+  const renderNavButton = (item: (typeof SHELL_NAV)[number]) => (
+    <button
+      key={item.id}
+      type="button"
+      disabled={item.disabled === true}
+      aria-current={item.primary && location === item.destination ? 'page' : undefined}
+      aria-disabled={item.disabled === true}
+      title={item.disabled === true ? 'The next workspace  -  not built yet.' : undefined}
+      onClick={() => {
+        mobileMenu.current?.removeAttribute('open')
+        onNavigate(item.destination)
+      }}
+      className={`flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
+        item.primary && location === item.destination
+          ? 'bg-glass-strong text-ink'
+          : item.disabled === true
+            ? 'cursor-not-allowed text-ink-muted opacity-60'
+            : 'text-ink-muted hover:text-ink'
+      }`}
+    >
+      {item.label}
+      {item.badge !== undefined && (
+        <span className="border-glass-border rounded-full border px-2 py-0.5 text-[11px]">
+          {item.badge}
+        </span>
+      )}
+    </button>
+  )
+
+  const renderNavigationItems = (layout: 'row' | 'column') => (
+    <>
+      {SHELL_NAV.filter((item) => item.primary).map(renderNavButton)}
+      <details className={layout === 'row' ? 'relative' : undefined}>
+        <summary className="text-ink-muted hover:text-ink flex min-h-[44px] cursor-pointer list-none items-center rounded-[10px] px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+          Under the hood
+        </summary>
+        <div
+          className={
+            layout === 'row'
+              ? 'border-glass-border absolute right-0 top-full z-[60] mt-2 flex w-56 flex-col rounded-xl border bg-[rgb(10_14_28/0.98)] p-2 shadow-xl'
+              : 'flex flex-col pl-2'
+          }
+        >
+          {SHELL_NAV.filter((item) => !item.primary).map(renderNavButton)}
+        </div>
+      </details>
+    </>
+  )
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 px-4 pb-12 sm:px-6">
@@ -94,14 +113,14 @@ export default function JourneyShell({
               aria-label="Laboratory pages"
               className="absolute right-0 top-full z-[60] mt-2 flex w-64 flex-col rounded-xl border border-glass-border bg-[rgb(10_14_28/0.98)] p-2 shadow-xl"
             >
-              {renderNavigationItems()}
+              {renderNavigationItems('column')}
             </nav>
           </details>
           <nav
             aria-label="Laboratory"
             className="hidden items-center gap-1 xl:ml-auto xl:flex"
           >
-            {renderNavigationItems()}
+            {renderNavigationItems('row')}
           </nav>
           <div className="xl:ml-2">
             <ProofSwitch />

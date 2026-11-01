@@ -356,7 +356,10 @@ async function drive() {
   await waitFor(() => hasText('Build something. Test what happens.'), 'station opens bench')
   await clickButton('Hub')
   await waitFor(() => hasText('Imagine it. Test it. Understand it.'), 'hub after solver')
-  check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment Bay') && await hasText('Meta Muse Spark') && await hasText('Verityn Solver'))
+  check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment Bay') && await hasText('Under the hood'))
+  await ev(`document.querySelector('nav[aria-label="Laboratory"] details summary').click()`)
+  check('under the hood group', await hasText('Meta Muse Spark') && await hasText('Verityn Solver'))
+  await ev(`document.querySelector('nav[aria-label="Laboratory"] details').removeAttribute('open')`)
   const navCurrent = await ev(`document.querySelector('nav[aria-label="Laboratory"] button[aria-current="page"]')?.textContent.trim() ?? 'none'`)
   check('hub is current location', navCurrent === 'Hub', navCurrent)
   const expEnabled = await ev(`(() => {
