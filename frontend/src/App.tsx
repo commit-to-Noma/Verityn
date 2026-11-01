@@ -27,7 +27,7 @@ import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
 import type { Prediction } from './lessons/lesson'
-import { createPrediction, LIT_POWER_W, matchesExpected } from './lessons/lesson'
+import { LIT_POWER_W, matchesExpected } from './lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
 import {
   showCoachText,
@@ -35,7 +35,6 @@ import {
   stopCoach,
   subscribeCoachSpeechFinished,
 } from './voice/coachVoice'
-import { spokenPredictionChoice } from './voice/spokenPrediction'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
 import { setTraceStage } from './trace/session'
 import {
@@ -115,6 +114,12 @@ export default function App() {
   const [entered, setEntered] = useState(false)
   const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(false)
   const [learnerReply, setLearnerReply] = useState('')
+  const [predictionTranscript, setPredictionTranscript] = useState<{
+    id: number
+    stage: 'l1-predict' | 'reality-predict'
+    text: string
+  } | null>(null)
+  const predictionTranscriptId = useRef(0)
   const [l1Prediction, setL1Prediction] = useState<Prediction | null>(null)
   const [realityStarted, setRealityStarted] = useState(false)
   const [realityPrediction, setRealityPrediction] = useState<Prediction | null>(null)
@@ -551,6 +556,7 @@ export default function App() {
     setResumedCheckpoint(false)
     setL1Prediction(null)
     setLearnerReply('')
+    setPredictionTranscript(null)
     setRealityStarted(false)
     setRealityPrediction(null)
     setRealitySession(null)
@@ -772,21 +778,13 @@ export default function App() {
   }
 
   const handleSpokenPrediction = (transcript: string): boolean => {
-    const choice = spokenPredictionChoice(transcript)
-    if (choice === null) {
-      return false
-    }
-    const prediction = createPrediction(
-      stage === 'reality-predict' ? L1.twist.id : L1.id,
-      choice,
-      transcript.trim().slice(0, 140),
-    )
-    if (stage === 'l1-predict') {
-      handleL1Predicted(prediction)
-      return true
-    }
-    if (stage === 'reality-predict') {
-      handleRealityPredicted(prediction)
+    if (stage === 'l1-predict' || stage === 'reality-predict') {
+      predictionTranscriptId.current += 1
+      setPredictionTranscript({
+        id: predictionTranscriptId.current,
+        stage,
+        text: transcript,
+      })
       return true
     }
     return false
@@ -1021,6 +1019,12 @@ export default function App() {
           challenge={L1}
           eyebrow="Predict · Light the bulb"
           coachDock={renderCoachDock()}
+          voiceTranscript={
+            predictionTranscript?.stage === 'l1-predict'
+              ? predictionTranscript
+              : undefined
+          }
+          onAmbiguousTranscript={announceCoach}
           onComplete={handleL1Predicted}
           demo={l1Demo}
           proofStage="l1-predict"
@@ -1058,6 +1062,12 @@ export default function App() {
           challenge={L1.twist}
           eyebrow="Reality Check · The open switch"
           coachDock={renderCoachDock()}
+          voiceTranscript={
+            predictionTranscript?.stage === 'reality-predict'
+              ? predictionTranscript
+              : undefined
+          }
+          onAmbiguousTranscript={announceCoach}
           onComplete={handleRealityPredicted}
           demo={realityDemo}
           proofStage="reality-predict"

@@ -1,5 +1,8 @@
 import type { Choice } from '../lessons/lesson'
-import { CHOICE_LABELS } from '../lessons/lesson'
+
+export const PREDICTION_CLARIFICATION_PROMPT =
+  'Do you think the bulb will light: yes, no or not sure?'
+export const VOICE_LOCK_MS = 3000
 
 const UNSURE_PATTERN =
   /\b(?:not sure|unsure|uncertain|don't know|do not know|no idea|maybe|can't tell|cannot tell|hard to tell)\b/
@@ -11,26 +14,19 @@ const YES_PATTERN =
 export interface TranscriptFill {
   why: string
   choice: Choice | null
-  status: string
 }
 
-/** Fill the Why field from a transcript and pre-select a clear choice; the
- * learner still confirms with Continue. Pure so it stays unit-testable. */
+/** Fill the Why field from a transcript and identify whether it can be locked in. */
 export function transcriptFill(transcript: string): TranscriptFill {
   const why = transcript.slice(0, 140)
   const choice = spokenPredictionChoice(transcript)
-  if (choice === null) {
-    return {
-      why,
-      choice,
-      status: 'Transcript added. Choose Yes, No, or Not sure to match what you said.',
-    }
-  }
-  return {
-    why,
-    choice,
-    status: `Heard “${transcript.slice(0, 80)}”. Selected ${CHOICE_LABELS[choice]} — change it or press Continue.`,
-  }
+  return { why, choice }
+}
+
+/** Schedule a clear spoken prediction to commit after its undo window. */
+export function scheduleVoiceLock(onLock: () => void): () => void {
+  const timer = globalThis.setTimeout(onLock, VOICE_LOCK_MS)
+  return () => globalThis.clearTimeout(timer)
 }
 
 /** Match clear spoken prediction choices; leave ambiguous replies conversational. */

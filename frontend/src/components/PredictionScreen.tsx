@@ -2,7 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
-import { transcriptFill } from '../voice/spokenPrediction'
+import {
+  PREDICTION_CLARIFICATION_PROMPT,
+  scheduleVoiceLock,
+  transcriptFill,
+} from '../voice/spokenPrediction'
 import MicButton from '../voice/MicButton'
 import CircuitPreview from './CircuitPreview'
 import ProofChips from './ProofChips'
@@ -33,6 +37,8 @@ export default function PredictionScreen({
   challenge,
   eyebrow,
   coachDock,
+  voiceTranscript,
+  onAmbiguousTranscript,
   onComplete,
   continueLabel = 'Continue to fix it',
   demo,
@@ -41,6 +47,8 @@ export default function PredictionScreen({
   challenge: Challenge
   eyebrow: string
   coachDock?: ReactNode
+  voiceTranscript?: { id: number; text: string }
+  onAmbiguousTranscript?: (prompt: string) => void
   onComplete: (prediction: Prediction) => void
   continueLabel?: string
   demo?: PredictionDemo
@@ -50,12 +58,24 @@ export default function PredictionScreen({
   const [choice, setChoice] = useState<Choice | null>(null)
   const [why, setWhy] = useState('')
   const [micStatus, setMicStatus] = useState('')
+  const [pendingVoiceChoice, setPendingVoiceChoice] = useState<Choice | null>(null)
+  const [clarificationVisible, setClarificationVisible] = useState(false)
   const ready = canProceed(choice)
   const committed = useRef(false)
   const onCompleteRef = useRef(onComplete)
+  const voiceLockCancel = useRef<(() => void) | null>(null)
+  const previousVoiceChoice = useRef<Choice | null>(null)
+  const lastExternalTranscript = useRef<number | null>(null)
+  const handleTranscriptRef = useRef<(transcript: string) => void>(() => undefined)
   useEffect(() => {
     onCompleteRef.current = onComplete
   })
+  useEffect(
+    () => () => {
+      voiceLockCancel.current?.()
+    },
+    [],
+  )
 
   const commit = (nextChoice: Choice, nextWhy: string) => {
     if (committed.current) {
@@ -107,24 +127,62 @@ export default function PredictionScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demo, demoChoice, demoWhy, demoPaused, demoSignal])
 
-  /** Manual input cancels the script and hands the screen to the learner. */
+  const cancelVoiceLock = () => {
+    voiceLockCancel.current?.()
+    voiceLockCancel.current = null
+    setPendingVoiceChoice(null)
+  }
+
+  /** Manual input cancels pending voice automation and hands the screen to the learner. */
   const manual = () => {
+    cancelVoiceLock()
+    setClarificationVisible(false)
+    setMicStatus('')
     if (demo !== undefined && !committed.current) {
       demo.onTakeover()
     }
   }
 
-  /** Spoken reason fills the Why field and pre-selects a clear choice; the
-   * learner still confirms with Continue. Interpretation is local keyword
-   * matching, and transcription never calls the coach, so Solo stays coach-free. */
+  /** Spoken reason fills Why; a clear choice gets a three-second undo window. */
   const handleTranscript = (transcript: string) => {
     manual()
     const fill = transcriptFill(transcript)
     setWhy(fill.why)
     if (fill.choice !== null) {
+      const nextChoice = fill.choice
+      previousVoiceChoice.current = choice
       setChoice(fill.choice)
+      setClarificationVisible(false)
+      setPendingVoiceChoice(nextChoice)
+      voiceLockCancel.current = scheduleVoiceLock(() => {
+        voiceLockCancel.current = null
+        setPendingVoiceChoice(null)
+        commit(nextChoice, fill.why)
+      })
+      return
     }
-    setMicStatus(fill.status)
+
+    const showPromptHere = onAmbiguousTranscript === undefined || coachDock == null
+    setClarificationVisible(showPromptHere)
+    onAmbiguousTranscript?.(PREDICTION_CLARIFICATION_PROMPT)
+  }
+  handleTranscriptRef.current = handleTranscript
+
+  useEffect(() => {
+    if (
+      voiceTranscript === undefined ||
+      lastExternalTranscript.current === voiceTranscript.id
+    ) {
+      return
+    }
+    lastExternalTranscript.current = voiceTranscript.id
+    handleTranscriptRef.current(voiceTranscript.text)
+  }, [voiceTranscript])
+
+  const undoVoiceChoice = () => {
+    cancelVoiceLock()
+    setChoice(previousVoiceChoice.current)
+    setMicStatus('')
   }
 
   return (
@@ -210,7 +268,20 @@ export default function PredictionScreen({
         <p className="text-ink-muted text-xs">
           Voice is optional. Audio is sent to Meta to be transcribed and is not saved.
         </p>
-        {micStatus !== '' && (
+        {pendingVoiceChoice !== null && (
+          <p className="text-ink-muted flex items-center gap-2 text-sm" role="status" aria-live="polite">
+            Locking in: {CHOICE_LABELS[pendingVoiceChoice]}.
+            <button type="button" onClick={undoVoiceChoice} className="underline">
+              Undo
+            </button>
+          </p>
+        )}
+        {clarificationVisible && (
+          <p className="text-ink-muted text-sm" role="status" aria-live="polite">
+            {PREDICTION_CLARIFICATION_PROMPT}
+          </p>
+        )}
+        {micStatus !== '' && pendingVoiceChoice === null && !clarificationVisible && (
           <p className="text-ink-muted text-sm" aria-live="polite">
             {micStatus}
           </p>
