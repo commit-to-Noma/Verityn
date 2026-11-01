@@ -36,9 +36,7 @@ import { flowDurationForCurrent, flowForCurrent, glowIntensity } from '../canvas
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
-import SpeakButton from '../voice/SpeakButton'
-import { speakCoach } from '../voice/coachVoice'
-import CoachVoiceToggle from './CoachVoiceToggle'
+import { showCoachText, speakCoach } from '../voice/coachVoice'
 import ProofChips from './ProofChips'
 import { useProofMode } from '../proof/store'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
@@ -375,7 +373,9 @@ function CoachAsk({
             actions: answer.actions,
           }
           if (coachVoiceEnabled) {
-            speakCoach(answer.text)
+            speakCoach(answer.text, { provider: answer.provider })
+          } else {
+            showCoachText(answer.text, answer.provider)
           }
           onActionsRef.current?.(answer.actions)
           const cards = [...rungsRef.current.filter((entry) => entry.rung !== served), card].sort(
@@ -490,7 +490,7 @@ function CoachAsk({
 
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
-      {rungs.map((card, index) => {
+      {rungs.map((card) => {
         const caption = rungCaption(card.provider)
         const draft = drafts[card.rung] ?? ''
         const reflective = card.rung === 'R1' || card.rung === 'R4'
@@ -506,9 +506,6 @@ function CoachAsk({
             </div>
             <p className="text-base">{card.text}</p>
             {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
-            <div>
-              {index === rungs.length - 1 && <SpeakButton enabled={coachVoiceEnabled} />}
-            </div>
             {card.rung === 'R2' &&
               demonstration !== null &&
               demonstration !== undefined &&
@@ -948,7 +945,7 @@ function CanvasInner({
   claim,
   coachSession,
   coachVoiceEnabled = false,
-  onCoachVoiceEnabledChange,
+  coachDock,
   autoStruggleHint = false,
   expectSwitchOpen = false,
   reportRejections = false,
@@ -991,7 +988,7 @@ function CanvasInner({
   claim?: { type: string; component: string }
   coachSession?: string | null
   coachVoiceEnabled?: boolean
-  onCoachVoiceEnabledChange?: (enabled: boolean) => void
+  coachDock?: ReactNode
   autoStruggleHint?: boolean
   expectSwitchOpen?: boolean
   reportRejections?: boolean
@@ -2175,24 +2172,33 @@ function CanvasInner({
           </h2>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {!solo && onCoachVoiceEnabledChange !== undefined && (
-            <CoachVoiceToggle
-              enabled={coachVoiceEnabled}
-              onChange={onCoachVoiceEnabledChange}
-            />
-          )}
           <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
             {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
           </span>
         </div>
       </div>
       {layout === 'split' ? (
-        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-          <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
-          <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
-        </div>
+        coachDock !== undefined && coachDock !== null ? (
+          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <div className="order-0 min-w-0 lg:col-start-2 lg:row-start-1">
+              {coachDock}
+            </div>
+            <div className="order-1 flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+              {experimentPane}
+            </div>
+            <div className="order-2 flex min-w-0 flex-col gap-4 lg:col-start-2 lg:row-start-2">
+              {insightPane}
+            </div>
+          </div>
+        ) : (
+          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
+            <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
+          </div>
+        )
       ) : (
         <>
+          {coachDock}
           {experimentPane}
           {insightPane}
         </>
@@ -2210,7 +2216,7 @@ export default function CircuitCanvas({
   claim,
   coachSession,
   coachVoiceEnabled,
-  onCoachVoiceEnabledChange,
+  coachDock,
   onSolved,
   onDirty,
   onVerdict,
@@ -2253,7 +2259,7 @@ export default function CircuitCanvas({
   claim?: { type: string; component: string }
   coachSession?: string | null
   coachVoiceEnabled?: boolean
-  onCoachVoiceEnabledChange?: (enabled: boolean) => void
+  coachDock?: ReactNode
   autoStruggleHint?: boolean
   expectSwitchOpen?: boolean
   reportRejections?: boolean
@@ -2299,7 +2305,7 @@ export default function CircuitCanvas({
         claim={claim}
         coachSession={coachSession}
         coachVoiceEnabled={coachVoiceEnabled}
-        onCoachVoiceEnabledChange={onCoachVoiceEnabledChange}
+        coachDock={coachDock}
         autoStruggleHint={autoStruggleHint}
         expectSwitchOpen={expectSwitchOpen}
         reportRejections={reportRejections}

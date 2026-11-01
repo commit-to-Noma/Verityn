@@ -172,6 +172,20 @@ async function hasText(t) {
   return ev(`document.body.innerText.includes(${JSON.stringify(t)})`)
 }
 
+async function setDockVoice(enabled) {
+  const found = await ev(`(() => {
+    const button = document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]');
+    if (!button) return false;
+    if (button.getAttribute('aria-pressed') !== ${JSON.stringify(String(enabled))}) button.click();
+    return true;
+  })()`)
+  if (!found) return false
+  return waitFor(
+    () => ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === ${JSON.stringify(String(enabled))}`),
+    `dock voice ${enabled ? 'on' : 'off'}`,
+  )
+}
+
 async function uploadLensFile(absPath) {
   const doc = await send('DOM.getDocument', { depth: 0 })
   const { nodeId } = await send('DOM.querySelector', { nodeId: doc.root.nodeId, selector: 'input[type="file"]' })
@@ -372,16 +386,14 @@ async function drive() {
   await waitFor(() => hasText('loose ends'), 'l1 predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
-  await ev(`document.querySelector('[aria-label="Voice settings"][aria-expanded="false"]')?.click()`)
-  check('browser voice muted by default', await hasText('Browser voice muted'))
-  await ev(`document.querySelector('[aria-label="Voice settings"][aria-expanded="false"]')?.click()`)
-  await clickButton('Browser voice muted')
+  check('coach dock shows the current line', await ev(`!!document.querySelector('[aria-label="Coach dock"] p[aria-live="polite"]')`))
+  check('browser voice muted by default', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
+  check('voice toggle is in the dock', await ev(`!!document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')`))
+  check('dock voice turns on', await setDockVoice(true))
   await waitFor(() => hasText('Reply by voice'), 'tap-to-talk offered', 10000)
   await sleep(2500)
   check('no auto-listen loop', !(await hasText('Listening. Pausing will send')))
-  await ev(`document.querySelector('[aria-label="Voice settings"][aria-expanded="false"]')?.click()`)
-  await clickButton('Browser voice on')
-  await waitFor(() => hasText('Browser voice muted'), 'voice restored to muted', 10000)
+  check('dock voice turns off', await setDockVoice(false))
   await clickButton('No')
   await fillInput('predict-why', 'gap breaks the loop')
   await clickButton('Continue to fix it')
@@ -412,9 +424,9 @@ async function drive() {
   await clickButton('Yes')
   await fillInput('predict-why', 'complete loop lights')
   await clickButtonStarts('Continue')
+  await clickButton('Test circuit')
   await waitFor(() => hasText('Ask the coach'), 'coach', 25000)
-  await ev(`document.querySelector('[aria-label="Voice settings"][aria-expanded="false"]')?.click()`)
-  await clickButton('Browser voice muted')
+  check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
   await clickButton('Ask the coach')
   await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
   check('trace drawer present', await hasText('What Meta did / What code checked'))
@@ -425,11 +437,10 @@ async function drive() {
   check('trace names serving tool', await hasText('prototype-fake'))
   await clickButton('Show me the evidence (R2)')
   await waitFor(() => hasText('Evidence pointer'), 'r2', 20000)
-  check('replay button on coach card', await ev(`!!document.querySelector('button[aria-label="Repeat coach message"]')`))
-  check('replay disclaims Meta', await ev(`document.querySelector('button[aria-label="Repeat coach message"]')?.getAttribute('title')`) === 'Repeat the latest coach message (browser voice, not Meta)')
-  await ev(`document.querySelector('[aria-label="Voice settings"][aria-expanded="false"]')?.click()`)
-  await clickButton('Browser voice on')
-  await waitFor(() => hasText('Browser voice muted'), 'voice muted again', 10000)
+  check('fake coach line is not marked Meta', await ev(`!document.querySelector('[aria-label="Coach dock"]')?.innerText.includes('Meta Spark')`))
+  check('earlier coach lines are expandable', await ev(`!!document.querySelector('[aria-label="Coach dock"] details summary')`))
+  check('dock speaker plays the current line', await setDockVoice(true))
+  check('dock speaker can be turned off', await setDockVoice(false))
 
   // Stuck-helper: closing the switch on the open-switch stage names the
   // problem instead of silently flipping the verdict.

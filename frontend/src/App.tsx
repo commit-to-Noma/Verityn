@@ -952,6 +952,19 @@ export default function App() {
       onExit={handleDemoExit}
     />
   )
+  const renderCoachDock = () =>
+    demo.active ? null : (
+      <Suspense fallback={null}>
+        <CoachConversation
+          enabled={coachVoiceEnabled}
+          onEnabledChange={setCoachVoiceEnabled}
+          replyAvailable={complete === null || complete.coach !== undefined}
+          learnerText={learnerReply}
+          onLearnerTextChange={setLearnerReply}
+          onPrediction={handleSpokenPrediction}
+        />
+      </Suspense>
+    )
 
   return (
     <JourneyShell
@@ -986,19 +999,6 @@ export default function App() {
         </Suspense>
       }
     >
-      {['l1-predict', 'l1-build', 'reality-predict', 'reality-build'].includes(stage) &&
-        !demo.active && (
-          <Suspense fallback={null}>
-            <CoachConversation
-              enabled={
-                coachVoiceEnabled && (complete === null || complete.coach !== undefined)
-              }
-              learnerText={learnerReply}
-              onLearnerTextChange={setLearnerReply}
-              onPrediction={handleSpokenPrediction}
-            />
-          </Suspense>
-        )}
       {stage === 'intro' && (
         <LabIntro
           onEnter={handleStartJourney}
@@ -1020,8 +1020,7 @@ export default function App() {
         <PredictionScreen
           challenge={L1}
           eyebrow="Predict · Light the bulb"
-          coachVoiceEnabled={coachVoiceEnabled}
-          onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+          coachDock={renderCoachDock()}
           onComplete={handleL1Predicted}
           demo={l1Demo}
           proofStage="l1-predict"
@@ -1043,7 +1042,7 @@ export default function App() {
             prediction={l1Prediction}
             challenge={L1}
             coachVoiceEnabled={coachVoiceEnabled}
-            onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+            coachDock={renderCoachDock()}
             autoStruggleHint
             demoBuild={demo.active ? DEMO_SCRIPT.l1Build : null}
             demoPaused={demo.paused}
@@ -1058,8 +1057,7 @@ export default function App() {
         <PredictionScreen
           challenge={L1.twist}
           eyebrow="Reality Check · The open switch"
-          coachVoiceEnabled={coachVoiceEnabled}
-          onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+          coachDock={renderCoachDock()}
           onComplete={handleRealityPredicted}
           demo={realityDemo}
           proofStage="reality-predict"
@@ -1087,7 +1085,7 @@ export default function App() {
             prediction={realityPrediction}
             challenge={L1.twist}
             coachVoiceEnabled={coachVoiceEnabled}
-            onCoachVoiceEnabledChange={setCoachVoiceEnabled}
+            coachDock={renderCoachDock()}
             expectSwitchOpen
             autoDemonstrate={auto && !demo.paused}
             autoAsk={demo.active && !demo.paused}

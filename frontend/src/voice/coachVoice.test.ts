@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   latestCoachStatement,
+  latestCoachMessage,
   repeatCoach,
   speakCoach,
   stopCoach,
@@ -32,15 +33,19 @@ describe('coach voice playback', () => {
         }
       },
     )
-    const statements: string[] = []
-    const unsubscribeStatement = subscribeCoachStatement((text) => statements.push(text))
+    const statements: { text: string; provider: string | null }[] = []
+    const unsubscribeStatement = subscribeCoachStatement((statement) => statements.push(statement))
 
-    expect(speakCoach('Connect the open ends.')).toBe(true)
-    expect(statements).toEqual(['Connect the open ends.'])
+    expect(speakCoach('Connect the open ends.', { provider: 'meta-spark' })).toBe(true)
+    expect(statements).toEqual([{ text: 'Connect the open ends.', provider: 'meta-spark' }])
     expect(synthesis.cancel).toHaveBeenCalledTimes(1)
     expect(synthesis.speak).toHaveBeenCalledTimes(1)
     expect(utterances[0]).toMatchObject({ text: 'Connect the open ends.', rate: 0.92, pitch: 1.04 })
     expect(latestCoachStatement()).toBe('Connect the open ends.')
+    expect(latestCoachMessage()).toEqual({
+      text: 'Connect the open ends.',
+      provider: 'meta-spark',
+    })
 
     stopCoach()
     expect(synthesis.cancel).toHaveBeenCalledTimes(2)
@@ -49,6 +54,26 @@ describe('coach voice playback', () => {
     expect(synthesis.speak).toHaveBeenCalledTimes(2)
     expect(utterances[1]?.text).toBe('Connect the open ends.')
     unsubscribeStatement()
+  })
+
+  it('does not lose provider metadata when the current line is replayed', () => {
+    vi.stubGlobal('speechSynthesis', {
+      speak: vi.fn(),
+      cancel: vi.fn(),
+      getVoices: () => [],
+    })
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        constructor(_text: string) {}
+      },
+    )
+    speakCoach('A Spark reply.', { provider: 'meta-spark' })
+    expect(repeatCoach()).toBe(true)
+    expect(latestCoachMessage()).toEqual({
+      text: 'A Spark reply.',
+      provider: 'meta-spark',
+    })
   })
 
   it('skips re-speaking an identical repeat but replays on explicit repeat', () => {

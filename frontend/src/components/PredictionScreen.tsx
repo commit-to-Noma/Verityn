@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { canProceed, CHOICE_LABELS, createPrediction } from '../lessons/lesson'
 import { transcriptFill } from '../voice/spokenPrediction'
 import MicButton from '../voice/MicButton'
-import CoachVoiceToggle from './CoachVoiceToggle'
 import CircuitPreview from './CircuitPreview'
 import ProofChips from './ProofChips'
 
@@ -33,8 +32,7 @@ const CHOICE_ACTIVE = { box: 'border-flow bg-flow/10', icon: 'text-flow' }
 export default function PredictionScreen({
   challenge,
   eyebrow,
-  coachVoiceEnabled,
-  onCoachVoiceEnabledChange,
+  coachDock,
   onComplete,
   continueLabel = 'Continue to fix it',
   demo,
@@ -42,8 +40,7 @@ export default function PredictionScreen({
 }: {
   challenge: Challenge
   eyebrow: string
-  coachVoiceEnabled?: boolean
-  onCoachVoiceEnabledChange?: (enabled: boolean) => void
+  coachDock?: ReactNode
   onComplete: (prediction: Prediction) => void
   continueLabel?: string
   demo?: PredictionDemo
@@ -147,18 +144,9 @@ export default function PredictionScreen({
           label={`${challenge.title} starting circuit`}
           className="h-64 sm:h-72 md:h-[min(60vh,460px)]"
         />
-        <p className="text-ink-muted text-sm">
-          <span className="text-flow font-medium">Coach: </span>
-          study the circuit, then lock in your prediction.
-        </p>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
-      {onCoachVoiceEnabledChange !== undefined && (
-        <CoachVoiceToggle
-          enabled={coachVoiceEnabled ?? false}
-          onChange={onCoachVoiceEnabledChange}
-        />
-      )}
+      {coachDock}
       {challenge.brief !== undefined && (
         <div className="rounded-2xl border border-glass-border p-4" aria-label="Challenge brief">
           <p className="text-sm">{challenge.brief.setup}</p>
