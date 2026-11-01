@@ -149,6 +149,7 @@ export default function JourneyShell({
         {children}
       </main>
       <footer className="flex flex-col gap-4">
+        {location === 'hub' && (
         <section aria-labelledby="built-with-meta-heading" className="glass-panel p-4">
           <h2 id="built-with-meta-heading" className="text-sm font-semibold">Built with Meta</h2>
           <ul className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
@@ -157,11 +158,11 @@ export default function JourneyShell({
               <span className="text-ink-muted"> — R1 questions, explanations, and Reality Lens vision. </span>
               <a
                 className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}backend/tests/test_trace.py`}
+                href={`${META_EVIDENCE_BASE}docs/INTELLIGENCE_LOG.md`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Mocked trace tests
+                Trace and validation notes
               </a>
             </li>
             <li>
@@ -169,11 +170,23 @@ export default function JourneyShell({
               <span className="text-ink-muted"> — speech-to-text for Predict, Reality Check, and Solo. </span>
               <a
                 className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}backend/tests/test_meta_voice.py`}
+                href={`${META_EVIDENCE_BASE}docs/ARCHITECTURE.md`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Mocked voice tests
+                Voice integration notes
+              </a>
+            </li>
+            <li>
+              <span className="font-medium">SAM</span>
+              <span className="text-ink-muted"> — sample only; no live inference. </span>
+              <a
+                className="text-flow underline underline-offset-2"
+                href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Sample probe results
               </a>
             </li>
           </ul>
@@ -181,6 +194,7 @@ export default function JourneyShell({
             Pointer and Demonstration are deterministic by design. SAM is sample-only, not a live inference.
           </p>
         </section>
+        )}
         {proof && <TracePanel />}
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">

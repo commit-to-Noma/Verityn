@@ -194,12 +194,14 @@ BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journ
 
 | Tool | Used for | Evidence |
 |---|---|---|
-| Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Mocked trace tests](./backend/tests/test_trace.py) |
-| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, and Solo | [Mocked voice tests](./backend/tests/test_meta_voice.py) |
+| Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Trace and validation notes](./docs/INTELLIGENCE_LOG.md) |
+| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, and Solo | [Voice API notes](./docs/ARCHITECTURE.md) |
+| SAM | Sample only; no live inference | [Sample probe results](./docs/sam-spike-results.json) |
 
-Pointer and Demonstration are deterministic by design, not model calls.
-SAM is sample-only; no live SAM inference is used. Browser speech playback
-is browser-native, not Meta text-to-speech. Provider labels and trace rows
+Pointer and Demonstration are deterministic by design, not model calls. SAM is
+sample-only; no live SAM inference is used.
+Browser speech playback is browser-native, not Meta text-to-speech.
+Provider labels and trace rows
 identify the provider that actually served each response.
 
 ## Notes

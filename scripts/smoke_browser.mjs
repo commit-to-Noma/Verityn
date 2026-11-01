@@ -374,6 +374,7 @@ async function drive() {
   const iconBytes = Number(iconRes.headers.get('content-length') ?? '0')
   check('brand icon served and bounded', iconRes.ok && iconBytes > 0 && iconBytes < 100 * 1024, `${iconRes.status} ${iconBytes}B`)
   check('hero headline', await hasText('Imagine it. Test it. Understand it.'))
+  check('Built with Meta disclosures are visible on the hub', await hasText('Built with Meta'))
   check('lab identity', await hasText('Verityn Laboratory'))
   check('first-lab line honest', await hasText('Circuits are our first live Engineering module.'))
   check('hero entries', await hasText('Start your own lab') && await hasText('Watch a walkthrough'))
@@ -433,6 +434,7 @@ async function drive() {
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
+  check('Built with Meta disclosures are hidden in the Guided Lab', !(await hasText('Built with Meta')))
   check(
     'guided lab opens with the task',
     await hasText('Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'),
