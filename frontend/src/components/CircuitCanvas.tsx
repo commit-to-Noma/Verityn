@@ -1865,11 +1865,7 @@ function CanvasInner({
     { id: 'delete', label: 'Delete', Icon: Eraser },
   ] as const
 
-  // Experiment pane (tools, canvas, controls, live result) and insight pane
-  // (prediction recap + readings + verdicts + next action): side by side on
-  // wide lab stages, stacked in the narrow lens replica. Plain element
-  // variables, not components, so React Flow keeps its state across renders.
-  const experimentPane = (
+  const palettePane = (
     <>
       <div className="flex gap-2" role="group" aria-label="Palette">
         {tools.map(({ id, label, Icon }) => (
@@ -1953,6 +1949,10 @@ function CanvasInner({
           {nextBuildStep}
         </p>
       )}
+    </>
+  )
+  const canvasPane = (
+    <>
       <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
@@ -2000,7 +2000,7 @@ function CanvasInner({
             snapGrid={[20, 20]}
             fitView
             fitViewOptions={{
-              padding: window.innerWidth <= 640 ? 0.28 : 0.2,
+              padding: window.innerWidth <= 640 ? 0.12 : 0.2,
               maxZoom: 1.25,
             }}
             colorMode="dark"
@@ -2015,12 +2015,16 @@ function CanvasInner({
           </div>
         )}
       </div>
+    </>
+  )
+  const actionPane = (
+    <>
       {simulateLocked !== null && (
         <p className="text-ink-muted text-sm" role="note">
           {simulateLocked}
         </p>
       )}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={runState.phase === 'loading' || simulateLocked !== null}
@@ -2061,11 +2065,6 @@ function CanvasInner({
           </button>
         )}
       </div>
-      {simulateLocked !== null && (
-        <p className="text-ink-muted text-sm" role="note">
-          {simulateLocked}
-        </p>
-      )}
       {runState.phase === 'idle' &&
         !(challenge !== undefined && nextBuildStep !== null) && (
         <div className={`flow-status ${loopClosed ? 'flow-status-ready' : ''}`} role="status">
@@ -2083,6 +2082,10 @@ function CanvasInner({
           </span>
         </div>
       )}
+    </>
+  )
+  const feedbackPane = (
+    <>
       {runState.phase === 'done' && runState.result.ok && (
         <div className="evidence-reveal">
           <ResultBanner result={runState.result} netlist={runState.netlist} />
@@ -2103,6 +2106,16 @@ function CanvasInner({
           </p>
         )
       })()}
+    </>
+  )
+  // The guided canvas remains independent from the right-hand stage content.
+  // Keep the original full workbench composition for non-guided canvases.
+  const experimentPane = (
+    <>
+      {palettePane}
+      {canvasPane}
+      {actionPane}
+      {feedbackPane}
     </>
   )
   const proof = useProofMode()
@@ -2214,7 +2227,7 @@ function CanvasInner({
       {layout === 'split' ? (
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <div className="order-0 flex min-w-0 flex-col gap-4">
-            {experimentPane}
+            {canvasPane}
           </div>
           <div className="order-1 flex min-w-0 flex-col gap-4">
             <div className="flex items-start justify-between gap-4">
@@ -2228,9 +2241,14 @@ function CanvasInner({
                 </span>
               )}
             </div>
-            {!completed && prediction && challenge && (
+            {prediction && challenge && (
               <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
-                <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
+                <PredictionSummary
+                  prediction={prediction}
+                  hint={challenge.fix.hint}
+                  hideHint={solo}
+                  compact={completed}
+                />
               </div>
             )}
             {coachDock}
@@ -2252,7 +2270,21 @@ function CanvasInner({
                 {gate}
               </>
             ) : (
-              insightPane
+              <>
+                {palettePane}
+                {runState.phase === 'done' ? (
+                  <>
+                    {insightPane}
+                    {actionPane}
+                  </>
+                ) : (
+                  <>
+                    {actionPane}
+                    {insightPane}
+                  </>
+                )}
+                {feedbackPane}
+              </>
             )}
           </div>
         </div>
