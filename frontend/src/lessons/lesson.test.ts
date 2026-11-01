@@ -17,7 +17,7 @@ describe('L1 lesson pack', () => {
     expect(L1.id).toBe('L1')
     expect(L1.title).toBe('Light the bulb')
     expect(L1.question).toBe(
-      'If you connect the two loose ends, what do you think will happen to the bulb?',
+      'If you connect the two loose ends, will the bulb light?',
     )
   })
 
@@ -157,7 +157,7 @@ describe('L1 twist', () => {
   it('asks about the wired circuit with the switch open', () => {
     expect(L1.twist.id).toBe('L1T1')
     expect(L1.twist.question).toBe(
-      'The circuit is complete, but the switch is open. Will current flow?',
+      'The circuit is complete, but the switch is open. Will the bulb light?',
     )
     expect(L1.twist.claim).toEqual({ type: 'lit', component: 'L1' })
   })

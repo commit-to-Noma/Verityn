@@ -1,7 +1,7 @@
 {
   "id": "L1",
   "title": "Light the bulb",
-  "question": "If you connect the two loose ends, what do you think will happen to the bulb?",
+  "question": "If you connect the two loose ends, will the bulb light?",
   "brief": {
     "setup": "This circuit has a gap, so the bulb is off.",
     "task": "Add one wire to close the loop, then watch the simulator test your prediction."
@@ -45,7 +45,7 @@
   "twist": {
     "id": "L1T1",
     "title": "Reality Check: the open switch",
-    "question": "The circuit is complete, but the switch is open. Will current flow?",
+    "question": "The circuit is complete, but the switch is open. Will the bulb light?",
     "start": {
       "components": [
         {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
