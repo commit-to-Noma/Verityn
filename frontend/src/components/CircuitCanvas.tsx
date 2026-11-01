@@ -42,7 +42,7 @@ import { useProofMode } from '../proof/store'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
-import { explainLitVerdict } from '../verdict/explain'
+import PredictionVerdictLine from './PredictionVerdictLine'
 import EvidenceTrace from './EvidenceTrace'
 import ReadoutValue from './ReadoutValue'
 import SoloResult from './SoloResult'
@@ -733,37 +733,14 @@ function StartVerdict({
  * it keeps its own mount across verdict re-checks. */
 function DoneVerdictCard({
   state,
+  choice,
   observed,
 }: {
   state: Extract<VerdictState, { phase: 'done' }>
+  choice: Choice
   /** Solver measurement for the claimed component, when the run solved. */
   observed?: { current: number; power: number }
 }) {
-  // Never headline the learner's claim on its own: after a failed
-  // prediction the claim could contradict the
-  // observed evidence shown beside it. Both sides stay explicit.
-  const predictionText =
-    state.claim.type === 'lit'
-      ? state.claim.value
-        ? 'The bulb lights'
-        : 'The bulb stays dark'
-      : 'Prediction checked'
-  const observedText =
-    observed === undefined || state.claim.type !== 'lit'
-      ? null
-      : observed.power > LIT_POWER_W
-        ? 'The bulb lights'
-        : 'The bulb stays dark'
-  const explanation =
-    observed !== undefined && state.claim.type === 'lit' && state.verdict.status !== 'UNASSESSABLE'
-      ? explainLitVerdict({
-          status: state.verdict.status,
-          component: state.claim.component,
-          predictedLit: state.claim.value,
-          power: observed.power,
-          netlist: state.netlist,
-        })
-      : null
   return (
     <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
       <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">
@@ -773,34 +750,16 @@ function DoneVerdictCard({
         <VerdictIcon status={state.verdict.status} />
         <div>
           <p className="text-base font-medium text-ink">{VERDICT_LABELS[state.verdict.status]}</p>
-          <p className="text-ink-muted text-sm">
-            <span className="font-medium text-ink">Your prediction:</span> {predictionText}
-          </p>
-          {observed !== undefined && observedText !== null && (
-            <p className="text-ink-muted text-sm">
-              <span className="font-medium text-ink">Observed:</span> {observedText}
-              {' · '}
-              <ReadoutValue value={observed.current} unit="A" />
-              {' · '}
-              <ReadoutValue value={observed.power} unit="W" />
-            </p>
+          {observed !== undefined && state.claim.type === 'lit' && (
+            <PredictionVerdictLine
+              choice={choice}
+              current={observed.current}
+              power={observed.power}
+              lit={observed.power > LIT_POWER_W}
+            />
           )}
-          {explanation !== null && <p className="text-ink-muted text-sm">{explanation}</p>}
         </div>
       </div>
-      {Object.entries(state.verdict.evidence).map(([key, power]) => {
-        const [cid] = key.split('.')
-        return (
-          <p key={key} className="text-ink-muted pl-9 text-sm">
-            <span className="font-mono">{cid}</span>
-            {' · '}
-            <ReadoutValue value={power} unit="W" />
-          </p>
-        )
-      })}
-      <p className="text-ink-muted pl-9 text-xs">
-        This tests your prediction against the model, not you.
-      </p>
     </div>
   )
 }
@@ -878,7 +837,7 @@ function ClaimVerdict({
         (renderDone !== undefined ? (
           renderDone()
         ) : (
-          <DoneVerdictCard state={state} observed={observed} />
+          <DoneVerdictCard state={state} choice={choice} observed={observed} />
         ))}
       {state.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">

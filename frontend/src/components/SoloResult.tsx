@@ -3,13 +3,13 @@ import type { Choice, LessonSeed } from '../lessons/lesson'
 import {
   describeAddedWires,
   soloBulbReadings,
-  soloPredictionLine,
   soloSuggestion,
   type BuiltEdge,
 } from '../solo/summary'
 import ReadoutValue from './ReadoutValue'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
+import PredictionVerdictLine from './PredictionVerdictLine'
 
 /** Solo result in four honest beats: prediction, change, measurement, suggestion.
  * Rendered instead of the plain verdict card in solo mode; every number comes
@@ -33,6 +33,7 @@ export default function SoloResult({
 }) {
   const readings = soloBulbReadings(result, netlist)
   const claimLabel = readings.find((reading) => reading.id === claimComponent)?.label ?? 'bulb'
+  const claimReading = readings.find((reading) => reading.id === claimComponent)
   return (
     <div className="glass-panel flex flex-col gap-3 p-4" aria-live="polite">
       <div className="flex items-center gap-3">
@@ -40,8 +41,18 @@ export default function SoloResult({
         <p className="text-base font-medium text-ink">{VERDICT_LABELS[verdict]}</p>
       </div>
       <div>
-        <p className="text-base font-medium text-ink">Your prediction</p>
-        <p className="text-ink-muted text-sm">{soloPredictionLine(choice, claimLabel)}</p>
+        <p className="text-base font-medium text-ink">Prediction and measurement</p>
+        {claimReading !== undefined ? (
+          <PredictionVerdictLine
+            choice={choice}
+            current={claimReading.current}
+            power={claimReading.power}
+            lit={claimReading.lit}
+            component={`the ${claimLabel}`}
+          />
+        ) : (
+          <p className="text-ink-muted text-sm">No solver measurement was saved for this bulb.</p>
+        )}
       </div>
       <div>
         <p className="text-base font-medium text-ink">What you changed</p>

@@ -4,7 +4,7 @@ import { MISSING_CHAPTER } from '../journey/story'
 import { ApiError, explainResult, providerBadge } from '../api/client'
 import { formatReading } from './format'
 import { netlistPreviewSeed } from '../canvas/netlistPreview'
-import { CHOICE_LABELS } from '../lessons/lesson'
+import { CHOICE_LABELS, LIT_POWER_W } from '../lessons/lesson'
 import type { TraceInput } from '../lessons/trace'
 import CircuitPreview from './CircuitPreview'
 import EvidenceCard from './EvidenceCard'
@@ -12,6 +12,7 @@ import EvidenceTrace from './EvidenceTrace'
 import MicButton from '../voice/MicButton'
 import { useProofMode } from '../proof/store'
 import { finaleRevealDelay } from '../journey/finaleMotion'
+import PredictionVerdictLine from './PredictionVerdictLine'
 
 const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
 
@@ -86,6 +87,27 @@ function conceptFor(chapter: ChapterRecap, input: TraceInput | null): string | n
     return `A complete loop gives current a path through the bulb; the solver measured ${formatReading(reading.current)} A.`
   }
   return 'The solver recorded this circuit; its component readings are shown above.'
+}
+
+function verdictReading(chapter: ChapterRecap, input: TraceInput | null) {
+  if (input?.prediction === null || input?.prediction === undefined || input.result?.ok !== true ||
+      input.netlist === null) {
+    return null
+  }
+  const bulbs = input.netlist.components.filter((component) => component.type === 'bulb')
+  const claimed = chapter.solo ? (bulbs[1] ?? bulbs[0]) : bulbs[0]
+  const reading = claimed === undefined ? undefined : input.result.components[claimed.id]
+  if (claimed === undefined || reading === undefined) {
+    return null
+  }
+  const label = chapter.solo ? 'the second bulb' : 'the bulb'
+  return {
+    choice: input.prediction.choice,
+    current: reading.current,
+    power: reading.power,
+    lit: reading.power > LIT_POWER_W,
+    component: label,
+  }
 }
 
 function saidByLearner(input: TraceInput | null): string {
@@ -200,6 +222,7 @@ export default function JourneyFinale({
                 )
           const readings = readingsFor(input)
           const concept = conceptFor(chapter, input)
+          const verdict = verdictReading(chapter, input)
           const polishState = polish[chapter.id]
           const title = CHAPTER_TITLES[index] ?? chapter.title
           return (
@@ -238,6 +261,9 @@ export default function JourneyFinale({
                     <h4 className="text-sm font-semibold">You said</h4>
                     <p className="mt-1 break-words text-sm text-ink-muted">{saidByLearner(input)}</p>
                   </div>
+                  {verdict !== null && (
+                    <PredictionVerdictLine {...verdict} />
+                  )}
                   <div>
                     <h4 className="text-sm font-semibold">The solver measured</h4>
                     {readings.length > 0 ? (
