@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ChapterRecap } from '../journey/story'
 import type { TraceInput } from '../lessons/trace'
-import { buildEvidenceCard, cardLines, wrapLine } from './card'
+import { buildEvidenceCard, cardLines, metaToolChips, rungLevel, toolShortLabel, wrapLine } from './card'
 
 function chapter(partial: Partial<ChapterRecap> = {}): ChapterRecap {
   return { id: 'L1', title: 'Light the bulb', solo: false, input: null, ...partial }
@@ -37,12 +37,14 @@ describe('buildEvidenceCard', () => {
         }),
         chapter({ id: 'L1T2', title: 'Solo', solo: true, input: SOLVED_INPUT }),
       ],
-      { total: 3, metaCalls: 0, rejections: 0, fallbacks: 1 },
+      { total: 3, metaCalls: 0, rejections: 0, fallbacks: 1, tools: [] },
       'http://127.0.0.1:5173',
     )
     expect(model).not.toBeNull()
     expect(model?.lesson).toBe('Light the bulb')
     expect(model?.prediction).toContain('The gap breaks the loop.')
+    expect(model?.lit).toBe(true)
+    expect(model?.metaTools).toEqual([])
     expect(model?.measurement).toContain('L1 0.6 A · 3.6 W')
     expect(model?.measurement).toContain('matched')
     expect(model?.reality).toContain('L1 0.6 A · 3.6 W')
@@ -63,7 +65,7 @@ describe('buildEvidenceCard', () => {
           input: { ...SOLVED_INPUT, verdict: { status: 'UNASSESSABLE', evidence: {} } },
         }),
       ],
-      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
       'http://x',
     )
     expect(model?.measurement).toBe('L1 0.6 A · 3.6 W')
@@ -73,7 +75,7 @@ describe('buildEvidenceCard', () => {
   it('omits solo and rung when the session never produced them', () => {
     const model = buildEvidenceCard(
       [chapter({ input: SOLVED_INPUT })],
-      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
       'http://x',
     )
     expect(model?.rung).toBeNull()
@@ -87,7 +89,7 @@ describe('buildEvidenceCard', () => {
     expect(
       buildEvidenceCard(
         [chapter({ input: null })],
-        { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0 },
+        { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
         'http://x',
       ),
     ).toBeNull()
@@ -97,6 +99,38 @@ describe('buildEvidenceCard', () => {
     const rows = wrapLine('a b c d e f g h', 5)
     expect(rows.join(' ')).toBe('a b c d e f g h')
     expect(rows.every((row) => row.length <= 7)).toBe(true)
+  })
+
+  it('marks the bulb dark when solver power is at the floor', () => {
+    const model = buildEvidenceCard(
+      [
+        chapter({
+          input: {
+            ...SOLVED_INPUT,
+            result: { ok: true, components: { L1: { current: 0, power: 0 } } },
+          } as unknown as TraceInput,
+        }),
+      ],
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
+      'http://x',
+    )
+    expect(model?.lit).toBe(false)
+  })
+
+  it('chips each Meta tool once, first-seen order, skipping others', () => {
+    expect(
+      metaToolChips(['muse-spark-1.3', 'template', 'muse-voice-transcribe', 'muse-spark-1.3']),
+    ).toEqual(['Spark', 'Voice'])
+    expect(toolShortLabel('sam-3.1')).toBe('SAM')
+    expect(toolShortLabel('template')).toBeNull()
+  })
+
+  it('maps rungs to dot levels', () => {
+    expect(rungLevel(null)).toBe(0)
+    expect(rungLevel('R1')).toBe(1)
+    expect(rungLevel('R2')).toBe(2)
+    expect(rungLevel('R4')).toBe(4)
+    expect(rungLevel('R9')).toBe(0)
   })
 })
 

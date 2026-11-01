@@ -493,6 +493,10 @@ async function drive() {
   await clickButton('Download card')
   await waitFor(() => hasText('Evidence card downloaded.'), 'card png renders', 20000)
   check('evidence card png renders', true)
+  check('card preview is 1200x630', await ev(`(() => {
+    const img = document.querySelector('section[aria-label="Evidence card"] img');
+    return img !== null && img.naturalWidth === 1200 && img.naturalHeight === 630;
+  })()`))
   await ev(`[...document.querySelectorAll('summary')].find((e) => e.textContent.trim() === 'See the full journey and measurements')?.click()`)
   await waitFor(() => hasText('REALITY CHECK EVIDENCE'), 'journey story', 20000)
   await ev(`[...document.querySelectorAll('summary')].filter((e) => e.textContent.trim() === 'Evidence trace').forEach((e) => e.click())`)

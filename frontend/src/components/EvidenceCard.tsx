@@ -16,7 +16,7 @@ export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] })
   const events = traceEvents()
   const model = buildEvidenceCard(
     chapters,
-    { ...traceCounts(events), total: events.length },
+    { ...traceCounts(events), total: events.length, tools: events.map((event) => event.tool) },
     publicUrl(),
   )
   const lines = model === null ? [] : cardLines(model)
