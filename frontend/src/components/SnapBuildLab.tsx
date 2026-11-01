@@ -13,6 +13,7 @@ import {
   LENS_VIEW_MODES,
   REVIEW_STATUS_LABELS,
   canLoadProposal,
+  canTestProposal,
   componentReviewStatus,
   connectionReviewStatus,
   nextRevealStep,
@@ -77,6 +78,7 @@ function ReviewPanels({
   const replicaRef = useRef<HTMLDivElement | null>(null)
 
   const loadable = canLoadProposal(proposal)
+  const canTest = canTestProposal(proposal, confirmed)
   const banner = reviewBanner(
     proposal.status,
     proposal.connections.filter((connection) => connection.uncertain).length,
@@ -341,9 +343,7 @@ function ReviewPanels({
                 proofStage="lens"
                 importRequest={{ seed, uncertainIds, nonce }}
                 reportRejections
-                simulateLocked={
-                  confirmed ? null : 'Confirm the model below before testing it against the simulator.'
-                }
+                simulateLocked={canTest ? null : 'Confirm the model below before testing it against the simulator.'}
                 peerSelection={selection}
                 onPeerSelect={setSelection}
                 onDirty={() => setCorrected(true)}

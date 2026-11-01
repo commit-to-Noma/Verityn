@@ -55,6 +55,11 @@ export function canLoadProposal(proposal: VisionProposal): boolean {
   return proposal.status !== 'unsupported' && proposal.components.length > 0
 }
 
+/** Solver access always requires an explicit learner confirmation. */
+export function canTestProposal(proposal: VisionProposal, confirmed: boolean): boolean {
+  return canLoadProposal(proposal) && confirmed
+}
+
 /** Normalized 0..1 evidence bounds as CSS percentage offsets. */
 export function regionStyle(bounds: { x: number; y: number; width: number; height: number }): {
   left: string

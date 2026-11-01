@@ -4,6 +4,7 @@ import {
   DEFAULT_LENS_VIEW,
   LENS_VIEW_MODES,
   canLoadProposal,
+  canTestProposal,
   componentReviewStatus,
   connectionReviewStatus,
   nextRevealStep,
@@ -99,6 +100,21 @@ describe('canLoadProposal', () => {
 
   it('refuses proposals with no components', () => {
     expect(canLoadProposal(proposal({ status: 'ready', components: [] }))).toBe(false)
+  })
+})
+
+describe('canTestProposal', () => {
+  it('keeps needs_review proposals and ambiguous connections locked until confirmed', () => {
+    const needsReview = proposal({ status: 'needs_review' })
+    expect(canTestProposal(needsReview, false)).toBe(false)
+    expect(canTestProposal(needsReview, true)).toBe(true)
+    const ambiguousReady = proposal({ status: 'ready' })
+    expect(canTestProposal(ambiguousReady, false)).toBe(false)
+    expect(canTestProposal(ambiguousReady, true)).toBe(true)
+  })
+
+  it('never enables unsupported proposals', () => {
+    expect(canTestProposal(proposal({ status: 'unsupported' }), true)).toBe(false)
   })
 })
 

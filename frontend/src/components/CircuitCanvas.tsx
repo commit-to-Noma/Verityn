@@ -1444,7 +1444,9 @@ function CanvasInner({
                 nodes.map((node) => ({ id: node.id, kind: node.data.kind })),
               )
               : loopClosed
-                ? 'All parts are connected. The lab will test the circuit automatically.'
+                ? simulateLocked !== null
+                  ? 'All parts are connected. Confirm the proposal before testing it.'
+                  : 'All parts are connected. The circuit is ready when you are.'
                 : 'All terminals have wires, but the parts are not in one complete path. Check for disconnected components.'
 
   /** Preset Test: a runRequest change runs once through the normal path.
