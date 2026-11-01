@@ -1,6 +1,7 @@
 export interface CoachStatement {
   text: string
   provider: string | null
+  singleUtterance?: boolean
 }
 
 let latestStatement: CoachStatement | null = null
@@ -79,8 +80,16 @@ export function subscribeCoachStatement(listener: (statement: CoachStatement) =>
   return () => statementListeners.delete(listener)
 }
 
-export function showCoachText(text: string, provider: string | null = null): void {
-  const statement = { text, provider }
+export function showCoachText(
+  text: string,
+  provider: string | null = null,
+  options?: { singleUtterance?: boolean },
+): void {
+  const statement: CoachStatement = {
+    text,
+    provider,
+    ...(options?.singleUtterance === true ? { singleUtterance: true } : {}),
+  }
   latestStatement = statement
   const previous = coachStatements[coachStatements.length - 1]
   if (previous?.text !== text || previous.provider !== provider) {
@@ -96,11 +105,13 @@ export function showCoachText(text: string, provider: string | null = null): voi
 
 export function speakCoach(
   text: string,
-  options?: { force?: boolean; provider?: string | null },
+  options?: { force?: boolean; provider?: string | null; singleUtterance?: boolean },
 ): boolean {
   const repeat = text === latestStatement?.text
   const provider = options?.provider ?? (repeat ? latestStatement?.provider ?? null : null)
-  showCoachText(text, provider)
+  const singleUtterance =
+    options?.singleUtterance ?? (repeat && latestStatement?.singleUtterance === true)
+  showCoachText(text, provider, { singleUtterance })
   if (repeat && options?.force !== true) {
     // Same line twice in a row: keep the caption, skip the re-speak so a
     // re-render or repeated event cannot trap the learner in a spoken loop.
@@ -118,7 +129,7 @@ export function speakCoach(
   const generation = ++speechGeneration
   speechFinishedBeforeSubscribe = false
   synthesis.cancel()
-  const parts = speechParts(text)
+  const parts = singleUtterance ? [text] : speechParts(text)
   const voice = chooseCoachVoice(synthesis.getVoices())
   const speakPart = (index: number) => {
     if (generation !== speechGeneration) {
@@ -153,7 +164,11 @@ export function speakCoach(
 
 export function repeatCoach(): boolean {
   return latestStatement !== null &&
-    speakCoach(latestStatement.text, { force: true, provider: latestStatement.provider })
+    speakCoach(latestStatement.text, {
+      force: true,
+      provider: latestStatement.provider,
+      singleUtterance: latestStatement.singleUtterance,
+    })
 }
 
 export function stopCoach(): void {

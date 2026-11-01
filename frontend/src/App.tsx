@@ -198,13 +198,13 @@ export default function App() {
   ])
 
   const announceCoach = useCallback(
-    (text: string) => {
+    (text: string, options?: { singleUtterance?: boolean }) => {
       // Spoken playback is browser TTS, default off, and never part of the
       // guided demo: the demo shows captions so it films silently.
       if (coachVoiceEnabled && !demoRef.current.active) {
-        return speakCoach(text)
+        return speakCoach(text, options)
       }
-      showCoachText(text)
+      showCoachText(text, null, options)
       return false
     },
     [coachVoiceEnabled],
@@ -573,7 +573,7 @@ export default function App() {
     setLensPage(false)
     setExperimentPage(false)
     setEntered(true)
-    announceCoach(COACH_INTRODUCTION)
+    announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
   }, [resetJourney, announceCoach])
 
   /** Enter the guided demo: a clean journey that performs itself. */
@@ -587,7 +587,7 @@ export default function App() {
     setExperimentPage(false)
     setEntered(true)
     setDemo((current) => demoTransition(current, { type: 'start' }))
-    announceCoach(COACH_INTRODUCTION)
+    announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
   }, [resetJourney, announceCoach])
 
   /** Leave demo mode, keep the journey exactly where it stands. */
@@ -711,7 +711,7 @@ export default function App() {
           return
         }
         if (!entered) {
-          announceCoach(COACH_INTRODUCTION)
+          announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
         }
         setLensPage(false)
         setExperimentPage(false)

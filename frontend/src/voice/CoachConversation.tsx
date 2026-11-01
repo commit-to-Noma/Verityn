@@ -376,6 +376,7 @@ export default function CoachConversation({
                 speakCoach(coachMessage.text, {
                   force: true,
                   provider: coachMessage.provider,
+                  singleUtterance: coachMessage.singleUtterance,
                 })
               }
             }}

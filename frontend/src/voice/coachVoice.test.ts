@@ -151,6 +151,30 @@ describe('coach voice playback', () => {
     expect(latestCoachStatement()).toBe('A different line.')
   })
 
+  it('keeps the welcome line to one utterance and ignores duplicate strict-mode calls', () => {
+    const utterances: { text: string }[] = []
+    const synthesis = { speak: vi.fn(), cancel: vi.fn(), getVoices: () => [] }
+    vi.stubGlobal('speechSynthesis', synthesis)
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        text: string
+        constructor(text: string) {
+          this.text = text
+          utterances.push(this)
+        }
+      },
+    )
+    const welcome =
+      'Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'
+
+    speakCoach(welcome, { singleUtterance: true })
+    speakCoach(welcome, { singleUtterance: true })
+
+    expect(utterances.map((utterance) => utterance.text)).toEqual([welcome])
+    expect(synthesis.speak).toHaveBeenCalledTimes(1)
+  })
+
   it('notifies listeners when speech finishes and ignores cancelled utterances', () => {
     const utterances: { onend: (() => void) | null; text: string }[] = []
     vi.stubGlobal('speechSynthesis', {
