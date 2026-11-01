@@ -9,6 +9,7 @@ import type { LensSample } from '../lens/samples'
 import ReadoutValue from './ReadoutValue'
 import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
+import { useProofMode } from '../proof/store'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
 
@@ -132,6 +133,7 @@ export default function RealityLens({
   sample: LensSample
   onBack: () => void
 }) {
+  const proof = useProofMode()
   const [choice, setChoice] = useState<Choice | null>(null)
   const [switchOpen, setSwitchOpen] = useState(false)
   const [run, setRun] = useState<LensRun>({ phase: 'ready' })
@@ -275,7 +277,7 @@ export default function RealityLens({
           <ResultBanner result={result} netlist={run.netlist} />
         </div>
       )}
-      {run.phase === 'done' && result && <SimulationResultView result={result} />}
+      {run.phase === 'done' && result && <SimulationResultView result={result} dev={proof} />}
       {run.phase === 'done' && result?.ok && choice && (
         <div className="glass-panel evidence-reveal flex flex-col gap-1 p-4" aria-live="polite">
           {verdict ? (

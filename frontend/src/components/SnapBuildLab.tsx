@@ -26,6 +26,7 @@ import {
 import { LENS_ACCEPT, validateLensFile } from '../vision/upload'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
+import ProofChips from './ProofChips'
 import RealityTriptych from './RealityTriptych'
 import SketchPad from './SketchPad'
 
@@ -187,6 +188,9 @@ function ReviewPanels({
           <p className="text-sm font-medium">{reviewSummary(proposal)}</p>
           <p className="text-ink-muted text-sm">{banner.text}</p>
           {banner.hint !== undefined && <p className="text-ink-muted text-sm">{banner.hint}</p>}
+          <div className="mt-2">
+            <ProofChips stages={['lens']} />
+          </div>
         </div>
       </div>
       {reveal !== 'review' && (
@@ -334,6 +338,7 @@ function ReviewPanels({
               <CircuitCanvas
                 key={`review-${nonce}`}
                 layout="stacked"
+                proofStage="lens"
                 importRequest={{ seed, uncertainIds, nonce }}
                 reportRejections
                 simulateLocked={

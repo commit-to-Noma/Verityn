@@ -5,6 +5,12 @@ const MAX_EVENTS = 100
 
 let events: TraceEvent[] = []
 const listeners = new Set<() => void>()
+let currentStage: string | null = null
+
+/** The app stamps the active stage so proof chips stay per-stage. */
+export function setTraceStage(stage: string | null): void {
+  currentStage = stage
+}
 
 function notify() {
   for (const listener of listeners) {
@@ -16,7 +22,10 @@ export function recordTraceEvent(event: TraceEvent | undefined): void {
   if (event === undefined) {
     return
   }
-  events = [...events.slice(-(MAX_EVENTS - 1)), event]
+  events = [
+    ...events.slice(-(MAX_EVENTS - 1)),
+    currentStage === null ? event : { ...event, stage: currentStage },
+  ]
   notify()
 }
 

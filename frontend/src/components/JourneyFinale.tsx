@@ -6,6 +6,7 @@ import CircuitPreview from './CircuitPreview'
 import EvidenceCard from './EvidenceCard'
 import EvidenceTrace from './EvidenceTrace'
 import JourneyStory from './JourneyStory'
+import { useProofMode } from '../proof/store'
 
 /** Finale: show the verified circuit first, with detailed evidence on demand. */
 export default function JourneyFinale({
@@ -27,6 +28,7 @@ export default function JourneyFinale({
     transfer.verdict?.status === 'CONSISTENT' &&
     previewSeed !== null
   const soloBuilt = transfer?.netlist !== null && transfer?.netlist !== undefined && previewSeed !== null
+  const proof = useProofMode()
   const progress = learningProgress(chapters)
   const completedSteps = progress.filter((step) => step.complete).length
   const progressPercent = Math.round((completedSteps / progress.length) * 100)
@@ -185,9 +187,9 @@ export default function JourneyFinale({
               </div>
               {chapter.input === null ? (
                 <p className="text-ink-muted text-sm">{MISSING_CHAPTER}</p>
-              ) : (
+              ) : proof ? (
                 <EvidenceTrace input={chapter.input} />
-              )}
+              ) : null}
             </article>
           ))}
         </div>

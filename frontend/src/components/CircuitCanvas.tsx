@@ -39,6 +39,8 @@ import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/t
 import SpeakButton from '../voice/SpeakButton'
 import { speakCoach } from '../voice/coachVoice'
 import CoachVoiceToggle from './CoachVoiceToggle'
+import ProofChips from './ProofChips'
+import { useProofMode } from '../proof/store'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
@@ -961,6 +963,7 @@ function CanvasInner({
   onParts,
   importRequest,
   gate,
+  proofStage,
   simulateLocked = null,
   peerSelection = null,
   onPeerSelect,
@@ -1038,6 +1041,8 @@ function CanvasInner({
   onParts?: (parts: { id: string; kind: string; volts?: number }[]) => void
   /** Chapter gate, rendered below the result and above the evidence trace. */
   gate?: ReactNode
+  /** Trace stage id for proof chips; canvases without one show no chips. */
+  proofStage?: string
 }) {
   const initialSeed = importRequest?.seed ?? seed
   const initialUncertain = importRequest?.uncertainIds ?? []
@@ -2044,14 +2049,18 @@ function CanvasInner({
       })()}
     </>
   )
+  const proof = useProofMode()
   const insightPane = (
     <>
+      <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />
       {prediction && challenge && (
         <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
           <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
         </div>
       )}
-      {runState.phase === 'done' && <SimulationResultView result={runState.result} />}
+      {proof && runState.phase === 'done' && (
+        <SimulationResultView result={runState.result} dev />
+      )}
       {choice && claim && runState.phase === 'done' && runState.result.ok && (
         <div className="evidence-reveal flex flex-col gap-4">
           <ClaimVerdict
@@ -2101,7 +2110,7 @@ function CanvasInner({
           />
         </div>
       )}
-      {choice === undefined && runState.phase === 'done' && prediction && challenge && (
+      {proof && choice === undefined && runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
           <StartVerdict prediction={prediction} challenge={challenge} result={runState.result} />
         </div>
@@ -2120,7 +2129,7 @@ function CanvasInner({
         </div>
       )}
       {gate}
-      {runState.phase === 'done' && prediction && challenge && (
+      {proof && runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
           <EvidenceTrace
             input={{
@@ -2209,6 +2218,7 @@ export default function CircuitCanvas({
   onParts,
   importRequest,
   gate,
+  proofStage,
   simulateLocked,
   peerSelection,
   onPeerSelect,
@@ -2254,6 +2264,7 @@ export default function CircuitCanvas({
   onParts?: (parts: { id: string; kind: string; volts?: number }[]) => void
   importRequest?: CanvasImportRequest | null
   gate?: ReactNode
+  proofStage?: string
   simulateLocked?: string | null
   peerSelection?: string | null
   onPeerSelect?: (id: string | null) => void
@@ -2298,6 +2309,7 @@ export default function CircuitCanvas({
         benchNonce={benchNonce}
         onParts={onParts}
         importRequest={importRequest}
+        proofStage={proofStage}
         gate={gate}
         simulateLocked={simulateLocked}
         peerSelection={peerSelection}

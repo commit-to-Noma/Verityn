@@ -32,6 +32,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const BASE = process.env.BASE ?? 'http://localhost:5173'
+// Evidence path: the suite verifies readings, traces, and chips with proof on.
+const HOME = BASE + '/?proof=1'
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const CDP_PORT = Number(process.env.CDP_PORT ?? '9333')
 const CDP = `http://127.0.0.1:${CDP_PORT}`
@@ -299,9 +301,10 @@ async function drive() {
   await new Promise((resolve) => { ws.onopen = resolve })
   await send('Network.enable')
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
-  await send('Page.navigate', { url: BASE + '/' })
+  await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'hub')
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
+  check('proof on via param', await ev(`document.querySelector('[aria-label="Proof mode"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
   check('brand icon linked', iconHref === '/brand/verityn-logo.png', iconHref)
   const iconRes = await fetch(BASE + iconHref)
@@ -406,6 +409,7 @@ async function drive() {
   await clickButton('Ask the coach')
   await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
   check('trace drawer present', await hasText('What Meta did / What code checked'))
+  check('stage chips name tool and guard', await ev(`document.querySelector('[aria-label="Proof chips"]')?.innerText.includes('fallback:template') === true`))
   check('trace drawer closed by default', await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.open !== true`))
   await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.querySelector('summary')?.click()`)
   await waitFor(() => hasText('Template fallback'), 'trace event recorded', 10000)
@@ -588,13 +592,13 @@ async function drive() {
   check('benches hidden by default', !(await hasText('Try a circuit')) && !(await hasText('Check a prediction')))
 
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
-  await send('Page.navigate', { url: BASE + '/' })
+  await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'mobile hub')
   const overflow = await ev('document.documentElement.scrollWidth - document.documentElement.clientWidth')
   check('mobile homepage fits 390px', overflow <= 1, `overflow ${overflow}px`)
   await clickButton('Start your own lab')
   await waitFor(() => hasText('loose ends'), 'mobile predict')
-  await send('Page.navigate', { url: BASE + '/' })
+  await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'mobile rehub')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('META VISION WORKSPACE'), 'mobile lens')
@@ -604,7 +608,7 @@ async function drive() {
 
   // ---- Guided demo: a separate clean run that performs itself. ----
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
-  await send('Page.navigate', { url: BASE + '/' })
+  await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Watch a walkthrough'), 'demo hub')
   await clickButton('Watch a walkthrough')
   await waitFor(() => hasText('Demo playing'), 'demo starts')
@@ -651,7 +655,7 @@ async function drive() {
   check('takeover keeps input', await ev(`document.getElementById('predict-why')?.value === 'manual takeover'`))
 
   // ---- Experiment workspace: free bench beside the guided journey. ----
-  await send('Page.navigate', { url: BASE + '/' })
+  await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'hub again')
   await clickButton('Experiment Bay')
   await waitFor(() => hasText('Build something. Test what happens.'), 'experiment page')
@@ -668,6 +672,11 @@ async function drive() {
   await waitFor(() => hasText('Run 1 - Light a bulb'), 'history run 1', 25000)
   check('preset measures honestly', await hasText('0.6 A'))
   check('ask unlocked after run', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Ask Muse Spark about this result' && !b.disabled)`))
+  await clickButton('Proof')
+  check('proof off hides readings', !(await ev(`!!document.querySelector('[aria-label="Simulation result"]')`)))
+  check('proof off hides trace drawer', !(await hasText('What Meta did / What code checked')))
+  await clickButton('Proof')
+  await waitFor(() => ev(`!!document.querySelector('[aria-label="Simulation result"]')`), 'readings restored', 10000)
   await clickButton('Closed')
   await waitFor(() => hasText('Circuit changed - run the experiment again.'), 'stale status')
   check('stale hides measurements', !(await hasText('Simulation result')))

@@ -3,6 +3,7 @@ import type { TraceEvent } from '../api/client'
 import {
   clearTraceEvents,
   recordTraceEvent,
+  setTraceStage,
   subscribeTraceEvents,
   traceCounts,
   traceEvents,
@@ -40,6 +41,18 @@ describe('trace session store', () => {
     unsubscribe()
     recordTraceEvent(event())
     expect(listener).toHaveBeenCalledTimes(2)
+  })
+
+  it('stamps the active stage without mutating the served event', () => {
+    clearTraceEvents()
+    setTraceStage('reality-build')
+    const served = event()
+    recordTraceEvent(served)
+    expect(traceEvents()[0]?.stage).toBe('reality-build')
+    expect('stage' in served).toBe(false)
+    setTraceStage(null)
+    recordTraceEvent(event())
+    expect(traceEvents()[1]).not.toHaveProperty('stage')
   })
 
   it('bounds the session to the newest 100 events', () => {

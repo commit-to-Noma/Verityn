@@ -3,7 +3,9 @@ import type { ShellLocation, Stage } from '../journey/stages'
 import { SHELL_NAV, progressIndex } from '../journey/stages'
 import HealthStatus from './HealthStatus'
 import JourneyProgress from './JourneyProgress'
+import ProofSwitch from './ProofSwitch'
 import TracePanel from './TracePanel'
+import { useProofMode } from '../proof/store'
 
 /** Laboratory frame: brand header, persistent nav, workspace, dev controls. */
 export default function JourneyShell({
@@ -34,6 +36,7 @@ export default function JourneyShell({
   wide?: boolean
 }) {
   const mobileMenu = useRef<HTMLDetailsElement>(null)
+  const proof = useProofMode()
   const renderNavigationItems = () =>
     SHELL_NAV.map((item) => (
       <button
@@ -100,6 +103,9 @@ export default function JourneyShell({
           >
             {renderNavigationItems()}
           </nav>
+          <div className="xl:ml-2">
+            <ProofSwitch />
+          </div>
           {(stage !== 'intro' || auto) && (
             <div className="flex w-full flex-wrap items-center gap-2 border-t border-glass-border/70 pt-2">
               {stage !== 'intro' && <JourneyProgress active={progressIndex(stage)} />}
@@ -123,7 +129,7 @@ export default function JourneyShell({
         {children}
       </main>
       <footer className="flex flex-col gap-4">
-        <TracePanel />
+        {proof && <TracePanel />}
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">
             Presenter &amp; developer controls

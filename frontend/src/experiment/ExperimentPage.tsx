@@ -362,6 +362,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
         <CircuitCanvas
           key={`experiment-${bench.key}`}
           mode="experiment"
+          proofStage="experiment"
           seed={bench.seed}
           runRequest={runRequest}
           eyebrow="Experiment · Free build"

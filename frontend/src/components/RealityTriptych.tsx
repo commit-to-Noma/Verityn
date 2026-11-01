@@ -4,6 +4,7 @@ import { resultPanel } from '../lens/triptych'
 import CircuitPreview from './CircuitPreview'
 import ReadoutValue from './ReadoutValue'
 import SimulationResultView from './SimulationResultView'
+import { useProofMode } from '../proof/store'
 
 /** Triptych: the upload, the reviewed reading, and the solver measurement. */
 export default function RealityTriptych({
@@ -17,6 +18,7 @@ export default function RealityTriptych({
   result: SimulateResult
   bulbIds: string[]
 }) {
+  const proof = useProofMode()
   const measured = result.ok
     ? bulbIds.filter((id) => result.components[id] !== undefined)
     : []
@@ -80,7 +82,7 @@ export default function RealityTriptych({
             <p className="font-mono text-sm font-medium">
               {result.error_code ?? 'INVALID_CIRCUIT'}
             </p>
-            <SimulationResultView result={result} />
+            <SimulationResultView result={result} dev={proof} />
           </>
         )}
         <p className="text-ink-muted text-xs">Computed by Verityn&apos;s solver.</p>

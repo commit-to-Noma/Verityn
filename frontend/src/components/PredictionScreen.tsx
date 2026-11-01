@@ -6,6 +6,7 @@ import { transcriptFill } from '../voice/spokenPrediction'
 import MicButton from '../voice/MicButton'
 import CoachVoiceToggle from './CoachVoiceToggle'
 import CircuitPreview from './CircuitPreview'
+import ProofChips from './ProofChips'
 
 const CHOICES = Object.entries(CHOICE_LABELS) as [Choice, string][]
 
@@ -37,6 +38,7 @@ export default function PredictionScreen({
   onComplete,
   continueLabel = 'Continue to fix it',
   demo,
+  proofStage,
 }: {
   challenge: Challenge
   eyebrow: string
@@ -45,6 +47,8 @@ export default function PredictionScreen({
   onComplete: (prediction: Prediction) => void
   continueLabel?: string
   demo?: PredictionDemo
+  /** Trace stage id for proof chips. */
+  proofStage?: string
 }) {
   const [choice, setChoice] = useState<Choice | null>(null)
   const [why, setWhy] = useState('')
@@ -241,6 +245,7 @@ export default function PredictionScreen({
         </button>
         {!ready && <p className="text-ink-muted text-sm">Choose Yes, No, or Not sure to continue.</p>}
       </div>
+      <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />
       </div>
     </section>
   )

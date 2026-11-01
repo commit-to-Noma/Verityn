@@ -37,6 +37,7 @@ import {
 } from './voice/coachVoice'
 import { spokenPredictionChoice } from './voice/spokenPrediction'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
+import { setTraceStage } from './trace/session'
 import {
   JOURNEY_PROGRESS_VERSION,
   clearJourneyCheckpoint,
@@ -660,6 +661,10 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [stage])
 
+  useEffect(() => {
+    setTraceStage(lensPage ? 'lens' : experimentPage ? 'experiment' : stage)
+  }, [lensPage, experimentPage, stage])
+
   /** Reality Lens is a first-class workspace, not a footer tool. Leaving the
    * journey unmounts the canvases, so any latched gate is cleared: builds must
    * be re-verified on return, while recorded predictions stand. */
@@ -1009,6 +1014,7 @@ export default function App() {
           onCoachVoiceEnabledChange={setCoachVoiceEnabled}
           onComplete={handleL1Predicted}
           demo={l1Demo}
+          proofStage="l1-predict"
         />
       )}
       {stage === 'l1-build' && l1Prediction !== null && (
@@ -1016,6 +1022,7 @@ export default function App() {
           <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="l1"
+            proofStage="l1-build"
             seed={L1.seed}
             eyebrow="Build · Light the bulb"
             instructions="Connect the two open ends with one wire, then press Test to check your prediction."
@@ -1045,6 +1052,7 @@ export default function App() {
           onCoachVoiceEnabledChange={setCoachVoiceEnabled}
           onComplete={handleRealityPredicted}
           demo={realityDemo}
+          proofStage="reality-predict"
         />
       )}
       {stage === 'reality-build' && realityPrediction !== null && (
@@ -1052,6 +1060,7 @@ export default function App() {
           <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="reality"
+            proofStage="reality-build"
             seed={L1.twist.seed}
             eyebrow="Reality Check · The open switch"
             instructions="The loop is fully wired and the switch is open. We will test it right away  -  don't change the switch."
@@ -1094,6 +1103,7 @@ export default function App() {
             continueLabel="Continue to wire it"
             onComplete={setTransferPrediction}
             demo={transferDemo}
+            proofStage="transfer-predict"
           />
         </div>
       )}
@@ -1108,6 +1118,7 @@ export default function App() {
           <Suspense fallback={CANVAS_FALLBACK}>
           <CircuitCanvas
             key="transfer"
+            proofStage="transfer-build"
             seed={TRANSFER.seed}
             eyebrow="Solo · The second bulb"
             instructions="Connect the second bulb across L1's two terminals. We will test the circuit as soon as the loop closes."

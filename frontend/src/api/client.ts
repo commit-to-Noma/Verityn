@@ -10,6 +10,8 @@ export interface TraceEvent {
   decided_by: string
   ms: number
   t: string
+  /** Client-stamped app stage; never sent by the server. */
+  stage?: string | null
 }
 
 /** Trace metadata is additive: malformed events are dropped, never fatal. */
