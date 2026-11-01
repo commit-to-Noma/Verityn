@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle, Mic, Square } from 'lucide-react'
 import { ApiError, transcribeAudio } from '../api/client'
-import { encodeWav } from './audio'
+import {
+  audioRms,
+  encodeWav,
+  VOICE_SILENCE_MS,
+  VOICE_SPEECH_RMS_THRESHOLD,
+} from './audio'
+import { elapsedMs, recordVoiceTiming } from './voiceTimings'
 
 type MicState =
   | 'idle'
@@ -22,6 +28,9 @@ interface Recording {
   silentOutput: GainNode
   chunks: Float32Array[]
   timer: number
+  silenceTimer: number | null
+  sawSpeech: boolean
+  lastSpeechAt: number | null
 }
 
 function isPermissionError(error: unknown): boolean {
@@ -33,9 +42,11 @@ function isPermissionError(error: unknown): boolean {
 export default function MicButton({
   onTranscript,
   onStatus,
+  stage = 'Guided Lab',
 }: {
   onTranscript: (text: string) => void
   onStatus: (message: string) => void
+  stage?: string
 }) {
   const [state, setState] = useState<MicState>('idle')
   const recordingRef = useRef<Recording | null>(null)
@@ -46,6 +57,9 @@ export default function MicButton({
 
   const releaseRecording = (recording: Recording) => {
     window.clearTimeout(recording.timer)
+    if (recording.silenceTimer !== null) {
+      window.clearTimeout(recording.silenceTimer)
+    }
     recording.processor.onaudioprocess = null
     recording.source.disconnect()
     recording.processor.disconnect()
@@ -57,27 +71,32 @@ export default function MicButton({
   }
 
   const transcribe = async (recording: Recording) => {
+    const speechEndedAt = recording.lastSpeechAt ?? performance.now()
     recordingRef.current = null
     releaseRecording(recording)
-    if (recording.chunks.length === 0) {
+    if (!recording.sawSpeech) {
       setState('no-speech')
       updateStatus('No speech was captured. Try again or type your reason.')
       return
     }
 
     setState('transcribing')
-    updateStatus('Sending this recording to Meta Muse Voice Transcribe.')
+    updateStatus('Transcribing with Meta Muse Voice Transcribe…')
     try {
       const wav = encodeWav(recording.chunks, recording.context.sampleRate)
       const form = new FormData()
       form.append('audio', wav, 'recording.wav')
       const { transcript, source } = await transcribeAudio(form)
+      const speechToTranscriptMs = elapsedMs(speechEndedAt, performance.now())
+      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs: null })
       onTranscript(transcript)
       setState('idle')
       updateStatus(
-        source === 'meta-voice-transcribe'
-          ? 'Transcribed by Meta Voice Transcribe. Edit it if needed.'
-          : 'Transcript added by Browser speech. Edit it before continuing.',
+        `Heard: ${transcript} · ${stage} transcript in ${speechToTranscriptMs} ms. ${
+          source === 'meta-voice-transcribe'
+            ? 'Transcribed by Meta Voice Transcribe. Edit it if needed.'
+            : 'Transcript added by Browser speech. Edit it before continuing.'
+        }`,
       )
     } catch (error) {
       if (!(error instanceof ApiError)) {
@@ -125,23 +144,35 @@ export default function MicButton({
       silentOutput.gain.value = 0
       const chunks: Float32Array[] = []
       processor.onaudioprocess = (event) => {
-        chunks.push(event.inputBuffer.getChannelData(0).slice())
+        const samples = event.inputBuffer.getChannelData(0).slice()
+        chunks.push(samples)
+        if (audioRms(samples) >= VOICE_SPEECH_RMS_THRESHOLD) {
+          recording.sawSpeech = true
+          recording.lastSpeechAt = performance.now()
+          if (recording.silenceTimer !== null) {
+            window.clearTimeout(recording.silenceTimer)
+          }
+          recording.silenceTimer = window.setTimeout(stop, VOICE_SILENCE_MS)
+        }
       }
       source.connect(processor)
       processor.connect(silentOutput)
       silentOutput.connect(context.destination)
-      const recording = {
+      const recording: Recording = {
         stream,
         context,
         source,
         processor,
         silentOutput,
         chunks,
+        sawSpeech: false,
+        lastSpeechAt: null,
+        silenceTimer: null,
         timer: window.setTimeout(() => stop(), MAX_RECORDING_MS),
       }
       recordingRef.current = recording
       setState('recording')
-      updateStatus('Recording. Select stop when you have finished speaking.')
+      updateStatus('Recording. Pause for 1.5 seconds to transcribe, or stop early.')
     } catch (error) {
       stream?.getTracks().forEach((track) => track.stop())
       if (context !== null && context.state !== 'closed') {

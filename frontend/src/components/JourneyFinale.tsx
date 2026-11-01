@@ -350,6 +350,7 @@ export default function JourneyFinale({
             placeholder="Type your reflection, or use voice."
           />
           <MicButton
+            stage="Finale reflection"
             onTranscript={(text) => {
               setReflection(text.slice(0, 120))
               setReflectionStatus('Transcript added. Edit it before saving.')

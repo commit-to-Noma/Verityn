@@ -9,19 +9,30 @@ import {
   subscribeCoachStatement,
   type CoachStatement,
 } from './coachVoice'
-import { encodeWav } from './audio'
+import {
+  audioRms,
+  encodeWav,
+  VOICE_SILENCE_MS,
+  VOICE_SPEECH_RMS_THRESHOLD,
+} from './audio'
+import {
+  elapsedMs,
+  readVoiceTimings,
+  recordVoiceTiming,
+  subscribeVoiceTimings,
+  type VoiceTiming,
+} from './voiceTimings'
 
 type ConversationState =
   | 'ready'
   | 'listening'
   | 'transcribing'
+  | 'replying'
   | 'no-speech'
   | 'denied'
   | 'unavailable'
 
-const SILENCE_MS = 1800
 const MAX_TURN_MS = 20_000
-const SPEECH_RMS_THRESHOLD = 0.015
 
 interface Recording {
   stream: MediaStream
@@ -32,6 +43,7 @@ interface Recording {
   chunks: Float32Array[]
   sampleRate: number
   sawVoice: boolean
+  lastSpeechAt: number | null
 }
 
 function isPermissionError(error: unknown): boolean {
@@ -44,6 +56,7 @@ export default function CoachConversation({
   enabled,
   onEnabledChange,
   replyAvailable = true,
+  stage = 'Guided Lab',
   learnerText,
   onLearnerTextChange,
   onPrediction,
@@ -51,6 +64,7 @@ export default function CoachConversation({
   enabled: boolean
   onEnabledChange: (enabled: boolean) => void
   replyAvailable?: boolean
+  stage?: string
   learnerText: string
   onLearnerTextChange: (transcript: string) => void
   onPrediction?: (transcript: string) => boolean
@@ -59,6 +73,7 @@ export default function CoachConversation({
   const [status, setStatus] = useState('')
   const [coachMessage, setCoachMessage] = useState<CoachStatement | null>(latestCoachMessage)
   const [earlier, setEarlier] = useState(() => coachStatementHistory().slice(0, -1))
+  const [voiceTimings, setVoiceTimings] = useState<VoiceTiming[]>(readVoiceTimings)
   const lastCoachStatementRef = useRef(coachMessage?.text ?? '')
   const recordingRef = useRef<Recording | null>(null)
   const enabledRef = useRef(enabled)
@@ -78,6 +93,10 @@ export default function CoachConversation({
   useEffect(() => {
     onPredictionRef.current = onPrediction
   }, [onPrediction])
+  useEffect(
+    () => subscribeVoiceTimings(setVoiceTimings),
+    [],
+  )
 
   useEffect(
     () =>
@@ -131,6 +150,7 @@ export default function CoachConversation({
   }
 
   const transcribe = async (recording: Recording) => {
+    const speechEndedAt = recording.lastSpeechAt ?? performance.now()
     recordingRef.current = null
     release(recording)
     if (!recording.sawVoice) {
@@ -141,7 +161,7 @@ export default function CoachConversation({
 
     busyRef.current = true
     setState('transcribing')
-    setStatus('Transcribing your reply with Meta Muse Voice Transcribe…')
+    setStatus('Transcribing with Meta Muse Voice Transcribe…')
     const request = new AbortController()
     requestRef.current = request
     try {
@@ -174,28 +194,44 @@ export default function CoachConversation({
         return
       }
 
+      const transcriptAt = performance.now()
+      const speechToTranscriptMs = elapsedMs(speechEndedAt, transcriptAt)
+      const heard = `Heard: ${transcript} · ${stage} transcript in ${speechToTranscriptMs} ms.`
       onLearnerTextChange(transcript)
       if (onPredictionRef.current?.(transcript) === true) {
+        recordVoiceTiming({
+          stage,
+          speechToTranscriptMs,
+          transcriptToCoachReplyMs: null,
+        })
         lastTranscriptRef.current = transcript
-        setStatus('')
+        setStatus(heard)
         return
       }
       if (transcript === lastTranscriptRef.current) {
         // The mic likely caught its own echo: say so instead of looping
         // the same turn through the coach again.
         setState('no-speech')
-        setStatus('Heard the same reply twice. Type instead if the mic is echoing.')
+        recordVoiceTiming({
+          stage,
+          speechToTranscriptMs,
+          transcriptToCoachReplyMs: null,
+        })
+        setStatus(`${heard} The same reply was heard twice; type instead if the mic is echoing.`)
         return
       }
       lastTranscriptRef.current = transcript
-      setStatus('The coach is thinking…')
+      setState('replying')
+      setStatus(`${heard} The coach is thinking…`)
       const result = await converseWithCoach(
         transcript,
         lastCoachStatementRef.current,
         request.signal,
       )
+      const transcriptToCoachReplyMs = elapsedMs(transcriptAt, performance.now())
+      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs })
       lastCoachStatementRef.current = result.reply
-      setStatus('')
+      setStatus(`${heard} Coach reply in ${transcriptToCoachReplyMs} ms.`)
       if (enabledRef.current) {
         speakCoach(result.reply, { provider: result.provider })
       } else {
@@ -219,7 +255,9 @@ export default function CoachConversation({
       }
       busyRef.current = false
       if (mountedRef.current) {
-        setState((current) => current === 'transcribing' ? 'ready' : current)
+        setState((current) =>
+          current === 'transcribing' || current === 'replying' ? 'ready' : current,
+        )
       }
     }
   }
@@ -284,23 +322,20 @@ export default function CoachConversation({
         chunks: [],
         sampleRate: context.sampleRate,
         sawVoice: false,
+        lastSpeechAt: null,
       }
       processor.onaudioprocess = (event) => {
         const samples = event.inputBuffer.getChannelData(0).slice()
         recording.chunks.push(samples)
-        let energy = 0
-        for (const sample of samples) {
-          energy += sample * sample
-        }
-        const rms = Math.sqrt(energy / samples.length)
-        if (rms >= SPEECH_RMS_THRESHOLD) {
+        if (audioRms(samples) >= VOICE_SPEECH_RMS_THRESHOLD) {
           recording.sawVoice = true
+          recording.lastSpeechAt = performance.now()
           if (silenceTimerRef.current !== null) {
             window.clearTimeout(silenceTimerRef.current)
           }
           silenceTimerRef.current = window.setTimeout(
             () => stopRef.current(true),
-            SILENCE_MS,
+            VOICE_SILENCE_MS,
           )
         }
       }
@@ -314,7 +349,7 @@ export default function CoachConversation({
       )
       busyRef.current = false
       setState('listening')
-      setStatus('Listening. Pausing will send this turn to Meta for transcription.')
+      setStatus('Listening. Pause for 1.5 seconds to transcribe, or stop early.')
     } catch (error) {
       busyRef.current = false
       stream?.getTracks().forEach((track) => track.stop())
@@ -342,7 +377,7 @@ export default function CoachConversation({
       : displayState === 'listening'
         ? 'Listening…'
         : displayState === 'transcribing'
-          ? 'Thinking…'
+          ? 'Transcribing…'
           : status
   if (coachMessage === null && visibleStatus === '' && learnerText.trim() === '') {
     return null
@@ -399,7 +434,7 @@ export default function CoachConversation({
               <Square className="h-3.5 w-3.5" aria-hidden="true" />
               Stop
             </button>
-          ) : displayState === 'transcribing' ? (
+          ) : displayState === 'transcribing' || displayState === 'replying' ? (
             <LoaderCircle className="h-5 w-5 animate-spin text-flow" aria-label="Transcribing" />
           ) : replyAvailable ? (
             <button
@@ -421,7 +456,7 @@ export default function CoachConversation({
       )}
       {learnerText !== '' && (
         <p className="break-words text-sm" aria-live="polite">
-          <span className="font-semibold">You:</span> {learnerText}
+          <span className="font-semibold">Heard:</span> {learnerText}
         </p>
       )}
       {earlier.length > 0 && (
@@ -437,6 +472,23 @@ export default function CoachConversation({
                   <span className="ml-2 inline-flex rounded-full border border-flow/40 px-2 py-0.5 align-middle text-[10px] font-medium text-flow">
                     Meta Spark
                   </span>
+                )}
+                {voiceTimings.length > 0 && (
+                  <details className="border-t border-glass-border/70 pt-2">
+                    <summary className="text-ink-muted cursor-pointer text-xs font-medium">
+                      Voice timings
+                    </summary>
+                    <ol className="mt-2 flex flex-col gap-1">
+                      {voiceTimings.map((timing, index) => (
+                        <li key={`${timing.stage}-${index}`} className="text-xs text-ink-muted">
+                          {timing.stage}: speech end → transcript {timing.speechToTranscriptMs} ms
+                          {timing.transcriptToCoachReplyMs === null
+                            ? '; no coach reply'
+                            : `; transcript → coach reply ${timing.transcriptToCoachReplyMs} ms`}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                 )}
               </li>
             ))}

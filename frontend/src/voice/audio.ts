@@ -1,4 +1,15 @@
 export const MUSE_VOICE_SAMPLE_RATE = 24_000
+export const VOICE_SILENCE_MS = 1_500
+export const VOICE_SPEECH_RMS_THRESHOLD = 0.015
+
+export function audioRms(samples: Float32Array): number {
+  if (samples.length === 0) return 0
+  let energy = 0
+  for (const sample of samples) {
+    energy += sample * sample
+  }
+  return Math.sqrt(energy / samples.length)
+}
 
 /** Encode captured mono float samples as the 24 kHz PCM WAV Meta expects. */
 export function encodeWav(chunks: Float32Array[], sourceSampleRate: number): Blob {

@@ -263,7 +263,7 @@ export default function PredictionScreen({
             autoComplete="off"
             className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 pr-12 text-base"
           />
-          <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} />
+          <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} stage={eyebrow} />
         </div>
         <p className="text-ink-muted text-xs">
           Voice is optional. Audio is sent to Meta to be transcribed and is not saved.
@@ -281,7 +281,7 @@ export default function PredictionScreen({
             {PREDICTION_CLARIFICATION_PROMPT}
           </p>
         )}
-        {micStatus !== '' && pendingVoiceChoice === null && !clarificationVisible && (
+        {micStatus !== '' && (
           <p className="text-ink-muted text-sm" aria-live="polite">
             {micStatus}
           </p>

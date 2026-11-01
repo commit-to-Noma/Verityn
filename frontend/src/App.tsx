@@ -977,6 +977,7 @@ export default function App() {
         <CoachConversation
           enabled={coachVoiceEnabled}
           onEnabledChange={setCoachVoiceEnabled}
+          stage={stage}
           replyAvailable={complete === null || complete.coach !== undefined}
           learnerText={learnerReply}
           onLearnerTextChange={setLearnerReply}
