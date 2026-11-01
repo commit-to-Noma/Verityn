@@ -26,7 +26,7 @@ import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
 import { TRANSFER } from './lessons/transfer'
-import type { Prediction } from './lessons/lesson'
+import type { LessonSeed, Prediction } from './lessons/lesson'
 import { LIT_POWER_W, matchesExpected } from './lessons/lesson'
 import type { CoachTraceOutcome, TraceInput } from './lessons/trace'
 import {
@@ -135,6 +135,10 @@ export default function App() {
   const [autoPending, setAutoPending] = useState(false)
   const [lensPage, setLensPage] = useState(false)
   const [experimentPage, setExperimentPage] = useState(false)
+  const [journeyExperiment, setJourneyExperiment] = useState<{
+    seed: LessonSeed
+    label: string
+  } | null>(null)
   /** Guided demo: a visible product mode above the `?auto=1` presenter timers. */
   const [demo, setDemo] = useState<DemoState>(IDLE_DEMO)
   const preset = PRESETS.find((option) => option.id === presetId) ?? PRESETS[0]
@@ -691,6 +695,7 @@ export default function App() {
     (target: ShellLocation) => {
       endDemoToManual()
       cancelAdvance()
+      setJourneyExperiment(null)
       setComplete(null)
       if (target === 'hub') {
         setCheckpointRead(
@@ -735,6 +740,18 @@ export default function App() {
   const handleExploreLens = useCallback(() => {
     jumpToLens()
   }, [jumpToLens])
+
+  const handleTryExperiment = useCallback(
+    (seed: LessonSeed, label: string) => {
+      endDemoToManual()
+      cancelAdvance()
+      setComplete(null)
+      setJourneyExperiment({ seed, label })
+      setLensPage(false)
+      setExperimentPage(true)
+    },
+    [cancelAdvance, endDemoToManual],
+  )
 
   const handleAutoToggle = useCallback(
     (checked: boolean) => {
@@ -920,7 +937,11 @@ export default function App() {
               </div>
             </div>
             <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
-              <ExperimentPage onReturnToLab={() => handleNavigate('lab')} />
+              <ExperimentPage
+                initialSeed={journeyExperiment?.seed}
+                initialLabel={journeyExperiment?.label}
+                onReturnToLab={() => handleNavigate('lab')}
+              />
             </Suspense>
           </section>
         </div>
@@ -1165,6 +1186,7 @@ export default function App() {
             onExploreLens={() => {
               jumpToLens()
             }}
+            onTryExperiment={handleTryExperiment}
           />
         </Suspense>
       )}

@@ -187,12 +187,20 @@ function LatestResult({
 
 /** Free bench: build anything, run the solver, keep a session history.
  * No prediction gate, no ladder, no shared state with the guided lab. */
-export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () => void }) {
-  const [bench, setBench] = useState<{ key: number; seed?: LessonSeed; label: string }>({
+export default function ExperimentPage({
+  onReturnToLab,
+  initialSeed,
+  initialLabel,
+}: {
+  onReturnToLab?: () => void
+  initialSeed?: LessonSeed
+  initialLabel?: string
+}) {
+  const [bench, setBench] = useState<{ key: number; seed?: LessonSeed; label: string }>(() => ({
     key: 0,
-    seed: undefined,
-    label: 'Free build',
-  })
+    seed: initialSeed,
+    label: initialLabel ?? 'Free build',
+  }))
   const [activePreset, setActivePreset] = useState<string | null>(null)
   const [runRequest, setRunRequest] = useState<number | undefined>(undefined)
   const [runs, setRuns] = useState<RunRecord[]>([])
@@ -320,6 +328,9 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           Experiment freely with batteries, switches, bulbs, and wires. The simulator calculates
           the result after every test.
         </p>
+        {bench.label !== 'Free build' && (
+          <p className="text-flow text-sm" role="status">Loaded circuit: {bench.label}</p>
+        )}
       </section>
 
       <section aria-label="Starter experiments" className="flex flex-col gap-3">
@@ -372,8 +383,8 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
           proofStage="experiment"
           seed={bench.seed}
           runRequest={runRequest}
-          eyebrow="Experiment · Free build"
-          title="Free bench"
+          eyebrow={`Experiment · ${bench.label}`}
+          title={bench.label === 'Free build' ? 'Free bench' : bench.label}
           instructions="Place parts, wire terminals, toggle switches  -  then run the experiment."
           benchConditions={benchConditions}
           batteryVolts={batteryVolts}

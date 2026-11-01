@@ -15,10 +15,12 @@ import { finaleRevealDelay } from '../journey/finaleMotion'
 import PredictionVerdictLine from './PredictionVerdictLine'
 import { batterySupplyLine } from '../journey/readings'
 import { cleanTranscriptForDisplay } from '../voice/displayTranscript'
+import type { LessonSeed } from '../lessons/lesson'
+import { isDeclarativeExplanation } from '../journey/explanationText'
 
 const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
 
-type PolishState =
+type ExplanationState =
   | { phase: 'loading' }
   | { phase: 'done'; text: string; provider: string }
   | { phase: 'error'; message: string }
@@ -130,12 +132,14 @@ export default function JourneyFinale({
   chapters,
   onReturnHub,
   onExploreLens,
+  onTryExperiment,
 }: {
   chapters: ChapterRecap[]
   onReturnHub: () => void
   onExploreLens: () => void
+  onTryExperiment: (seed: LessonSeed, label: string) => void
 }) {
-  const [polish, setPolish] = useState<Record<string, PolishState>>({})
+  const [explanations, setExplanations] = useState<Record<string, ExplanationState>>({})
   const [reflection, setReflection] = useState('')
   const [includeReflection, setIncludeReflection] = useState(false)
   const [reflectionStatus, setReflectionStatus] = useState('')
@@ -149,7 +153,7 @@ export default function JourneyFinale({
     [],
   )
 
-  const polishConcept = async (chapter: ChapterRecap) => {
+  const explainConcept = async (chapter: ChapterRecap) => {
     const input = chapter.input
     if (input?.netlist === null || input?.netlist === undefined || input.result?.ok !== true) {
       return
@@ -157,23 +161,25 @@ export default function JourneyFinale({
     controllers.current.get(chapter.id)?.abort()
     const controller = new AbortController()
     controllers.current.set(chapter.id, controller)
-    setPolish((current) => ({ ...current, [chapter.id]: { phase: 'loading' } }))
+    setExplanations((current) => ({ ...current, [chapter.id]: { phase: 'loading' } }))
     try {
       const answer = await explainResult(input.netlist, controller.signal)
       if (controller.signal.aborted) {
         return
       }
-      if (!answer.valid) {
-        setPolish((current) => ({
+      if (!answer.valid || !isDeclarativeExplanation(answer.text)) {
+        setExplanations((current) => ({
           ...current,
           [chapter.id]: {
             phase: 'error',
-            message: 'The explanation did not pass the number guard; the template remains.',
+            message: answer.valid
+              ? 'The explanation ended with a question; the solver-grounded concept remains.'
+              : 'The explanation did not pass the number guard; the template remains.',
           },
         }))
         return
       }
-      setPolish((current) => ({
+      setExplanations((current) => ({
         ...current,
         [chapter.id]: {
           phase: 'done',
@@ -185,7 +191,7 @@ export default function JourneyFinale({
       if (controller.signal.aborted) {
         return
       }
-      setPolish((current) => ({
+      setExplanations((current) => ({
         ...current,
         [chapter.id]: {
           phase: 'error',
@@ -227,7 +233,7 @@ export default function JourneyFinale({
           const readings = readingsFor(input)
           const concept = conceptFor(chapter, input)
           const verdict = verdictReading(chapter, input)
-          const polishState = polish[chapter.id]
+          const explanationState = explanations[chapter.id]
           const title = CHAPTER_TITLES[index] ?? chapter.title
           return (
             <li
@@ -287,26 +293,36 @@ export default function JourneyFinale({
                         <div className="mt-3 flex flex-col items-start gap-2">
                           <button
                             type="button"
-                            onClick={() => void polishConcept(chapter)}
-                            disabled={polishState?.phase === 'loading'}
+                            onClick={() => void explainConcept(chapter)}
+                            disabled={explanationState?.phase === 'loading'}
                             className="border-glass-border min-h-[40px] rounded-[10px] border px-3 text-xs font-medium disabled:opacity-50"
                           >
-                            {polishState?.phase === 'loading'
-                              ? 'Asking Muse Spark…'
-                              : 'Polish with Muse Spark'}
+                            {explanationState?.phase === 'loading'
+                              ? 'Explaining with Muse Spark…'
+                              : 'Explain with Muse Spark'}
                           </button>
-                          {polishState?.phase === 'done' && (
+                          {explanationState?.phase === 'done' && (
                             <div aria-live="polite">
-                              <p className="text-sm">{polishState.text}</p>
+                              <p className="text-sm">{explanationState.text}</p>
                               <p className="mt-1 text-xs text-ink-muted">
-                                {polishState.provider === 'meta-spark'
+                                {explanationState.provider === 'meta-spark'
                                   ? 'Meta Spark'
-                                  : providerBadge(polishState.provider)}
+                                  : providerBadge(explanationState.provider)}
                               </p>
                             </div>
                           )}
-                          {polishState?.phase === 'error' && (
-                            <p className="text-sm text-bad" role="alert">{polishState.message}</p>
+                          {explanationState?.phase === 'error' && (
+                            <p className="text-sm text-bad" role="alert">{explanationState.message}</p>
+                          )}
+                          {seed !== null && (
+                            <button
+                              type="button"
+                              aria-label={`Try ${title} in the Experiment Bay`}
+                              onClick={() => onTryExperiment(seed, `${title} from your journey`)}
+                              className="bg-flow text-on-accent min-h-[40px] rounded-[10px] px-3 text-xs font-medium"
+                            >
+                              Try it in the Experiment Bay
+                            </button>
                           )}
                         </div>
                       )}
