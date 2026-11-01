@@ -76,6 +76,13 @@ def test_simulate_invalid_circuit_is_judged_not_rejected(client):
     assert body["components"] == {}
 
 
+def test_simulate_rejects_numeric_values_too_large_for_float(client):
+    res = client.post("/api/simulate", json=netlist(
+        battery("B1", 10 ** 2000, "p", "0")))
+    assert res.status_code == 400
+    assert res.get_json()["error_code"] == "MALFORMED_REQUEST"
+
+
 @pytest.mark.parametrize("bad", [{}, {"components": "nope"},
                                  {"components": [{"id": "B1"}]}])
 def test_simulate_malformed_netlist_is_judged_by_solver(client, bad):

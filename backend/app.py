@@ -35,8 +35,13 @@ MAX_SAFE_WATTS = 1000.0
 
 
 def _in_range(value, low, high):
-    return (isinstance(value, (int, float)) and not isinstance(value, bool)
-            and math.isfinite(float(value)) and low <= float(value) <= high)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        numeric = float(value)
+    except OverflowError:
+        return False
+    return math.isfinite(numeric) and low <= numeric <= high
 
 
 def _numeric_range_error(netlist):
