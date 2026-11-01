@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Netlist, SimulateResult } from '../api/client'
-import { compareRuns, describeRun, summarizeRun } from './history'
+import { batteriesOppose, compareRuns, describeRun, summarizeRun } from './history'
 
 const LOOP: Netlist = {
   components: [
@@ -12,6 +12,7 @@ const LOOP: Netlist = {
 function solved(power: number, current: number): SimulateResult {
   return {
     ok: true,
+    node_voltages: { p: 6, '0': 0 },
     components: {
       B1: { voltage: 6, current: -current, power: -power },
       L1: { voltage: 6, current, power },
@@ -46,7 +47,7 @@ describe('describeRun', () => {
     expect(record).toMatchObject({ valid: false, amps: 0, bulbsLit: 0, errorCode: 'SHORTED_BATTERY' })
   })
 
-  it('records per-bulb conditions and total battery volts', () => {
+  it('records per-bulb conditions and solver-measured source volts', () => {
     const result = {
       ...solved(14.4, 1.2),
       conditions: { L1: 'overloaded' },
@@ -55,7 +56,7 @@ describe('describeRun', () => {
     expect(record.bulbs).toEqual([
       { id: 'L1', volts: 6, amps: 1.2, watts: 14.4, condition: 'overloaded' },
     ])
-    expect(record.batteryVolts).toBe(6)
+    expect(record.sourceVolts).toBe(6)
   })
 
   it('tolerates results without conditions or ratings', () => {
@@ -69,10 +70,10 @@ describe('describeRun', () => {
 describe('summarizeRun', () => {
   it('renders the one-line run format', () => {
     expect(summarizeRun(describeRun(3, 'Switch opened', solved(0, 0), LOOP))).toBe(
-      'Run 3  -  Switch opened  -  0.0 A  -  bulb dark',
+      'Run 3  -  Switch opened  -  6.0 V net source  -  0.0 A  -  bulb dark',
     )
     expect(summarizeRun(describeRun(1, 'Light a bulb', solved(3.6, 0.6), LOOP))).toBe(
-      'Run 1  -  Light a bulb  -  0.6 A  -  1 bulb lit',
+      'Run 1  -  Light a bulb  -  6.0 V net source  -  0.6 A  -  1 bulb lit',
     )
   })
 
@@ -90,7 +91,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(overloaded)).toBe(
-      'Run 2  -  Overload the bulb  -  1.2 A  -  1 bulb lit  -  L1 overloaded',
+      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  L1 overloaded',
     )
     const damaged = describeRun(
       3,
@@ -99,7 +100,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(damaged)).toBe(
-      'Run 3  -  Overload the bulb  -  0.0 A  -  bulb dark  -  L1 damaged',
+      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  L1 damaged',
     )
   })
 })
@@ -144,9 +145,55 @@ describe('compareRuns', () => {
       doubled,
     )
     expect(compareRuns(prev, curr)).toBe(
-      'Compared with run 1: more current (0.6 A → 1.2 A), battery 6 V → 12 V, ' +
+      'Compared with run 1: more current (0.6 A → 1.2 A), ' +
         'L1 power 3.6 W → 14.4 W (4.0×).',
     )
+  })
+
+  it('records solver-derived net source voltage when batteries oppose', () => {
+    const nine: Netlist = {
+      components: [...Array.from({ length: 9 }, (_, index) => ({
+        id: `B${index + 1}`,
+        type: 'battery' as const,
+        volts: 24,
+        a: index < 5 ? `n${index + 1}` : `n${index}`,
+        b: index < 5 ? `n${index}` : `n${index + 1}`,
+      })), { id: 'L1', type: 'bulb', a: 'n9', b: 'n0' }],
+    }
+    const result = {
+      ...solved(57.599999999999994, 2.4),
+      node_voltages: { n0: 0, n9: 24 },
+      components: {
+        ...solved(57.6, 2.4).components,
+        ...Object.fromEntries(Array.from({ length: 9 }, (_, index) => [
+          `B${index + 1}`,
+          { voltage: 24, current: index < 5 ? -2.4 : 2.4, power: 0 },
+        ])),
+        L1: { voltage: 24, current: 2.4, power: 57.599999999999994 },
+      },
+    } as unknown as SimulateResult
+    expect(describeRun(1, 'Nine batteries', result, nine).sourceVolts).toBeCloseTo(24)
+    expect(batteriesOppose(result, nine)).toBe(true)
+  })
+
+  it('detects opposing batteries when their net voltage and current are both zero', () => {
+    const opposing: Netlist = {
+      components: [
+        { id: 'B1', type: 'battery', volts: 6, a: 'n1', b: 'n0' },
+        { id: 'B2', type: 'battery', volts: 6, a: 'n1', b: 'n2' },
+        { id: 'L1', type: 'bulb', a: 'n2', b: 'n0' },
+      ],
+    }
+    const result = {
+      ...solved(0, 0),
+      components: {
+        B1: { voltage: 6, current: 0, power: 0 },
+        B2: { voltage: 6, current: 0, power: 0 },
+        L1: { voltage: 0, current: 0, power: 0 },
+      },
+      conditions: { L1: 'intact' },
+    } as unknown as SimulateResult
+    expect(batteriesOppose(result, opposing)).toBe(true)
   })
 
   it('leaves ordinary comparisons unchanged when nothing eventful happened', () => {

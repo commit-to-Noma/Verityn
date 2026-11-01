@@ -116,13 +116,18 @@ def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
     conditions = conditions or {}
     batteries = batteries or {}
     if valid:
+        opposing = facts.get("source.opposed") is True
+        source_note = ("Some batteries face opposite directions and partly cancel."
+                       if opposing else "")
         return (
             "The simulator tested this circuit and it is valid.\n"
             f"Solver facts (per part): {json.dumps(facts, sort_keys=True)}\n"
+            f"Solver-measured net source voltage: {facts.get('source.net_V', 'unavailable')} V. "
+            f"{source_note}\n"
             f"Switches: {json.dumps(switches, sort_keys=True)}. "
             f"Bulbs: {json.dumps(bulbs)}.\n"
             f"Bulb conditions: {json.dumps(conditions, sort_keys=True)}. "
-            f"Batteries: {json.dumps(batteries, sort_keys=True)}.\n"
+            f"Signed battery voltage contributions (from solver current direction): {json.dumps(batteries, sort_keys=True)}.\n"
             "Explain the measured result in two to three sentences. "
             "Name an overloaded or damaged bulb only when the "
             "conditions say so."

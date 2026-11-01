@@ -245,8 +245,7 @@ def test_explain_passes_conditions_batteries_and_limits():
     assert seen["facts"]["L1.power_W"] == pytest.approx(14.4)
     assert seen["facts"]["L1.limit_W"] == 6
     assert seen["facts"]["L1.rated_V"] == 6
-    assert seen["facts"]["batteries.count"] == 2.0
-    assert seen["facts"]["batteries.total_V"] == 12.0
+    assert seen["facts"]["source.net_V"] == 12.0
 
 
 def test_explain_rejected_passes_empty_conditions():
@@ -262,7 +261,7 @@ def test_explain_rejected_passes_empty_conditions():
     coach.explain_result(SHORTED, SpyProvider())
     assert seen["facts"] == {}
     assert seen["conditions"] == {}
-    assert seen["batteries"] == {"B1": 6}
+    assert seen["batteries"] == {}
 
 
 def test_explain_fake_overload_cites_measured_watts_and_limit():
@@ -290,8 +289,7 @@ def test_meta_explain_message_carries_conditions_and_batteries(monkeypatch):
     monkeypatch.setattr(meta_coach, "_post_json", fake_post)
     facts = {"L1.power_W": 14.4, "L1.current_A": 1.2,
              "L1.voltage_V": 12.0, "L1.limit_W": 6,
-             "L1.rated_V": 6, "batteries.count": 2.0,
-             "batteries.total_V": 12.0}
+             "L1.rated_V": 6, "source.net_V": 12.0}
     provider.explain(facts=facts, valid=True, error_code=None,
                      component_ids=[], switches={},
                      bulbs=["L1"], conditions={"L1": "overloaded"},
@@ -300,6 +298,77 @@ def test_meta_explain_message_carries_conditions_and_batteries(monkeypatch):
     assert '"L1": "overloaded"' in user_text
     assert '"B1": 6' in user_text and '"B2": 6' in user_text
     assert "14.4" in user_text
+
+
+def test_explain_uses_net_solver_voltage_for_opposing_battery_bank():
+    components = []
+    for index in range(1, 10):
+        if index <= 5:
+            a, b = f"n{index}", f"n{index - 1}"
+        else:
+            a, b = f"n{index - 1}", f"n{index}"
+        components.append({"id": f"B{index}", "type": "battery",
+                           "volts": 24, "a": a, "b": b})
+    components.append({"id": "L1", "type": "bulb", "a": "n9", "b": "n0"})
+    seen = {}
+
+    class SpyProvider:
+        name = "spy"
+
+        def explain(self, **call):
+            seen.update(call)
+            return "L1 reads 2.4 A and 57.6 W at 24 V."
+
+    out = coach.explain_result({"components": components}, SpyProvider())
+    assert out["text"] == "L1 reads 2.4 A and 57.6 W at 24 V."
+    assert seen["facts"]["L1.power_W"] == 57.6
+    assert seen["facts"]["source.net_V"] == 24.0
+    assert seen["facts"]["source.opposed"] is True
+    assert sum(seen["batteries"].values()) == 24.0
+    assert all("999994" not in repr(value) for value in seen["facts"].values())
+
+
+def test_explain_flags_opposition_when_sources_cancel_at_zero_current():
+    netlist = {"components": [
+        {"id": "B1", "type": "battery", "volts": 6, "a": "n1", "b": "n0"},
+        {"id": "B2", "type": "battery", "volts": 6, "a": "n1", "b": "n2"},
+        {"id": "L1", "type": "bulb", "a": "n2", "b": "n0"},
+    ]}
+    seen = {}
+
+    class SpyProvider:
+        name = "spy"
+
+        def explain(self, **call):
+            seen.update(call)
+            return "seen"
+
+    coach.explain_result(netlist, SpyProvider())
+    assert seen["facts"]["source.net_V"] == 0.0
+    assert seen["facts"]["source.opposed"] is True
+
+
+def test_meta_explain_prompt_labels_net_voltage_and_cancellation():
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    seen = {}
+
+    def fake_post(url, payload, headers, timeout_s):
+        seen.update(payload=payload)
+        return 200, chat_response({"explanation": "The bulb receives 24 V."})
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(meta_coach, "_post_json", fake_post)
+    facts = {"B1.current_A": -2.4, "B2.current_A": 2.4,
+             "L1.power_W": 57.6, "source.net_V": 24.0,
+             "source.opposed": True}
+    provider.explain(facts=facts, valid=True, error_code=None,
+                     component_ids=[], switches={}, bulbs=["L1"],
+                     batteries={"B1": 24, "B2": -24})
+    user_text = seen["payload"]["messages"][1]["content"]
+    assert "Solver-measured net source voltage: 24.0 V" in user_text
+    assert "Some batteries face opposite directions and partly cancel." in user_text
+    assert "57.599999999999994" not in user_text
+    monkeypatch.undo()
 
 
 def test_meta_explain_accepts_limit_citation(monkeypatch):

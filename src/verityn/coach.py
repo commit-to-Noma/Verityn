@@ -259,6 +259,42 @@ def solver_facts(result):
     return facts
 
 
+def rounded_solver_facts(facts):
+    """Keep provider prompts readable without changing solver decisions."""
+    return {key: round(value, 1) if _is_number(value) else value
+            for key, value in facts.items()}
+
+
+def _net_source_volts(result, parts):
+    readings = [result.components[pid] for pid, part in parts.items()
+                if part.get("type") == "battery" and pid in result.components]
+    if any(abs(reading["current"]) > 1e-9 for reading in readings):
+        return sum(reading["voltage"] * (1 if reading["current"] < 0 else -1)
+                   for reading in readings
+                   if abs(reading["current"]) > 1e-9)
+    bulbs = [result.components[pid]["voltage"] for pid, part in parts.items()
+             if part.get("type") == "bulb" and pid in result.components]
+    return max((abs(value) for value in bulbs), default=0.0)
+
+
+def _batteries_oppose(result, parts, source_volts):
+    readings = [result.components[pid] for pid, part in parts.items()
+                if part.get("type") == "battery" and pid in result.components]
+    currents = [reading["current"] for reading in readings]
+    if any(current < -1e-9 for current in currents) and any(
+            current > 1e-9 for current in currents):
+        return True
+    if len(readings) < 2 or any(abs(current) > 1e-9 for current in currents):
+        return False
+    if any(part.get("type") == "switch" and part.get("closed") is False
+           for part in parts.values()):
+        return False
+    if any(value == "damaged" for value in (result.conditions or {}).values()):
+        return False
+    total = sum(abs(reading["voltage"]) for reading in readings)
+    return total - abs(source_volts) > 1e-6
+
+
 def _is_number(value):
     return (isinstance(value, (int, float))
             and not isinstance(value, bool)
@@ -500,7 +536,8 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
     else:
         try:
             text = provider.r1_question(choice=recorded["choice"],
-                                        why=recorded["why"], facts=facts)
+                                        why=recorded["why"],
+                                        facts=rounded_solver_facts(facts))
             serving = provider.name
         except CoachProviderError as err:
             log.warning("coach primary failed: stage=%s http_status=%s "
@@ -510,7 +547,8 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
                 raise
             primary_error = err.stage
             text = fallback.r1_question(choice=recorded["choice"],
-                                        why=recorded["why"], facts=facts)
+                                        why=recorded["why"],
+                                        facts=rounded_solver_facts(facts))
             serving = fallback.name
     if rung not in served:
         served.append(rung)
@@ -543,16 +581,22 @@ def explain_result(netlist, provider, fallback=None):
                 if part.get("type") == "switch"}
     bulbs = sorted(pid for pid, part in parts.items()
                    if part.get("type") == "bulb")
-    batteries = {pid: part.get("volts", 6)
-                 for pid, part in parts.items()
-                 if part.get("type") == "battery"}
+    batteries = {}
     result = solver.solve(netlist)
     if result.ok is True:
         facts = solver_facts(result)
-        facts["batteries.count"] = float(len(batteries))
-        facts["batteries.total_V"] = float(sum(
-            volts for volts in batteries.values()
-            if _is_number(volts)))
+        source_volts = _net_source_volts(result, parts)
+        facts["source.net_V"] = source_volts
+        facts["source.opposed"] = _batteries_oppose(result, parts, source_volts)
+        batteries = {
+            pid: (round(result.components[pid]["voltage"], 1)
+                  if result.components[pid]["current"] <= 0
+                  else -round(result.components[pid]["voltage"], 1))
+            for pid, part in parts.items()
+            if (part.get("type") == "battery" and pid in result.components
+                and abs(result.components[pid]["current"]) > 1e-9)
+        }
+        facts = rounded_solver_facts(facts)
         valid, error_code, component_ids = True, None, []
         conditions = dict(result.conditions or {})
     else:

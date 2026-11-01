@@ -21,8 +21,8 @@ export interface RunRecord {
   bulbCount: number
   errorCode: string | null
   bulbs: RunBulb[]
-  /** Sum of battery volts in the tested netlist (6 V each when unset). */
-  batteryVolts: number
+  /** Signed source voltage from solver battery measurements. */
+  sourceVolts: number
 }
 
 function bulbMeasurements(result: SimulateResult, netlist: Netlist): RunBulb[] {
@@ -41,10 +41,41 @@ function bulbMeasurements(result: SimulateResult, netlist: Netlist): RunBulb[] {
     })
 }
 
-function batteryTotal(netlist: Netlist): number {
-  return netlist.components
+export function measuredSourceVolts(result: SimulateResult, netlist: Netlist): number {
+  const batteries = netlist.components.filter((part) => part.type === 'battery')
+  const batteryReadings = batteries.map((part) => result.components[part.id]).filter(Boolean)
+  if (batteryReadings.some((reading) => Math.abs(reading.current) > 1e-9)) {
+    return batteryReadings.reduce(
+      (total, reading) => Math.abs(reading.current) <= 1e-9
+        ? total
+        : total + reading.voltage * (reading.current < 0 ? 1 : -1),
+      0,
+    )
+  }
+  const bulbReadings = netlist.components
+    .filter((part) => part.type === 'bulb')
+    .map((part) => result.components[part.id]?.voltage ?? 0)
+  return bulbReadings.length === 0 ? 0 : Math.max(...bulbReadings.map(Math.abs))
+}
+
+export function batteriesOppose(result: SimulateResult, netlist: Netlist): boolean {
+  const batteries = netlist.components
     .filter((part) => part.type === 'battery')
-    .reduce((total, part) => total + (part.volts ?? 6), 0)
+    .map((part) => result.components[part.id])
+    .filter(Boolean)
+  const currents = batteries.map((reading) => reading.current)
+  if (currents.some((current) => current < -1e-9) && currents.some((current) => current > 1e-9)) {
+    return true
+  }
+  if (batteries.length < 2 || currents.some((current) => Math.abs(current) > 1e-9)) {
+    return false
+  }
+  if (netlist.components.some((part) => part.type === 'switch' && !part.closed) ||
+      Object.values(result.conditions ?? {}).some((condition) => condition === 'damaged')) {
+    return false
+  }
+  const totalBatteryVolts = batteries.reduce((sum, reading) => sum + Math.abs(reading.voltage), 0)
+  return totalBatteryVolts - Math.abs(measuredSourceVolts(result, netlist)) > 1e-6
 }
 
 function formatVolts(value: number): string {
@@ -69,7 +100,7 @@ export function describeRun(
       bulbCount: bulbs.length,
       errorCode: result.error_code,
       bulbs,
-      batteryVolts: batteryTotal(netlist),
+      sourceVolts: 0,
     }
   }
   const banner = bannerModel(result, netlist)
@@ -83,7 +114,7 @@ export function describeRun(
     bulbCount: bulbs.length,
     errorCode: null,
     bulbs,
-    batteryVolts: batteryTotal(netlist),
+    sourceVolts: measuredSourceVolts(result, netlist),
   }
 }
 
@@ -103,7 +134,7 @@ export function summarizeRun(record: RunRecord): string {
     const code = record.errorCode ?? 'rejected'
     return `Run ${record.n}  -  ${record.label}  -  not testable (${code})`
   }
-  const base = `Run ${record.n}  -  ${record.label}  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
+  const base = `Run ${record.n}  -  ${record.label}  -  ${record.sourceVolts.toFixed(1)} V net source  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
   const events = record.bulbs
     .filter((bulb) => bulb.condition === 'overloaded' || bulb.condition === 'damaged')
     .map((bulb) => `${bulb.id} ${bulb.condition}`)
@@ -134,9 +165,9 @@ export function compareRuns(previous: RunRecord | null, current: RunRecord): str
   if (litShift !== 0) {
     parts.push(`${previous.bulbsLit} → ${current.bulbsLit} bulbs lit`)
   }
-  if (previous.batteryVolts !== current.batteryVolts) {
+  if (previous.sourceVolts !== current.sourceVolts) {
     parts.push(
-      `battery ${formatVolts(previous.batteryVolts)} → ${formatVolts(current.batteryVolts)}`,
+      `net source ${formatVolts(previous.sourceVolts)} → ${formatVolts(current.sourceVolts)}`,
     )
   }
   for (const bulb of current.bulbs) {

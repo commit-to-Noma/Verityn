@@ -9,7 +9,7 @@ import {
 } from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
 import { latchedDamage, validateBatteryVolts } from './bench'
-import { compareRuns, describeRun, summarizeRun, type RunRecord } from './history'
+import { batteriesOppose, compareRuns, describeRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 
 const CircuitCanvas = lazy(() => import('../components/CircuitCanvas'))
@@ -129,9 +129,15 @@ function LatestResult({
   const bulbs = netlist.components.filter((part) => part.type === 'bulb')
   const conditions = result.conditions ?? {}
   const anyOverloaded = bulbs.some((bulb) => conditions[bulb.id] === 'overloaded')
+  const sourceVolts = measuredSourceVolts(result, netlist)
+  const opposingSources = batteriesOppose(result, netlist)
   return (
     <section aria-label="Latest result" className="glass-panel flex flex-col gap-3 p-4">
       <h3 className="text-base font-semibold">Latest result</h3>
+      <p className="text-sm">Net source voltage: {sourceVolts.toFixed(1)} V</p>
+      {opposingSources && (
+        <p className="text-ink-muted text-sm">Some batteries face opposite directions, so they partly cancel.</p>
+      )}
       {bulbs.length === 0 ? (
         <p className="text-ink-muted text-sm">No bulbs in this circuit.</p>
       ) : (
