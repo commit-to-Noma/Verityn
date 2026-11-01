@@ -254,6 +254,7 @@ export default function ExperimentPage({ onReturnToLab }: { onReturnToLab?: () =
     controller.current?.abort()
     setFresh(null)
     setAsk({ phase: 'idle' })
+    setBenchConditions({})
     // Edited benches log as free builds, even when a preset seeded them.
     setBench((current) => ({ ...current, label: 'Free build' }))
   }, [])
