@@ -1,6 +1,7 @@
 import type { ChapterRecap } from '../journey/story'
 import { CHOICE_LABELS, LIT_POWER_W } from '../lessons/lesson'
 import { formatReading } from '../components/format'
+import { cleanTranscriptForDisplay } from '../voice/displayTranscript'
 
 /** Shareable evidence card: session facts only, never scores or claims. */
 export interface EvidenceCardModel {
@@ -92,7 +93,7 @@ function chapterLine(index: number, title: string, chapter: ChapterRecap | undef
   const prediction = input?.prediction
   const choice = prediction === null || prediction === undefined
     ? 'prediction not recorded'
-    : `predicted ${CHOICE_LABELS[prediction.choice]}${includeWhy && prediction.why.trim() !== '' ? ` (“${prediction.why.trim()}”)` : ''}`
+    : `predicted ${CHOICE_LABELS[prediction.choice]}${includeWhy && prediction.why.trim() !== '' ? ` (“${cleanTranscriptForDisplay(prediction.why)}”)` : ''}`
   const result = input?.result
   const reading = result === null || result === undefined
     ? 'not measured'

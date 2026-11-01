@@ -86,6 +86,23 @@ describe('buildEvidenceCard', () => {
     )
   })
 
+  it('cleans transcript artifacts only in the opted-in display copy', () => {
+    const rawWhy = 'Um, if the if the bulb lights.'
+    const input = {
+      ...SOLVED_INPUT,
+      prediction: { choice: 'yes', why: rawWhy },
+    } as unknown as TraceInput
+    const model = buildEvidenceCard(
+      [chapter({ input })],
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
+      'http://x',
+      true,
+    )
+
+    expect(model?.chapterLines[0]).toContain('predicted Yes (“if the bulb lights.”)')
+    expect(input.prediction?.why).toBe(rawWhy)
+  })
+
   it('omits solo and rung when the session never produced them', () => {
     const model = buildEvidenceCard(
       [chapter({ input: SOLVED_INPUT })],

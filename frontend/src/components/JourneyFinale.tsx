@@ -14,6 +14,7 @@ import { useProofMode } from '../proof/store'
 import { finaleRevealDelay } from '../journey/finaleMotion'
 import PredictionVerdictLine from './PredictionVerdictLine'
 import { batterySupplyLine } from '../journey/readings'
+import { cleanTranscriptForDisplay } from '../voice/displayTranscript'
 
 const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
 
@@ -118,7 +119,7 @@ function saidByLearner(input: TraceInput | null): string {
   if (prediction === null || prediction === undefined) {
     return 'No prediction was recorded.'
   }
-  const why = prediction.why.trim()
+  const why = cleanTranscriptForDisplay(prediction.why)
   return why === ''
     ? `You predicted ${CHOICE_LABELS[prediction.choice]}.`
     : `You said: “${why}”`
