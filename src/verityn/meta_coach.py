@@ -196,7 +196,16 @@ _SYSTEM_PROMPT = (
     "never give numbers, and never give wiring instructions or the fix. "
     "Reply with exactly one JSON object and no other text: "
     '{"misconception_id": "<one id>", "question": "<your question>"}. '
-    "misconception_id must be one of: " + ", ".join(MISCONCEPTION_IDS) + "."
+    "misconception_id must be one of: " + ", ".join(MISCONCEPTION_IDS) + ". "
+    "The question must avoid every lesson-answer hint and every prohibited "
+    "leak word, including current, power, volt, ampere, wire, connect, "
+    "open, stays, dark, lit, answer, and because."
+)
+
+_R1_RETRY_PROMPT = (
+    "Validator feedback: your previous question was rejected for a leak. "
+    "Rewrite it as one short question about the learner's reasoning. Do not "
+    "mention measurements, outcomes, wiring, parts, or the validator."
 )
 
 
@@ -380,16 +389,20 @@ class MetaSparkProvider:
         }
         headers = {"Content-Type": "application/json",
                    "Authorization": f"Bearer {self.api_key}"}
-        _, body = _post_json(f"{self.base_url}/chat/completions", payload,
-                             headers, self.timeout_s)
-        try:
-            _, question = validate_model_output(
-                _parse_output(_chat_content(body)), facts)
-        except CoachProviderError as err:
-            if err.stage == "parse" and ",finish=" not in (err.shape or ""):
-                err.shape = _with_completion(err.shape or "unknown", body)
-            raise
-        return question
+        for attempt in range(2):
+            _, body = _post_json(f"{self.base_url}/chat/completions", payload,
+                                 headers, self.timeout_s)
+            try:
+                _, question = validate_model_output(
+                    _parse_output(_chat_content(body)), facts)
+                return question
+            except CoachProviderError as err:
+                if err.stage == "parse" and ",finish=" not in (err.shape or ""):
+                    err.shape = _with_completion(err.shape or "unknown", body)
+                if attempt == 0 and err.stage == "validate":
+                    payload["messages"].append({"role": "user", "content": _R1_RETRY_PROMPT})
+                    continue
+                raise
 
     def explain(self, *, facts, valid, error_code, component_ids,
                 switches, bulbs, conditions=None, batteries=None):
