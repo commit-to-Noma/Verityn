@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import type { SimulateResult } from '../api/client'
-import { LIT_POWER_W } from '../lessons/lesson'
 import ReadoutValue from './ReadoutValue'
 
 /** Compact solver-grounded result with the rest of the workbench disclosed below. */
@@ -23,7 +22,6 @@ export default function GuidedResultCard({
 
   const battery = Object.entries(result.components).find(([id]) => id.startsWith('B'))?.[1]
   const bulb = result.components.L1
-  const lit = bulb !== undefined && bulb.power > LIT_POWER_W
 
   return (
     <section className="glass-panel flex min-w-0 flex-col gap-4 p-4" aria-label="Test result">
@@ -57,11 +55,6 @@ export default function GuidedResultCard({
             </>
           )}
         </div>
-        <p className="mt-3 text-sm">
-          {lit
-            ? 'The bulb lit; current flows around the completed loop.'
-            : 'The bulb stayed off; the open switch breaks the loop.'}
-        </p>
       </div>
       <details
         className="border-t border-glass-border/70 pt-3"

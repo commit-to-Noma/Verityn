@@ -32,7 +32,7 @@ describe('GuidedResultCard', () => {
     expect(markup).toContain('6 V')
     expect(markup).toContain('0.6 A')
     expect(markup).toContain('3.6 W')
-    expect(markup).toContain('The bulb lit; current flows around the completed loop.')
+    expect(markup).not.toContain('The bulb lit; current flows around the completed loop.')
     expect(markup).toContain('<summary')
     expect(markup).toContain('See details')
     expect(markup).toContain('Detailed circuit')
@@ -51,6 +51,6 @@ describe('GuidedResultCard', () => {
 
     expect(markup).toContain('0 A')
     expect(markup).toContain('0 W')
-    expect(markup).toContain('The bulb stayed off; the open switch breaks the loop.')
+    expect(markup).not.toContain('The bulb stayed off; the open switch breaks the loop.')
   })
 })
