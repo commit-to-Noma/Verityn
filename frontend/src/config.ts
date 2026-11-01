@@ -4,5 +4,5 @@ export function publicUrl(): string {
   if (configured !== undefined && configured !== '') {
     return configured
   }
-  return window.location.origin
+  return configured ?? ''
 }

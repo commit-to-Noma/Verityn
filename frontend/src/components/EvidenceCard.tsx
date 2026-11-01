@@ -10,6 +10,7 @@ const PNG_FILENAME = 'verityn-evidence.png'
 export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] }) {
   const [tick, setTick] = useState(0)
   const [status, setStatus] = useState('')
+  const [includeWhy, setIncludeWhy] = useState(false)
   const [rendered, setRendered] = useState<{ key: string; url: string | null } | null>(null)
   const doneKey = useRef<string | null>(null)
   useEffect(() => subscribeTraceEvents(() => setTick((count) => count + 1)), [])
@@ -18,6 +19,7 @@ export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] })
     chapters,
     { ...traceCounts(events), total: events.length, tools: events.map((event) => event.tool) },
     publicUrl(),
+    includeWhy,
   )
   const lines = model === null ? [] : cardLines(model)
   const key = model === null ? null : `${tick}:${lines.join('\n')}`
@@ -110,6 +112,10 @@ export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] })
         </p>
       )}
       <p className="text-ink-muted text-xs">Computed by a solver. Not an AI score.</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={includeWhy} onChange={(event) => setIncludeWhy(event.target.checked)} />
+        Include my written reason
+      </label>
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
