@@ -29,6 +29,34 @@ def _elapsed_ms(start):
     return int(round((time.perf_counter() - start) * 1000))
 
 
+def _provider_failure(err, *, feature, tool):
+    """Map provider failures to stable, actionable API errors."""
+    if err.http_status == 429:
+        code, message, status = "RATE_LIMITED", "The live provider is rate limited. Try again shortly.", 429
+    elif err.http_status == 401:
+        code, message, status = "MISSING_KEY", "The live provider credential is missing or was rejected.", 503
+    elif err.stage == "transport" and err.reason == "timeout":
+        code, message, status = "PROVIDER_TIMEOUT", "The live provider timed out. Try again shortly.", 502
+    elif err.stage == "transport":
+        code, message, status = "PROVIDER_UNAVAILABLE", "The live provider is unavailable. Use a verified sample or try again.", 502
+    elif err.stage in ("parse", "validate"):
+        code, message, status = "INVALID_PROPOSAL" if feature == "vision" else "INVALID_PROVIDER_RESPONSE", "The live provider returned an unusable response. Use a verified sample or try again.", 502
+    else:
+        code, message, status = "PROVIDER_UNAVAILABLE", "The live provider is unavailable. Try again shortly.", 502
+    if feature == "vision" and err.http_status != 429:
+        status = 500
+    return jsonify({
+        "error_code": code,
+        "error_message": message,
+        "trace": trace.rejection_trace(
+            tool=tool,
+            input_kind="image" if feature == "vision" else "text",
+            output_kind="proposal" if feature == "vision" else "conversation-reply",
+            reason=err.reason or err.stage,
+            ms=0),
+    }), status
+
+
 def _tool_for(serving, primary, fallback=None):
     """Display id for a serving provider: model id when Meta, else its name."""
     for candidate in (primary, fallback):
@@ -196,16 +224,7 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                     "coach conversation failed: stage=%s http_status=%s "
                     "shape=%s reason=%s",
                     err.stage, err.http_status, err.shape, err.reason)
-                return jsonify({
-                    "error_code": "COACH_UNAVAILABLE",
-                    "error_message": "The coach could not respond. Please try again.",
-                    "trace": trace.rejection_trace(
-                        tool=_tool_for(active_provider.name, active_provider,
-                                       active_fallback),
-                        input_kind="text", output_kind="conversation-reply",
-                        reason=err.reason or err.stage,
-                        ms=_elapsed_ms(start)),
-                }), 502
+                return _provider_failure(err, feature="coach", tool=_tool_for(active_provider.name, active_provider, active_fallback))
             failed_stage = err.stage
             try:
                 reply = active_fallback.conversation_reply(message.strip(), context)
@@ -214,16 +233,7 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 app.logger.warning(
                     "coach conversation fallback failed: stage=%s",
                     fallback_error.stage)
-                return jsonify({
-                    "error_code": "COACH_UNAVAILABLE",
-                    "error_message": "The coach could not respond. Please try again.",
-                    "trace": trace.rejection_trace(
-                        tool=_tool_for(active_fallback.name, active_provider,
-                                       active_fallback),
-                        input_kind="text", output_kind="conversation-reply",
-                        reason=fallback_error.reason or fallback_error.stage,
-                        ms=_elapsed_ms(start)),
-                }), 502
+                return _provider_failure(fallback_error, feature="coach", tool=_tool_for(active_fallback.name, active_provider, active_fallback))
         return jsonify({
             "reply": reply,
             "provider": reply_provider,
@@ -276,13 +286,7 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "vision propose failed: stage=%s http_status=%s "
                 "shape=%s reason=%s",
                 err.stage, err.http_status, err.shape, err.reason)
-            return jsonify({"error_code": "INTERNAL_ERROR",
-                            "error_message": "Unexpected server error.",
-                            "trace": trace.rejection_trace(
-                                tool=tool, input_kind="image",
-                                output_kind="proposal",
-                                reason=err.reason or err.stage,
-                                ms=_elapsed_ms(start))}), 500
+            return _provider_failure(err, feature="vision", tool=tool)
         return jsonify({"proposal": proposal,
                         "assumptions": vision.ASSUMPTIONS,
                         "provider": active_vision.name,
@@ -330,10 +334,13 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         except meta_voice.VoiceTranscriptionError as err:
             app.logger.warning("voice transcribe failed: http_status=%s",
                                err.status)
-            return jsonify({
-                "error_code": "VOICE_TRANSCRIPTION_FAILED",
-                "error_message": str(err),
-            }), 502
+            if err.status == 429:
+                return jsonify({"error_code": "RATE_LIMITED", "error_message": "Voice transcription is rate limited. Try again shortly."}), 429
+            if err.status == 401:
+                return jsonify({"error_code": "MISSING_KEY", "error_message": "The voice provider credential is missing or was rejected."}), 503
+            if str(err) == "Muse Voice Transcribe is temporarily unavailable.":
+                return jsonify({"error_code": "PROVIDER_TIMEOUT", "error_message": "Voice transcription timed out. Try again shortly."}), 502
+            return jsonify({"error_code": "PROVIDER_UNAVAILABLE", "error_message": str(err)}), 503
         return jsonify({
             "transcript": transcript,
             "source": "meta-voice-transcribe",

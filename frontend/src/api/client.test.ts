@@ -490,7 +490,7 @@ describe('subscribeBackendHealth', () => {
     expect(seen).toEqual(['up'])
   })
 
-  it('treats gateway statuses as unreachable', async () => {
+  it('treats typed gateway statuses as reachable provider failures', async () => {
     const seen: string[] = []
     const off = subscribeBackendHealth((health) => seen.push(health))
     try {
@@ -498,13 +498,12 @@ describe('subscribeBackendHealth', () => {
         stubFetch(() => errResponse(status, null))
         const failure = await simulate({ components: [] }).catch((err: unknown) => err)
         expect(failure).toBeInstanceOf(ApiError)
-        expect((failure as ApiError).kind).toBe('network')
-        expect((failure as ApiError).message).toBe('Could not reach the backend. Is it running?')
+        expect((failure as ApiError).kind).toBe('http')
       }
     } finally {
       off()
     }
-    expect(seen).toEqual(['down', 'down', 'down'])
+    expect(seen).toEqual(['up', 'up', 'up'])
   })
 
   it('stays silent after unsubscribe', async () => {
@@ -525,9 +524,9 @@ describe('providerBadge', () => {
   })
 
   it('labels deterministic ladder rungs without claiming a model call', () => {
-    expect(providerBadge('deterministic', 'R2')).toBe('Evidence pointer')
-    expect(providerBadge('deterministic', 'R4')).toBe('Confirmation check')
-    expect(providerBadge('deterministic')).toBe('Guide')
+    expect(providerBadge('deterministic', 'R2')).toBe('Pointer')
+    expect(providerBadge('deterministic', 'R4')).toBe('Demonstration')
+    expect(providerBadge('deterministic')).toBe('Question')
   })
 })
 
@@ -600,10 +599,10 @@ describe('transcribeAudio', () => {
     expect((failure as ApiError).message).toBe('Upload a WAV recording.')
   })
 
-  it('maps gateway failures to network errors', async () => {
+  it('preserves typed gateway failures', async () => {
     stubFetch(() => errResponse(502, { error_code: 'VOICE_TRANSCRIPTION_FAILED' }))
     const failure = await transcribeAudio(new FormData()).catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(ApiError)
-    expect((failure as ApiError).kind).toBe('network')
+    expect((failure as ApiError).kind).toBe('http')
   })
 })

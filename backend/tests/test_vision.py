@@ -241,7 +241,7 @@ def test_invalid_model_output_500s_without_content(monkeypatch, app,
     res = app.test_client().post("/api/vision/propose",
                                  json={"image": TINY_PNG})
     assert res.status_code == 500
-    assert res.get_json()["error_message"] == "Unexpected server error."
+    assert res.get_json()["error_code"] == "INVALID_PROPOSAL"
     assert "stage=validate" in caplog.text
     assert "MARKER-EVIL" not in caplog.text
 

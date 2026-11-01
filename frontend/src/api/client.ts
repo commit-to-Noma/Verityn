@@ -245,15 +245,6 @@ async function postJson(path: string, payload: unknown, signal?: AbortSignal): P
     reportBackendHealth('down')
     throw new ApiError('network', 'Could not reach the backend. Is it running?')
   }
-  if (res.status === 502 || res.status === 503 || res.status === 504) {
-    reportBackendHealth('down')
-    throw new ApiError(
-      'network',
-      'Could not reach the backend. Is it running?',
-      res.status,
-      null,
-    )
-  }
   reportBackendHealth('up')
   let body: unknown = null
   try {
@@ -347,13 +338,9 @@ export function providerBadge(provider: string, rung?: string): string {
     return 'Meta Muse'
   }
   if (provider === 'deterministic') {
-    if (rung === 'R2') {
-      return 'Evidence pointer'
-    }
-    if (rung === 'R4') {
-      return 'Confirmation check'
-    }
-    return 'Guide'
+    if (rung === 'R2') return 'Pointer'
+    if (rung === 'R4') return 'Demonstration'
+    return 'Question'
   }
   return provider === 'prototype-fake' ? 'Fallback coach' : 'Coach'
 }
@@ -725,10 +712,6 @@ export async function transcribeAudio(
     }
     reportBackendHealth('down')
     throw new ApiError('network', 'Could not reach the transcription service.')
-  }
-  if (res.status === 502 || res.status === 503 || res.status === 504) {
-    reportBackendHealth('down')
-    throw new ApiError('network', 'Could not reach the transcription service.', res.status, null)
   }
   reportBackendHealth('up')
   let body: unknown = null

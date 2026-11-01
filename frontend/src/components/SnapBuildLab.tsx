@@ -479,13 +479,21 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
         if (next.signal.aborted) {
           return
         }
+        const code = err instanceof ApiError ? err.code : null
         const message = err instanceof ApiError ? err.message : 'Request failed.'
-        const visionDown = message === 'Vision unavailable.'
+        const visionDown = code === 'PROVIDER_UNAVAILABLE' || code === 'MISSING_KEY'
+        const nextStep = code === 'PROVIDER_TIMEOUT'
+          ? 'Vision timed out. Try again or use a verified sample.'
+          : code === 'RATE_LIMITED'
+            ? 'Vision is rate limited. Try again shortly or use a verified sample.'
+            : code === 'INVALID_PROPOSAL'
+              ? 'The proposal was not usable. Review a verified sample or try another image.'
+              : visionDown
+                ? 'Meta vision is unavailable. Use a verified sample or return to the Guided Lab.'
+                : message
         setState({
           phase: 'error',
-          message: visionDown
-            ? 'Meta vision is unavailable right now. Use a verified sample or return to the Guided Lab.'
-            : message,
+          message: nextStep,
           image,
           size,
           reason: visionDown ? 'vision' : 'file',

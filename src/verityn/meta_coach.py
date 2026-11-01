@@ -260,10 +260,10 @@ def _post_json(url, payload, headers, timeout_s):
             stage="http", http_status=err.code) from err
     except TimeoutError as err:
         raise CoachProviderError("Meta request timed out.",
-                                 stage="transport") from err
+                                 stage="transport", reason="timeout") from err
     except urllib.error.URLError as err:
         raise CoachProviderError("Meta request failed.",
-                                 stage="transport") from err
+                                 stage="transport", reason="unavailable") from err
     try:
         return status, json.loads(raw)
     except (json.JSONDecodeError, UnicodeDecodeError) as err:
