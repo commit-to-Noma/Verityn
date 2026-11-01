@@ -93,7 +93,7 @@ Kill “Turn a static circuit diagram into…” as the mission. That sentence b
 
 **AI controls the diagram, automatically, not via extra buttons.** Keep the closed list (`open_switch`, `close_switch`, `highlight_path`). After the coach speaks, **auto-play the validated action** (with a short “Watch” beat and Undo). Do not let the model drag batteries around. That would break the judging story.
 
-**Voice as conversation.** Today it is browser TTS + a mic that fills the Why box, optional, easy to miss. Plan: coach lines **speak themselves**; you can **answer by voice**; Why is quoted back; typed input always works. Still a **turn-taking lab**, not ChatGPT. If Muse Voice Transcribe is available with the same key, use it for the transcript; otherwise keep browser speech and label it honestly.
+**Voice as conversation.** Guided Lab uses Meta Muse Voice Transcribe 1.0 through the backend to turn an explicitly recorded, maximum-30-second WAV clip into editable Why text. Audio is not stored. Coach replies remain visible; the learner can independently enable or mute their audible playback, which uses browser speech synthesis (not Meta-generated voice). Typing and visible coach text always work when speech is muted, unavailable, or unsupported.
 
 **Solo second bulb / overlapping wires.** Transfer seed places L2 off to the side with a hanging wire over the loop. Relayout to a clean schematic: existing loop as a rectangle, second bulb clearly parallel, **orthogonal (`smoothstep`) wires**, terminals that do not cross bodies. Same physics, readable picture.
 

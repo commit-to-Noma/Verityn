@@ -963,10 +963,20 @@ export default function App() {
       demoActive={demo.active}
       notice={
         resumedCheckpoint && entered ? (
-          <p className="glass-panel mb-4 border-flow/30 p-3 text-sm text-ink" role="status">
-            Saved predictions and completed measurements are restored. An unfinished circuit, if any,
-            starts from its lesson setup.
-          </p>
+          <div className="glass-panel mb-4 flex items-start justify-between gap-3 border-flow/30 p-3 text-sm text-ink" role="status">
+            <p>
+              Saved predictions and completed measurements are restored. An unfinished circuit, if any,
+              starts from its lesson setup.
+            </p>
+            <button
+              type="button"
+              onClick={() => setResumedCheckpoint(false)}
+              aria-label="Dismiss saved progress notice"
+              className="border-glass-border min-h-9 shrink-0 rounded-[8px] border px-3 text-xs"
+            >
+              Dismiss
+            </button>
+          </div>
         ) : undefined
       }
       wide

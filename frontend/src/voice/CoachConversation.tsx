@@ -335,6 +335,10 @@ export default function CoachConversation({
           ? 'Thinking…'
           : ''
     : ''
+  const hasContent = visibleStatus !== '' || learnerText.trim() !== '' || coachText.trim() !== ''
+  if (!hasContent) {
+    return null
+  }
   return (
     <section
       aria-label="Coach conversation"
