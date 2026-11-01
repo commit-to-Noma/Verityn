@@ -15,7 +15,7 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
+import { CircleX, Eraser, Lightbulb, LoaderCircle, Lock, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
@@ -32,7 +32,7 @@ import {
 } from '../coach/actions'
 import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
-import { flowForCurrent, glowIntensity } from '../canvas/visuals'
+import { flowDurationForCurrent, flowForCurrent, glowIntensity } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
@@ -895,6 +895,14 @@ function ClaimVerdict({
           </button>
         </div>
       )}
+      {!coachAvailable && (
+        <p className="inline-flex items-center gap-2 rounded-[10px] border border-glass-border px-3 py-2 text-sm text-ink-muted">
+          <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            <span className="font-semibold text-ink">Coach off.</span> {SOLO_COACH_MESSAGE}
+          </span>
+        </p>
+      )}
       {coachAvailable && (
         <CoachAsk
           session={session}
@@ -1351,16 +1359,18 @@ function CanvasInner({
         setEdges((current) =>
           current.map((edge) => {
             const bad = offenders.has(edge.id)
-            const flow = bad
-              ? 'still'
-              : flowForCurrent(result.components[edge.id]?.current ?? 0)
+            const branchA = result.components[edge.id]?.current ?? 0
+            const flow = bad ? 'still' : flowForCurrent(branchA)
+            const duration = flow === 'still' ? null : flowDurationForCurrent(branchA)
             return {
               ...edge,
               style: bad
                 ? BAD_EDGE_STYLE
                 : uncertainRef.current.includes(edge.id)
                   ? UNCERTAIN_EDGE_STYLE
-                  : FLOW_EDGE_STYLE,
+                  : duration === null
+                    ? FLOW_EDGE_STYLE
+                    : { ...FLOW_EDGE_STYLE, animationDuration: `${duration}s` },
               animated: flow !== 'still',
               className: flow === 'reverse' ? 'flow-reverse' : undefined,
             }

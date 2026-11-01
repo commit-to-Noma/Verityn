@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flowForCurrent, glowIntensity } from './visuals'
+import { flowDurationForCurrent, flowForCurrent, glowIntensity } from './visuals'
 
 describe('glowIntensity', () => {
   it.each([
@@ -28,4 +28,26 @@ describe('flowForCurrent', () => {
   ] as const)('maps %s A to %s', (current, expected) => {
     expect(flowForCurrent(current)).toBe(expected)
   })
+})
+
+describe('flowDurationForCurrent', () => {
+  it.each([
+    [0.6, 0.5],
+    [-0.6, 0.5],
+    [1.2, 0.25],
+    [0.3, 1],
+    [3, 0.15],
+    [30, 0.15],
+    [0.06, 2],
+    [0.006, 2],
+  ])('maps %s A to a %s s dash cycle', (current, expected) => {
+    expect(flowDurationForCurrent(current)).toBeCloseTo(expected, 10)
+  })
+
+  it.each([[0], [1e-12], [-1e-12], [Number.NaN], [Number.POSITIVE_INFINITY]])(
+    'stays still for %s A',
+    (current) => {
+      expect(flowDurationForCurrent(current)).toBeNull()
+    },
+  )
 })

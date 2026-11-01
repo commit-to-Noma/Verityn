@@ -393,6 +393,8 @@ async function drive() {
   check('initial copy (stay dark)', await hasText('Your initial prediction was that the open circuit would stay dark.'))
   check('Repair verified header', await hasText('You completed the loop'))
   check('repair numbers', await hasText('Your completed circuit produces 0.6 A and 3.6 W.'))
+  check('lock-in seal', await hasText('Locked in — testing this against the circuit'))
+  check('flow paced by amps', await ev(`[...document.querySelectorAll('.react-flow__edge.animated path.react-flow__edge-path')].some((p) => p.style.animationDuration === '0.5s')`))
   check('3-section card', await hasText('What the simulator observed'))
   check('simulator ready badge', await hasText('Simulator ready'))
   await clickButton('Hub')
@@ -482,6 +484,7 @@ async function drive() {
   await waitFor(() => hasText('View completed journey'), 'solo gate', 25000)
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
+  check('solo coach-off lock', await hasText('Coach off.'))
   await clickButtonStarts('View completed journey')
   await waitFor(() => hasText('JOURNEY COMPLETE'), 'finale')
   check('finale solo matched', await hasText('Your solo prediction matched'))

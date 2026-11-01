@@ -36,3 +36,23 @@ export function flowForCurrent(currentA: number): CurrentFlow {
   }
   return 'still'
 }
+
+/** Dash-cycle seconds at the L1 nominal branch current (0.6 A). */
+export const NOMINAL_FLOW_S = 0.5
+
+/** Fastest and slowest dash cycles; extremes clamp instead of freezing. */
+export const MIN_FLOW_S = 0.15
+export const MAX_FLOW_S = 2
+
+/**
+ * Dash-cycle seconds from solver branch current, or null when still.
+ * Speed rises with |current| (nominal 0.6 A reads 0.5 s); the floor
+ * and non-finite inputs stay still so uncertain branches never move.
+ */
+export function flowDurationForCurrent(currentA: number): number | null {
+  if (!Number.isFinite(currentA) || Math.abs(currentA) <= CURRENT_FLOOR_A) {
+    return null
+  }
+  const scaled = (NOMINAL_FLOW_S * 0.6) / Math.abs(currentA)
+  return Math.min(MAX_FLOW_S, Math.max(MIN_FLOW_S, Math.round(scaled * 1000) / 1000))
+}
