@@ -1059,6 +1059,23 @@ function CanvasInner({
     })),
   )
   const { screenToFlowPosition, fitView } = useReactFlow()
+  useEffect(() => {
+    let frame = 0
+    const refit = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        void fitView({
+          padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+          maxZoom: 1.25,
+        })
+      })
+    }
+    window.addEventListener('resize', refit)
+    return () => {
+      window.removeEventListener('resize', refit)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [fitView])
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   /** Experiment copy: idle after a run means the circuit changed. */
@@ -2097,11 +2114,6 @@ function CanvasInner({
   const insightPane = (
     <>
       {!completed && <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />}
-      {!completed && prediction && challenge && (
-        <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
-          <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
-        </div>
-      )}
       {proof && runState.phase === 'done' && (
         <SimulationResultView result={runState.result} dev />
       )}
@@ -2198,65 +2210,87 @@ function CanvasInner({
   )
 
   return (
-    <section aria-labelledby="canvas-heading" className="flex scroll-mt-44 flex-col gap-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
-          <h2 id="canvas-heading" className="text-xl font-semibold">
-            {title}
-          </h2>
+    <section aria-labelledby="canvas-heading" className="scroll-mt-44">
+      {layout === 'split' ? (
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="order-0 flex min-w-0 flex-col gap-4">
+            {experimentPane}
+          </div>
+          <div className="order-1 flex min-w-0 flex-col gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
+                <h2 id="canvas-heading" className="text-xl font-semibold">{title}</h2>
+              </div>
+              {!completed && (
+                <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-3 py-1 text-xs">
+                  {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+                </span>
+              )}
+            </div>
+            {!completed && prediction && challenge && (
+              <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
+                <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
+              </div>
+            )}
+            {coachDock}
+            {completed && runState.phase === 'done' ? (
+              <>
+                <GuidedResultCard
+                  result={runState.result}
+                  onDetailsOpen={() => {
+                    window.requestAnimationFrame(() => {
+                      void fitView({
+                        padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+                        maxZoom: 1.25,
+                      })
+                    })
+                  }}
+                >
+                  {insightPane}
+                </GuidedResultCard>
+                {gate}
+              </>
+            ) : (
+              insightPane
+            )}
+          </div>
         </div>
-        {!completed && (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-              {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
-            </span>
-          </div>
-        )}
-      </div>
-      {completed && runState.phase === 'done' && prediction ? (
-        <div className="flex min-w-0 flex-col gap-4">
-          <PredictionSummary prediction={prediction} hint="" hideHint compact />
-          <GuidedResultCard
-            result={runState.result}
-            onDetailsOpen={() => {
-              window.requestAnimationFrame(() => {
-                void fitView({
-                  padding: window.innerWidth <= 640 ? 0.28 : 0.2,
-                  maxZoom: 1.25,
-                })
-              })
-            }}
-          >
-            <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
-            <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
-          </GuidedResultCard>
-          {gate}
-        </div>
-      ) : layout === 'split' ? (
-        coachDock !== undefined && coachDock !== null ? (
-          <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div className="order-0 min-w-0 lg:col-start-2 lg:row-start-1">
-              {coachDock}
-            </div>
-            <div className="order-1 flex min-w-0 flex-col gap-4 lg:col-start-1 lg:row-start-1 lg:row-span-2">
-              {experimentPane}
-            </div>
-            <div className="order-2 flex min-w-0 flex-col gap-4 lg:col-start-2 lg:row-start-2">
-              {insightPane}
-            </div>
-          </div>
-        ) : (
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
-            <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
-          </div>
-        )
       ) : (
         <>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
+              <h2 id="canvas-heading" className="text-xl font-semibold">{title}</h2>
+            </div>
+            {!completed && (
+              <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
+                {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+              </span>
+            )}
+          </div>
           {coachDock}
           {experimentPane}
+          {prediction && challenge && (
+            <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
+          )}
+          {completed && runState.phase === 'done' && (
+            <GuidedResultCard
+              result={runState.result}
+              onDetailsOpen={() => {
+                window.requestAnimationFrame(() => {
+                  void fitView({
+                    padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+                    maxZoom: 1.25,
+                  })
+                })
+              }}
+            >
+              {insightPane}
+            </GuidedResultCard>
+          )}
           {insightPane}
+          {completed && gate}
         </>
       )}
     </section>

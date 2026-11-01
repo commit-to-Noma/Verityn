@@ -6,7 +6,7 @@ const READOUT_DURATION_MS = 650
 
 /** ReadoutValue (§7): a mono tabular number with its unit. */
 export default function ReadoutValue({ value, unit }: { value: number; unit: string }) {
-  const [displayValue, setDisplayValue] = useState(0)
+  const [displayValue, setDisplayValue] = useState(value)
 
   useEffect(() => {
     const prefersReducedMotion =

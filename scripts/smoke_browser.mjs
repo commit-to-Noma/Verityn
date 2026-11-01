@@ -51,6 +51,7 @@ const pending = new Map()
 const askRequestIds = []
 const explainRequestIds = []
 let chrome = null
+let originalViewportWidth = null
 
 async function waitForCdp(timeoutMs = 20000) {
   const t0 = Date.now()
@@ -210,10 +211,58 @@ async function edgeList() {
 
 async function ensureCanvasVisible() {
   await ev(`(() => {
-    const c = document.querySelector('[aria-label="Circuit canvas"]');
+    const c = document.querySelector('[aria-label="Circuit canvas"], [aria-label$="starting circuit"]');
     if (c) c.scrollIntoView({ block: 'center' });
   })()`)
   await sleep(400)
+}
+
+async function assertGuidedCanvasFits(stage) {
+  if (originalViewportWidth === null) {
+    originalViewportWidth = await ev('window.innerWidth')
+  }
+  for (const width of [390, 1024, 1440]) {
+    await send('Emulation.setDeviceMetricsOverride', {
+      width,
+      height: 900,
+      deviceScaleFactor: 1,
+      mobile: false,
+    })
+    await sleep(650)
+    const layout = await ev(`(() => {
+      const canvas = document.querySelector('[aria-label="Circuit canvas"], [aria-label$="starting circuit"]');
+      const flow = canvas?.closest('.react-flow') ?? canvas;
+      const bounds = flow?.getBoundingClientRect();
+      const nodes = [...(canvas?.querySelectorAll('.react-flow__node') ?? [])]
+        .map((node) => node.getBoundingClientRect());
+      return {
+        present: !!canvas && !!bounds && bounds.width > 0 && bounds.height > 0,
+        fits: !!bounds && bounds.left >= -1 && bounds.right <= window.innerWidth + 1
+          && nodes.every((node) => node.left >= bounds.left - 1
+            && node.right <= bounds.right + 1
+            && node.top >= bounds.top - 1
+            && node.bottom <= bounds.bottom + 1),
+        pageFits: document.documentElement.scrollWidth <= window.innerWidth,
+        canvas: bounds ? { left: bounds.left, right: bounds.right, width: bounds.width } : null,
+        nodeBounds: nodes.map((node) => ({
+          left: Math.round(node.left),
+          right: Math.round(node.right),
+          top: Math.round(node.top),
+          bottom: Math.round(node.bottom),
+        })),
+        nodeCount: nodes.length,
+      };
+    })()`)
+    check(`${stage} canvas present and fits at ${width}px`,
+      layout.present && layout.fits && layout.pageFits, JSON.stringify(layout))
+  }
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: originalViewportWidth,
+    height: 1000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+  await sleep(250)
 }
 
 async function drag(from, to) {
@@ -388,6 +437,7 @@ async function drive() {
     'guided lab opens with the task',
     await hasText('Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'),
   )
+  await assertGuidedCanvasFits('Predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
   check('coach dock shows the current line', await ev(`!!document.querySelector('[aria-label="Coach dock"] p[aria-live="polite"]')`))
@@ -402,8 +452,10 @@ async function drive() {
   await fillInput('predict-why', 'gap breaks the loop')
   await clickButton('Continue to fix it')
   await waitFor(() => handleCenter('B1', 'b'), 'l1 canvas')
+  await assertGuidedCanvasFits('Build before test')
   await wire('B1', 'b', 'L1', 'b')
   await waitFor(() => hasText('Test with the switch open'), 'l1 gate', 25000)
+  await assertGuidedCanvasFits('Build after test')
 
   check('Your original prediction header', await hasText('Your original prediction'))
   check('initial copy (stay dark)', await hasText('Your initial prediction was that the open circuit would stay dark.'))
@@ -425,11 +477,13 @@ async function drive() {
   await clickButtonStarts('Test with the switch open')
 
   await waitFor(() => hasText('switch is open'), 'reality predict')
+  await assertGuidedCanvasFits('Reality Check')
   await clickButton('Yes')
   await fillInput('predict-why', 'complete loop lights')
   await clickButtonStarts('Continue')
   await clickButton('Test circuit')
   await waitFor(() => hasText('Ask the coach'), 'coach', 25000)
+  await assertGuidedCanvasFits('Reality Check after test')
   check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
   await clickButton('Ask the coach')
   await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
@@ -488,6 +542,7 @@ async function drive() {
   const coachCallsBeforeSolo = askRequestIds.length
   await clickButtonStarts('Start the Solo challenge')
   await waitFor(() => hasText('Solo mode'), 'solo predict')
+  await assertGuidedCanvasFits('Solo prediction')
   check('no coach in solo', !(await hasText('Ask the coach')))
   const soloMic = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('solo mic offered without coach', soloMic === 'Record a reason with Meta Muse Voice Transcribe', soloMic)
@@ -497,6 +552,7 @@ async function drive() {
   await waitFor(() => handleCenter('L2', 'b'), 'solo canvas')
   await wire('L2', 'b', 'L1', 'b')
   await waitFor(() => hasText('View completed journey'), 'solo gate', 25000)
+  await assertGuidedCanvasFits('Solo after test')
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
   check('solo coach-off lock', await hasText('Coach off.'))

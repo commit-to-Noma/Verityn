@@ -1,5 +1,6 @@
-import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
+import { ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react'
 import type { Edge } from '@xyflow/react'
+import { useEffect } from 'react'
 import '@xyflow/react/dist/style.css'
 import type { CSSProperties } from 'react'
 import type { SimulateResult } from '../api/client'
@@ -9,6 +10,30 @@ import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
+
+function FitPreviewOnResize() {
+  const { fitView } = useReactFlow()
+
+  useEffect(() => {
+    let frame = 0
+    const refit = () => {
+      window.cancelAnimationFrame(frame)
+      frame = window.requestAnimationFrame(() => {
+        void fitView({
+          padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+          maxZoom: 1,
+        })
+      })
+    }
+    window.addEventListener('resize', refit)
+    return () => {
+      window.removeEventListener('resize', refit)
+      window.cancelAnimationFrame(frame)
+    }
+  }, [fitView])
+
+  return null
+}
 
 function isCircuitKind(kind: string): kind is 'battery' | 'bulb' | 'switch' {
   return kind === 'battery' || kind === 'bulb' || kind === 'switch'
@@ -83,7 +108,9 @@ export default function CircuitPreview({
           fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
           colorMode="dark"
           aria-label={label}
-        />
+        >
+          <FitPreviewOnResize />
+        </ReactFlow>
       </ReactFlowProvider>
     </div>
   )
