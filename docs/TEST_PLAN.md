@@ -138,8 +138,8 @@ Gates at rehearsal time: backend 505, frontend 239, lint 0/0, build clean.
 
 - Committed `scripts/smoke_browser.mjs`: PASSED  -  misconception path,
   mid-ladder demo excursion (apply → Consistent 3.6 W → undo → dark)
-  with R1/R2 preserved, R4 served after undo, exactly 3 coach calls
-  in R1/R2/R4 order, zero solo coach calls, proof cards, drawer
+  with Question/Pointer preserved, Demonstration served after undo, exactly 3 coach calls
+  in Question/Pointer/Demonstration order, zero solo coach calls, proof cards, drawer
   sections, lazy lab chunk, 390px hub overflow 0px.
 - P0 rehearsal (throwaway `/tmp` driver): PASSED  -  LabNav lens link
   and Auto-demo toggle visible in-lab; 12 screenshots in `docs/demo/`
@@ -153,7 +153,7 @@ Gates at rehearsal time: backend 505, frontend 239, lint 0/0, build clean.
 
 Findings fixed in this round:
 
-- Coach ladder reset to R1 when a demonstration flipped the verdict:
+- Coach ladder reset to Question when a demonstration flipped the verdict:
   the verdict subtree remounts on every re-run. Served rungs and
   reflection drafts now live in canvas-owned memory; the ladder keeps
   a stable mount across idle/checking/done. The committed smoke runs
