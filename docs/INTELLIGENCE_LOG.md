@@ -12,3 +12,4 @@ the Under the hood Smart details section, and the README.
 - Server-enforced Solo with zero coach calls — [transfer tests](../backend/tests/test_transfer.py).
 - Typed errors with actionable next steps — [error-safety tests](../backend/tests/test_error_safety.py).
 - Prediction lock-in with a short undo window — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
+- Ranked English browser voice with measured pacing — [coach voice tests](../frontend/src/voice/coachVoice.test.ts).

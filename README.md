@@ -66,7 +66,8 @@ plan.
   microphone in every Why box. Meta Muse Voice Transcribe turns each
   recording into editable text; a clear spoken answer pre-selects the
   matching choice but never submits. Spoken coach playback is browser
-  speech synthesis (Meta Muse Voice Transcribe is not text-to-speech).
+  speech synthesis, defaults off, and uses a ranked English browser voice
+  with short sentence pauses (Meta Muse Voice Transcribe is not text-to-speech).
   Typing and manual lab controls remain available.
 - Deterministic MNA solver (`src/verityn/solver.py`): battery,
   resistor, bulb (fixed 10 Ω), switch, and wire circuits;
@@ -99,6 +100,7 @@ plan.
 | Server-enforced Solo with zero coach calls | Solo second-bulb challenge | [Transfer tests](./backend/tests/test_transfer.py) |
 | Typed errors with actionable next steps | API responses and learner notices | [Error-safety tests](./backend/tests/test_error_safety.py) |
 | Prediction lock-in with a short undo window | Voice replies in every stage | [Spoken prediction tests](./frontend/src/voice/spokenPrediction.test.ts) |
+| Ranked English browser voice with measured pacing | Coach Dock playback | [Coach voice tests](./frontend/src/voice/coachVoice.test.ts) |
 
 ## Deliberately out of scope
 

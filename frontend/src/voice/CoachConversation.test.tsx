@@ -28,6 +28,7 @@ describe('coach dock', () => {
     expect(markup).toContain('Meta Spark')
     expect(markup).toContain('Reply by voice')
     expect(markup).toContain('Browser voice, not Meta')
+    expect(markup).toContain('aria-pressed="false"')
     expect(markup).not.toContain('Coach conversation')
   })
 })

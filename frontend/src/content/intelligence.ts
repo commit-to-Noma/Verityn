@@ -47,4 +47,9 @@ export const SMART_DETAILS = [
     where: 'Voice replies in every stage',
     evidence: 'frontend/src/voice/spokenPrediction.test.ts',
   },
+  {
+    behavior: 'Ranked English browser voice with measured pacing',
+    where: 'Coach Dock playback',
+    evidence: 'frontend/src/voice/coachVoice.test.ts',
+  },
 ] as const

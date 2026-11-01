@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   latestCoachStatement,
   latestCoachMessage,
+  chooseCoachVoice,
   repeatCoach,
   speakCoach,
   stopCoach,
@@ -10,6 +11,7 @@ import {
 } from './coachVoice'
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 })
 
@@ -40,13 +42,12 @@ describe('coach voice playback', () => {
     expect(statements).toEqual([{ text: 'Connect the open ends.', provider: 'meta-spark' }])
     expect(synthesis.cancel).toHaveBeenCalledTimes(1)
     expect(synthesis.speak).toHaveBeenCalledTimes(1)
-    expect(utterances[0]).toMatchObject({ text: 'Connect the open ends.', rate: 0.92, pitch: 1.04 })
+    expect(utterances[0]).toMatchObject({ text: 'Connect the open ends.', rate: 0.95, pitch: 1.04 })
     expect(latestCoachStatement()).toBe('Connect the open ends.')
     expect(latestCoachMessage()).toEqual({
       text: 'Connect the open ends.',
       provider: 'meta-spark',
     })
-
     stopCoach()
     expect(synthesis.cancel).toHaveBeenCalledTimes(2)
     expect(repeatCoach()).toBe(true)
@@ -54,6 +55,59 @@ describe('coach voice playback', () => {
     expect(synthesis.speak).toHaveBeenCalledTimes(2)
     expect(utterances[1]?.text).toBe('Connect the open ends.')
     unsubscribeStatement()
+  })
+
+  it('ranks preferred English browser voices ahead of ordinary voices', () => {
+    const voices = [
+      { name: 'Google US English', lang: 'en-US' },
+      { name: 'Enhanced English', lang: 'en-GB' },
+      { name: 'Natural Voice', lang: 'en-US' },
+      { name: 'Samantha', lang: 'en-US' },
+      { name: 'Neural English', lang: 'en-US' },
+      { name: 'Premium Voice', lang: 'en-US' },
+      { name: 'Google Spanish', lang: 'es-ES' },
+    ]
+
+    expect(chooseCoachVoice(voices)).toBe(voices[5])
+    expect(chooseCoachVoice([{ name: 'Spanish', lang: 'es-ES' }])).toBeNull()
+  })
+
+  it('adds a short pause between sentences without changing their words', () => {
+    vi.useFakeTimers()
+    const utterances: { text: string; onend: (() => void) | null }[] = []
+    vi.stubGlobal('speechSynthesis', {
+      speak: vi.fn(),
+      cancel: vi.fn(),
+      getVoices: () => [],
+    })
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        onend: (() => void) | null = null
+        onerror: (() => void) | null = null
+        text: string
+        rate = 1
+        pitch = 1
+        voice: SpeechSynthesisVoice | null = null
+        constructor(text: string) {
+          this.text = text
+          utterances.push(this)
+        }
+      },
+    )
+
+    speakCoach('Connect the ends. Then test the bulb.')
+    expect(utterances.map((utterance) => utterance.text)).toEqual([
+      'Connect the ends.',
+    ])
+    utterances[0]?.onend?.()
+    vi.advanceTimersByTime(179)
+    expect(utterances).toHaveLength(1)
+    vi.advanceTimersByTime(1)
+    expect(utterances.map((utterance) => utterance.text)).toEqual([
+      'Connect the ends.',
+      'Then test the bulb.',
+    ])
   })
 
   it('does not lose provider metadata when the current line is replayed', () => {
