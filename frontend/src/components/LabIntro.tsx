@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import LaboratoryTurntable from './LaboratoryTurntable'
+import UnderTheHoodTryIts from './UnderTheHoodTryIts'
 import {
   HOMEPAGE_ENTRIES,
   HOMEPAGE_HEADLINE,
@@ -516,6 +517,7 @@ export default function LabIntro({
           <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">SAM sample only</h4><p className="text-sm text-ink-muted">Segmentation examples are labelled samples, not a live inference claim.</p></article>
           <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">Verityn Solver</h4><p className="text-sm text-ink-muted">Every netlist is read and measured locally for current, voltage, power, and validity.</p></article>
         </div>
+        <UnderTheHoodTryIts />
       </section>
 
       <section aria-labelledby="impact-heading" className="grid w-full overflow-hidden rounded-[20px] border border-flow/25 bg-[radial-gradient(circle_at_10%_0%,rgb(56_214_233/0.2),transparent_42%),linear-gradient(135deg,rgb(14_38_60/0.9),rgb(10_14_28/0.55))] lg:grid-cols-[0.78fr_1.22fr]">
