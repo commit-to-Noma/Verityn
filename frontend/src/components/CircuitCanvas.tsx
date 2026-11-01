@@ -49,6 +49,7 @@ import SoloResult from './SoloResult'
 import PredictionSummary from './PredictionSummary'
 import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
+import GuidedResultCard from './GuidedResultCard'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
@@ -1057,7 +1058,7 @@ function CanvasInner({
       style: initialUncertain.includes(edge.id) ? UNCERTAIN_EDGE_STYLE : FLOW_EDGE_STYLE,
     })),
   )
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow()
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   /** Experiment copy: idle after a run means the circuit changed. */
@@ -1978,7 +1979,10 @@ function CanvasInner({
             snapToGrid
             snapGrid={[20, 20]}
             fitView
-            fitViewOptions={{ padding: 0.2, maxZoom: 1.25 }}
+            fitViewOptions={{
+              padding: window.innerWidth <= 640 ? 0.28 : 0.2,
+              maxZoom: 1.25,
+            }}
             colorMode="dark"
             aria-label="Circuit canvas"
           >
@@ -2082,10 +2086,15 @@ function CanvasInner({
     </>
   )
   const proof = useProofMode()
+  const completed =
+    gate !== null &&
+    gate !== undefined &&
+    runState.phase === 'done' &&
+    runState.result.ok
   const insightPane = (
     <>
-      <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />
-      {prediction && challenge && (
+      {!completed && <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />}
+      {!completed && prediction && challenge && (
         <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
           <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
         </div>
@@ -2160,7 +2169,7 @@ function CanvasInner({
           </button>
         </div>
       )}
-      {gate}
+      {!completed && gate}
       {proof && runState.phase === 'done' && prediction && challenge && (
         <div className="evidence-reveal">
           <EvidenceTrace
@@ -2194,13 +2203,34 @@ function CanvasInner({
             {title}
           </h2>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-            {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
-          </span>
-        </div>
+        {!completed && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
+              {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+            </span>
+          </div>
+        )}
       </div>
-      {layout === 'split' ? (
+      {completed && runState.phase === 'done' && prediction ? (
+        <div className="flex min-w-0 flex-col gap-4">
+          <PredictionSummary prediction={prediction} hint="" hideHint compact />
+          <GuidedResultCard
+            result={runState.result}
+            onDetailsOpen={() => {
+              window.requestAnimationFrame(() => {
+                void fitView({
+                  padding: window.innerWidth <= 640 ? 0.28 : 0.2,
+                  maxZoom: 1.25,
+                })
+              })
+            }}
+          >
+            <div className="flex min-w-0 flex-col gap-4">{experimentPane}</div>
+            <div className="flex min-w-0 flex-col gap-4">{insightPane}</div>
+          </GuidedResultCard>
+          {gate}
+        </div>
+      ) : layout === 'split' ? (
         coachDock !== undefined && coachDock !== null ? (
           <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
             <div className="order-0 min-w-0 lg:col-start-2 lg:row-start-1">

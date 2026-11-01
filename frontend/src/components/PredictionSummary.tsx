@@ -7,12 +7,32 @@ export default function PredictionSummary({
   prediction,
   hint,
   hideHint = false,
+  compact = false,
 }: {
   prediction: Prediction
   hint: string
   /** Solo shows the recap without the wiring guidance. */
   hideHint?: boolean
+  /** Completed screens keep the recap to a single learner-facing chip. */
+  compact?: boolean
 }) {
+  if (compact) {
+    return (
+      <p
+        className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-glass-border px-3 py-2 text-sm"
+        aria-label="Prediction recap"
+      >
+        <span className="text-ink-muted">Your prediction</span>
+        <span className="font-semibold">{CHOICE_LABELS[prediction.choice]}</span>
+        {prediction.why.trim() !== '' && (
+          <span className="min-w-0 break-words text-ink-muted">
+            “{prediction.why.trim()}”
+          </span>
+        )}
+      </p>
+    )
+  }
+
   return (
     <div className="rounded-2xl border border-glass-border p-4">
       <p className="text-sm">
