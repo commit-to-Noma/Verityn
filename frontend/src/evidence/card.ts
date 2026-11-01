@@ -1,18 +1,15 @@
 import type { ChapterRecap } from '../journey/story'
-import { bulbReadingText, choiceDetail } from '../journey/story'
-import { LIT_POWER_W } from '../lessons/lesson'
-import type { TraceInput } from '../lessons/trace'
+import { CHOICE_LABELS, LIT_POWER_W } from '../lessons/lesson'
+import { formatReading } from '../components/format'
 
 /** Shareable evidence card: session facts only, never scores or claims. */
 export interface EvidenceCardModel {
   lesson: string
-  prediction: string
-  measurement: string
+  /** One prediction and its own measured result for each journey chapter. */
+  chapterLines: string[]
   /** First-chapter L1 lit state, from solver power only. */
   lit: boolean
-  reality: string | null
   rung: string | null
-  solo: string | null
   total: number
   metaCalls: number
   rejections: number
@@ -88,20 +85,22 @@ function rungReached(chapters: ChapterRecap[]): string | null {
   return known.sort((a, b) => RUNG_ORDER.indexOf(a) - RUNG_ORDER.indexOf(b)).at(-1) ?? null
 }
 
-function verdictWord(status: string | undefined): string | null {
-  if (status === 'CONSISTENT') {
-    return 'matched'
-  }
-  if (status === 'CONTRADICTED') {
-    return 'did not match'
-  }
-  return null
-}
-
-function readingLine(input: TraceInput, bulbId: string): string {
-  const reading = bulbReadingText(input, bulbId)
-  const word = verdictWord(input.verdict?.status)
-  return word === null ? reading : `${reading} · ${word}`
+function chapterLine(index: number, title: string, chapter: ChapterRecap | undefined,
+                     bulbId: string, includeWhy: boolean): string {
+  const input = chapter?.input
+  const prediction = input?.prediction
+  const choice = prediction === null || prediction === undefined
+    ? 'prediction not recorded'
+    : `predicted ${CHOICE_LABELS[prediction.choice]}${includeWhy && prediction.why.trim() !== '' ? ` (“${prediction.why.trim()}”)` : ''}`
+  const result = input?.result
+  const reading = result === null || result === undefined
+    ? 'not measured'
+    : !result.ok
+      ? `not testable${result.error_code === null ? '' : ` (${result.error_code})`}`
+      : result.components[bulbId] === undefined
+        ? 'no bulb reading'
+        : `${index === 2 ? `${bulbId} ` : ''}${formatReading(result.components[bulbId].current)} A · ${formatReading(result.components[bulbId].power)} W`
+  return `${index + 1} · ${title}: ${choice} → ${reading}`
 }
 
 /** Assemble the card from saved chapters; null when nothing was produced. */
@@ -116,20 +115,17 @@ export function buildEvidenceCard(
     return null
   }
   const soloChapter = chapters.find((chapter) => chapter.solo)
-  const soloInput = soloChapter?.input ?? null
-  const realityInput = chapters[1]?.input ?? null
   const firstPower = first.input.result?.components.L1?.power
+  const solo = soloChapter
   return {
     lesson: first.title,
-    prediction: includeWhy ? choiceDetail(first) : choiceDetail(first).split('  -  ')[0],
-    measurement: readingLine(first.input, 'L1'),
+    chapterLines: [
+      chapterLine(0, 'Light the bulb', first, 'L1', includeWhy),
+      chapterLine(1, 'Open switch', chapters[1], 'L1', includeWhy),
+      chapterLine(2, 'Solo', solo, 'L2', includeWhy),
+    ],
     lit: typeof firstPower === 'number' && firstPower > LIT_POWER_W,
-    reality: realityInput === null ? null : readingLine(realityInput, 'L1'),
     rung: rungReached(chapters),
-    solo:
-      soloChapter !== undefined && soloInput !== null
-        ? `${choiceDetail(soloChapter)} · ${readingLine(soloInput, 'L2')}`
-        : null,
     total: counts.total,
     metaCalls: counts.metaCalls,
     rejections: counts.rejections,
@@ -147,11 +143,8 @@ function plural(count: number, noun: string): string {
 export function cardLines(model: EvidenceCardModel): string[] {
   return [
     `Verityn · ${model.lesson}`,
-    model.prediction,
-    `Measured: ${model.measurement}`,
-    ...(model.reality === null ? [] : [`Reality check: ${model.reality}`]),
+    ...model.chapterLines,
     model.rung === null ? 'Coach: not asked' : `Help reached: ${RUNG_NAME[model.rung] ?? model.rung}`,
-    ...(model.solo === null ? [] : [`Solo: ${model.solo}`]),
     `Trace: ${plural(model.total, 'call')} · ${model.metaCalls} Meta · ${plural(model.rejections, 'rejection')} · ${plural(model.fallbacks, 'fallback')}`,
     'Computed by a solver. Not an AI score.',
     model.appUrl,
@@ -269,9 +262,10 @@ function drawRungDots(ctx: CanvasRenderingContext2D, x: number, y: number, rung:
   ctx.fillStyle = '#94a3b8'
   ctx.font = '600 20px sans-serif'
   ctx.fillText('HELP LADDER', x, y - 14)
+  ctx.fillText(rung === null ? 'Coach not asked' : `Reached ${RUNG_NAME[rung] ?? 'a rung'}`, x + 250, y - 14)
   const level = rungLevel(rung)
-  RUNG_ORDER.forEach((label, index) => {
-    const cx = x + 14 + index * 44
+  RUNG_LABELS.forEach((label, index) => {
+    const cx = x + 14 + index * 190
     const cy = y + 22
     ctx.beginPath()
     ctx.arc(cx, cy, 11, 0, Math.PI * 2)
@@ -285,13 +279,12 @@ function drawRungDots(ctx: CanvasRenderingContext2D, x: number, y: number, rung:
     }
     ctx.fillStyle = '#94a3b8'
     ctx.font = '20px sans-serif'
-    ctx.fillText(label, cx - 13, cy + 34)
+    ctx.fillText(label, cx - 16, cy + 40)
   })
-  ctx.fillStyle = '#f1f5f9'
-  ctx.font = '24px sans-serif'
-  ctx.fillText(rung === null ? 'Coach not asked' : `Reached ${RUNG_NAME[rung] ?? rung}`, x + 3 * 44 + 20, y + 30)
   ctx.restore()
 }
+
+const RUNG_LABELS = ['Question', 'Pointer', 'Demonstration']
 
 /** One pill per Meta tool the session actually used; omitted when none. */
 function drawMetaChips(ctx: CanvasRenderingContext2D, x: number, y: number, tools: string[]): number {
@@ -300,6 +293,8 @@ function drawMetaChips(ctx: CanvasRenderingContext2D, x: number, y: number, tool
   }
   ctx.save()
   ctx.font = '600 20px sans-serif'
+  ctx.fillStyle = '#94a3b8'
+  ctx.fillText('Recorded Meta tools this session', x, y - 14)
   let cx = x
   for (const tool of tools) {
     const label = `Meta ${tool}`
@@ -345,29 +340,25 @@ export async function renderEvidencePng(
   ctx.fillStyle = '#f1f5f9'
   ctx.font = 'bold 40px sans-serif'
   ctx.fillText(`Verityn · ${model.lesson}`, 168, 94)
-  // Headline: the measured result, in large type.
+  // Headline and three paired prediction/measurement lines.
   ctx.font = 'bold 50px sans-serif'
-  ctx.fillText(model.measurement, 72, 178, 660)
-  // Learner prediction and follow-up facts, wrapped in the left column.
-  ctx.font = '25px sans-serif'
-  let y = 216
-  const facts = [
-    model.prediction,
-    ...(model.reality === null ? [] : [`Reality check: ${model.reality}`]),
-    ...(model.solo === null ? [] : [`Solo: ${model.solo}`]),
-  ]
-  const rows = facts.flatMap((fact) => wrapLine(fact, 46))
-  for (const row of rows) {
-    if (y > 412) {
-      break
-    }
+  ctx.fillText('Journey evidence', 72, 178, 660)
+  ctx.font = '22px sans-serif'
+  let y = 228
+  for (const line of model.chapterLines) {
     ctx.fillStyle = '#cbd5e1'
-    ctx.fillText(row, 72, y)
-    y += 38
+    ctx.fillText(line, 72, y, 700)
+    y += 56
   }
   drawMiniCircuit(ctx, 800, 140, model.lit)
   drawRungDots(ctx, 72, 452, model.rung)
   drawMetaChips(ctx, 800, 452, model.metaTools)
+  ctx.fillStyle = '#94a3b8'
+  ctx.font = '16px sans-serif'
+  if (model.metaTools.length > 0) {
+    wrapLine('Meta chips are recorded calls from this app session; Coach not asked refers only to the help ladder.', 39)
+      .forEach((line, index) => ctx.fillText(line, 800, 520 + index * 22, 328))
+  }
   ctx.fillStyle = '#94a3b8'
   ctx.font = '22px sans-serif'
   ctx.fillText('Computed by a solver. Not an AI score.', 72, 596)

@@ -111,6 +111,12 @@ export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] })
           Rendering the card…
         </p>
       )}
+      {model.metaTools.length > 0 && (
+        <p className="text-ink-muted text-xs">
+          Meta chips come from real provider calls anywhere in this app session. A Spark chip can come from
+          Reality Lens; “Coach not asked” means only that the separate help ladder was not used.
+        </p>
+      )}
       <p className="text-ink-muted text-xs">Computed by a solver. Not an AI score.</p>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={includeWhy} onChange={(event) => setIncludeWhy(event.target.checked)} />

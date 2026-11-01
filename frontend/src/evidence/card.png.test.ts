@@ -13,12 +13,13 @@ interface TextCall {
 function model(partial: Partial<EvidenceCardModel> = {}): EvidenceCardModel {
   return {
     lesson: 'Light the bulb',
-    prediction: 'Predicted “No” - “The gap breaks the loop.”',
-    measurement: 'L1 0.6 A · 3.6 W · matched',
+    chapterLines: [
+      '1 · Light the bulb: predicted Yes → 0.6 A · 3.6 W',
+      '2 · Open switch: predicted No → 0 A · 0 W',
+      '3 · Solo: Not sure → L2 0.6 A · 3.6 W',
+    ],
     lit: true,
-    reality: 'L1 0.0 A · 0.0 W · did not match',
     rung: 'R2',
-    solo: 'Predicted “Yes” · L2 0.6 A · 3.6 W · matched',
     total: 3,
     metaCalls: 1,
     rejections: 0,
@@ -114,11 +115,19 @@ describe('renderEvidencePng layout', () => {
         expect(gap, `"${first.text}" vs "${second.text}"`).toBeGreaterThanOrEqual(needed)
       }
     }
-    const drawn = texts.map((call) => call.text).join('\n')
-    expect(drawn).toContain('L1 0.6 A · 3.6 W · matched')
+    const drawn = texts.map((call) => call.text).join(' ')
+    expect(drawn).toContain('1 · Light the bulb: predicted Yes → 0.6 A · 3.6 W')
+    expect(drawn).toContain('2 · Open switch: predicted No → 0 A · 0 W')
+    expect(drawn).toContain('3 · Solo: Not sure → L2 0.6 A · 3.6 W')
     expect(drawn).toContain('Computed by a solver. Not an AI score.')
     expect(drawn).toContain('http://127.0.0.1:5173')
     expect(drawn).toContain('HELP LADDER')
+    expect(drawn).toContain('Question')
+    expect(drawn).toContain('Demonstration')
+    expect(drawn).not.toContain('R1')
+    expect(drawn).not.toContain('R2')
+    expect(drawn).not.toContain('R4')
+    expect(drawn).toContain('Meta chips are recorded calls from this app session')
   })
 
   it('draws three rung dots and one pill per Meta tool', async () => {

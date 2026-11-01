@@ -42,16 +42,17 @@ describe('buildEvidenceCard', () => {
     )
     expect(model).not.toBeNull()
     expect(model?.lesson).toBe('Light the bulb')
-    expect(model?.prediction).toBe('Predicted “No”')
     expect(model?.lit).toBe(true)
     expect(model?.metaTools).toEqual([])
-    expect(model?.measurement).toContain('L1 0.6 A · 3.6 W')
-    expect(model?.measurement).toContain('matched')
-    expect(model?.reality).toContain('L1 0.6 A · 3.6 W')
+    expect(model?.chapterLines).toEqual([
+      '1 · Light the bulb: predicted No → 0.6 A · 3.6 W',
+      '2 · Open switch: predicted No → 0.6 A · 3.6 W',
+      '3 · Solo: predicted No → L2 0.6 A · 3.6 W',
+    ])
     expect(model?.rung).toBe('R2')
-    expect(model?.solo).toContain('L2 0.6 A · 3.6 W')
+    expect(model?.chapterLines[2]).toContain('L2 0.6 A · 3.6 W')
     const lines = cardLines(model ?? fail('model is null'))
-    expect(lines.some((line) => line.includes('Reality check: L1 0.6 A'))).toBe(true)
+    expect(lines).toContain('2 · Open switch: predicted No → 0.6 A · 3.6 W')
     expect(lines.some((line) => line.includes('Trace: 3 calls · 0 Meta'))).toBe(true)
     expect(lines.some((line) => line.includes('1 fallback') && !line.includes('1 fallbacks'))).toBe(true)
     expect(lines.at(-2)).toBe('Computed by a solver. Not an AI score.')
@@ -68,8 +69,7 @@ describe('buildEvidenceCard', () => {
       { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
       'http://x',
     )
-    expect(model?.measurement).toBe('L1 0.6 A · 3.6 W')
-    expect(model?.reality).toBeNull()
+    expect(model?.chapterLines[0]).toBe('1 · Light the bulb: predicted No → 0.6 A · 3.6 W')
   })
 
   it('omits solo and rung when the session never produced them', () => {
@@ -79,9 +79,8 @@ describe('buildEvidenceCard', () => {
       'http://x',
     )
     expect(model?.rung).toBeNull()
-    expect(model?.solo).toBeNull()
     const lines = cardLines(model ?? fail('model is null'))
-    expect(lines.some((line) => line.startsWith('Solo:'))).toBe(false)
+    expect(lines.some((line) => line.startsWith('3 · Solo:'))).toBe(true)
     expect(lines).toContain('Coach: not asked')
   })
 
@@ -123,6 +122,18 @@ describe('buildEvidenceCard', () => {
     ).toEqual(['Spark', 'Voice'])
     expect(toolShortLabel('sam-3.1')).toBe('SAM')
     expect(toolShortLabel('template')).toBeNull()
+  })
+
+  it('labels a Meta trace separately from whether the coach ladder was used', () => {
+    const model = buildEvidenceCard(
+      [chapter({ input: SOLVED_INPUT })],
+      { total: 1, metaCalls: 1, rejections: 0, fallbacks: 0, tools: ['muse-spark-1.3'] },
+      'http://x',
+    )
+    const lines = cardLines(model ?? fail('model is null'))
+    expect(model?.metaTools).toEqual(['Spark'])
+    expect(lines).toContain('Coach: not asked')
+    expect(lines.some((line) => line.includes('Meta Spark'))).toBe(false)
   })
 
   it('maps rungs to dot levels', () => {
