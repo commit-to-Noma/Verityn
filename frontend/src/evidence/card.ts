@@ -57,7 +57,7 @@ export function metaToolChips(tools: string[]): string[] {
   return chips
 }
 
-/** Ladder rungs reached as a 0..4 level for the dot row. */
+/** Existing ladder stages only: R3 is not a product stage. */
 export function rungLevel(rung: string | null): number {
   if (rung === null) {
     return 0
@@ -65,7 +65,8 @@ export function rungLevel(rung: string | null): number {
   return RUNG_ORDER.indexOf(rung) + 1
 }
 
-const RUNG_ORDER = ['R1', 'R2', 'R3', 'R4']
+const RUNG_ORDER = ['R1', 'R2', 'R4']
+const RUNG_NAME: Record<string, string> = { R1: 'Question', R2: 'Pointer', R4: 'Demonstration' }
 
 function rungReached(chapters: ChapterRecap[]): string | null {
   const rungs = new Set<string>()
@@ -108,6 +109,7 @@ export function buildEvidenceCard(
   chapters: ChapterRecap[],
   counts: TraceCountInput,
   appUrl: string,
+  includeWhy = false,
 ): EvidenceCardModel | null {
   const first = chapters[0]
   if (first?.input == null) {
@@ -119,7 +121,7 @@ export function buildEvidenceCard(
   const firstPower = first.input.result?.components.L1?.power
   return {
     lesson: first.title,
-    prediction: choiceDetail(first),
+    prediction: includeWhy ? choiceDetail(first) : choiceDetail(first).split('  -  ')[0],
     measurement: readingLine(first.input, 'L1'),
     lit: typeof firstPower === 'number' && firstPower > LIT_POWER_W,
     reality: realityInput === null ? null : readingLine(realityInput, 'L1'),
@@ -148,7 +150,7 @@ export function cardLines(model: EvidenceCardModel): string[] {
     model.prediction,
     `Measured: ${model.measurement}`,
     ...(model.reality === null ? [] : [`Reality check: ${model.reality}`]),
-    model.rung === null ? 'Coach: not asked' : `Help reached: ${model.rung}`,
+    model.rung === null ? 'Coach: not asked' : `Help reached: ${RUNG_NAME[model.rung] ?? model.rung}`,
     ...(model.solo === null ? [] : [`Solo: ${model.solo}`]),
     `Trace: ${plural(model.total, 'call')} · ${model.metaCalls} Meta · ${plural(model.rejections, 'rejection')} · ${plural(model.fallbacks, 'fallback')}`,
     'Computed by a solver. Not an AI score.',
@@ -261,7 +263,7 @@ function drawMiniCircuit(ctx: CanvasRenderingContext2D, x: number, y: number, li
   ctx.restore()
 }
 
-/** Ladder dots R1..R4, filled up to the rung the session reached. */
+/** Ladder dots for the three served stages. */
 function drawRungDots(ctx: CanvasRenderingContext2D, x: number, y: number, rung: string | null): void {
   ctx.save()
   ctx.fillStyle = '#94a3b8'
@@ -287,7 +289,7 @@ function drawRungDots(ctx: CanvasRenderingContext2D, x: number, y: number, rung:
   })
   ctx.fillStyle = '#f1f5f9'
   ctx.font = '24px sans-serif'
-  ctx.fillText(rung === null ? 'Coach not asked' : `Reached ${rung}`, x + 4 * 44 + 20, y + 30)
+  ctx.fillText(rung === null ? 'Coach not asked' : `Reached ${RUNG_NAME[rung] ?? rung}`, x + 3 * 44 + 20, y + 30)
   ctx.restore()
 }
 

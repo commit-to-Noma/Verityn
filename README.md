@@ -25,11 +25,11 @@ plan.
   The learner commits to a Yes / No / Not sure prediction with a
   one-line Why, repairs the open-gap circuit (0.6 A / 3.6 W lit),
   meets the open-switch contradiction (0.0 A dark), climbs the
-  R1 → R2 → R4 coach ladder, and proves transfer on a fresh
+  Question → Pointer → Demonstration coach ladder, and proves transfer on a fresh
   second-bulb circuit with the coach fully off.
-- Socratic coach ladder: one R1 guiding question grounded in the
-  measured numbers, an R2 evidence pointer citing the 0.0 A
-  open-switch discrepancy, and an R4 confirmation check. Served
+- Socratic coach ladder: one Question grounded in the measured
+  numbers, a Pointer citing the 0.0 A open-switch discrepancy, and a
+  Demonstration confirmation. Served
   by Meta Muse Spark when a key is configured, otherwise by the
   labeled deterministic fallback. Eligibility is derived
   server-side; Solo makes zero coach calls, enforced by the

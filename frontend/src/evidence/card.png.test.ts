@@ -121,7 +121,7 @@ describe('renderEvidencePng layout', () => {
     expect(drawn).toContain('HELP LADDER')
   })
 
-  it('draws four rung dots and one pill per Meta tool', async () => {
+  it('draws three rung dots and one pill per Meta tool', async () => {
     const { arcs, texts } = installCanvasStub()
     try {
       await renderEvidencePng(model())
@@ -129,11 +129,11 @@ describe('renderEvidencePng layout', () => {
       vi.unstubAllGlobals()
     }
     const dots = arcs.filter((arc) => arc.r === 11)
-    expect(dots).toHaveLength(4)
+    expect(dots).toHaveLength(3)
     const drawn = texts.map((call) => call.text).join('\n')
     expect(drawn).toContain('Meta Spark')
     expect(drawn).toContain('Meta Voice')
-    expect(drawn).toContain('Reached R2')
+    expect(drawn).toContain('Reached Pointer')
   })
 
   it('omits chips and reports honestly when the session used no Meta tools', async () => {

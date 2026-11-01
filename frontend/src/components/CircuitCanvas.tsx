@@ -190,9 +190,9 @@ const RUNGS = ['R1', 'R2', 'R4'] as const
 const RUNG_ORDER: Record<string, number> = { R1: 0, R2: 1, R4: 2 }
 
 const NEXT_LABEL: Record<string, string> = {
-  R1: 'Ask the coach',
-  R2: 'Show me the evidence (R2)',
-  R4: 'Confirm before solo (R4)',
+  R1: 'Ask the question',
+  R2: 'Show me the pointer',
+  R4: 'Try the demonstration',
 }
 
 function rungCaption(provider: string): string | null {
