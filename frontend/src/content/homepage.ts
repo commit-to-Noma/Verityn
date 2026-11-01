@@ -12,6 +12,13 @@ export const HOMEPAGE_ENTRIES = {
   realityLens: 'Open Reality Lens',
 } as const
 
+export const LAB_LOOP = [
+  { step: 'Make a claim', doing: 'Predict what will happen before any help unlocks.' },
+  { step: 'Build or bring a model', doing: 'Wire a circuit on the canvas or confirm a Reality Lens proposal.' },
+  { step: 'Test with the simulator', doing: 'Current, power, and validity are measured, not guessed.' },
+  { step: 'Explain the evidence', doing: 'Answer in your own words, then try it without the coach in Solo.' },
+] as const
+
 export type LaboratoryStationId = 'lab' | 'experiment' | 'lens' | 'coach' | 'solver'
 
 export type StationAction = 'lab' | 'experiment' | 'lens' | 'scroll'
@@ -36,7 +43,7 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     description:
       'Predict, build, and test a circuit against measured results.',
     evidence: 'Predict → Build → Reality Check → Solo',
-    details: ['Engineering · Module 1', 'Solver-verified'],
+    details: ['Engineering · Module 1', 'Measured by the solver'],
     actionLabel: 'Open Guided Lab',
     action: 'lab',
   },

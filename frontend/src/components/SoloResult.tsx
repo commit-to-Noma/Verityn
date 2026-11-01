@@ -32,6 +32,7 @@ export default function SoloResult({
   verdict: VerdictStatus
 }) {
   const readings = soloBulbReadings(result, netlist)
+  const claimLabel = readings.find((reading) => reading.id === claimComponent)?.label ?? 'bulb'
   return (
     <div className="glass-panel flex flex-col gap-3 p-4" aria-live="polite">
       <div className="flex items-center gap-3">
@@ -40,7 +41,7 @@ export default function SoloResult({
       </div>
       <div>
         <p className="text-base font-medium text-ink">Your prediction</p>
-        <p className="text-ink-muted text-sm">{soloPredictionLine(choice, claimComponent)}</p>
+        <p className="text-ink-muted text-sm">{soloPredictionLine(choice, claimLabel)}</p>
       </div>
       <div>
         <p className="text-base font-medium text-ink">What you changed</p>
@@ -51,7 +52,7 @@ export default function SoloResult({
         <ul className="mt-1 flex flex-col gap-1">
           {readings.map((reading) => (
             <li key={reading.id} className="flex items-baseline gap-2 text-sm">
-              <span className="font-mono font-medium">{reading.id}</span>
+              <span className="font-medium">{reading.label}</span>
               <span className="text-ink-muted ml-auto">
                 <ReadoutValue value={reading.current} unit="A" />
                 {' · '}
@@ -61,7 +62,7 @@ export default function SoloResult({
             </li>
           ))}
         </ul>
-        <p className="text-ink-muted mt-1 text-xs">Measured by Verityn Solver</p>
+        <p className="text-ink-muted mt-1 text-xs">Measured by the solver</p>
       </div>
       <div>
         <p className="text-base font-medium text-ink">What this suggests</p>

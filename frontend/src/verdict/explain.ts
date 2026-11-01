@@ -27,19 +27,12 @@ export function explainLitVerdict(args: {
     if (open.length === 0) {
       return null
     }
-    const switches = open.length === 1 ? `switch ${open[0]}` : `switches ${joinIds(open)}`
-    const gap = open.length === 1 ? 'a gap' : 'gaps'
-    return `${args.component} stayed dark because the open ${switches} left ${gap} in the loop.`
+    return open.length === 1
+      ? 'The bulb stayed dark because the open switch left a gap in the loop.'
+      : 'The bulb stayed dark because open switches left gaps in the loop.'
   }
   if (!args.predictedLit && lit) {
-    return `${args.component} lit because the completed loop carries current to it.`
+    return 'The bulb lit because the completed loop carries current to it.'
   }
   return null
-}
-
-function joinIds(ids: string[]): string {
-  if (ids.length === 2) {
-    return `${ids[0]} and ${ids[1]}`
-  }
-  return `${ids.slice(0, -1).join(', ')}, and ${ids[ids.length - 1]}`
 }

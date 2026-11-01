@@ -8,15 +8,15 @@ describe('nextTerminalInstruction', () => {
     { id: 'S1', kind: 'switch' },
   ]
 
-  it('uses learner-friendly part names and numbers', () => {
+  it('gives a plain-language direction between the exact loose dots', () => {
     expect(nextTerminalInstruction(['B1.b', 'L1.b'], nodes)).toBe(
-      'Next, connect the b terminal on Battery one to the b terminal on Light one.',
+      "Drag from the battery's right dot to the bulb's right dot.",
     )
   })
 
   it('describes multiple open terminals without internal-only IDs', () => {
     expect(nextTerminalInstruction(['S1.a', 'S1.b', 'L1.b'], nodes)).toBe(
-      'Open terminals: the a terminal on Switch one, the b terminal on Switch one, the b terminal on Light one. Connect the right terminals to complete the path.',
+      'Connect the loose dots to complete the loop.',
     )
   })
 
@@ -31,7 +31,7 @@ describe('closedSwitchNotice', () => {
 
   it('names the closed switch on open-switch stages after a run', () => {
     expect(closedSwitchNotice(closed, true, true, false)).toBe(
-      'S1 is closed, but this challenge tests the open switch. Open it and press Test again to compare with your prediction.',
+      'The switch is closed, but this challenge uses it open. Open the switch and test again to compare with your prediction.',
     )
   })
 

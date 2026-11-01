@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import {
   Background,
   BackgroundVariant,
@@ -677,8 +677,8 @@ function StartVerdict({
   const would =
     prediction.choice === 'not_sure' ? null : prediction.choice === 'yes' ? 'light' : 'stay dark'
   const observedText = challenge.expectedStart.lit
-    ? `${component} lights`
-    : `${component} stays dark`
+    ? 'The bulb lights'
+    : 'The bulb stays dark'
   const measured = result.ok ? result.components[component] : undefined
   const verified = measured !== undefined && matchesExpected(result, challenge.expectedFixed)
   return (
@@ -719,7 +719,7 @@ function StartVerdict({
         </>
       )}
       <p className="text-ink-muted pl-9 text-xs">
-        Compared with the verified outcome of the starting circuit.
+        The starting circuit was measured by the solver.
       </p>
       <p className="text-ink-muted pl-9 text-xs">
         This tests your prediction against the model, not you.
@@ -739,20 +739,20 @@ function DoneVerdictCard({
   observed?: { current: number; power: number }
 }) {
   // Never headline the learner's claim on its own: after a failed
-  // prediction the claim text ("L1 lights") would contradict the
+  // prediction the claim could contradict the
   // observed evidence shown beside it. Both sides stay explicit.
   const predictionText =
     state.claim.type === 'lit'
       ? state.claim.value
-        ? `${state.claim.component} lights`
-        : `${state.claim.component} stays dark`
+        ? 'The bulb lights'
+        : 'The bulb stays dark'
       : 'Prediction checked'
   const observedText =
     observed === undefined || state.claim.type !== 'lit'
       ? null
       : observed.power > LIT_POWER_W
-        ? `${state.claim.component} lights`
-        : `${state.claim.component} stays dark`
+        ? 'The bulb lights'
+        : 'The bulb stays dark'
   const explanation =
     observed !== undefined && state.claim.type === 'lit' && state.verdict.status !== 'UNASSESSABLE'
       ? explainLitVerdict({
@@ -924,8 +924,7 @@ function ClaimVerdict({
   )
 }
 
-const DEFAULT_INSTRUCTIONS =
-  'Place a battery and bulb, then connect every glowing terminal dot. We will test the circuit as soon as the loop closes.'
+const DEFAULT_INSTRUCTIONS = 'Connect the loose ends to complete the loop.'
 
 /** Guided-demo repair: scripted wires through the normal connect path. */
 export interface CanvasDemoBuild {
@@ -961,7 +960,7 @@ function CanvasInner({
   layout = 'split',
   mode = 'lesson',
   runRequest,
-  title = 'Build what you predicted',
+  title = 'Build the circuit',
   benchConditions,
   batteryVolts,
   benchNonce,
@@ -1419,22 +1418,46 @@ function CanvasInner({
   }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode, reportRejections])
 
   const loopClosed = isClosedLoop(nodes, edges)
-  const unwiredTerminals = openTerminals(
-    nodes,
-    edges.map((edge) => ({
-      source: edge.source,
-      sourceHandle: edge.sourceHandle ?? null,
-      target: edge.target,
-      targetHandle: edge.targetHandle ?? null,
-    })),
+  const unwiredTerminals = useMemo(
+    () =>
+      openTerminals(
+        nodes,
+        edges.map((edge) => ({
+          source: edge.source,
+          sourceHandle: edge.sourceHandle ?? null,
+          target: edge.target,
+          targetHandle: edge.targetHandle ?? null,
+        })),
+      ),
+    [edges, nodes],
   )
+  const canvasNodes = useMemo(() => {
+    const looseByNode = new Map<string, Set<'a' | 'b'>>()
+    if (mode !== 'experiment') {
+      for (const terminal of unwiredTerminals) {
+        const separator = terminal.lastIndexOf('.')
+        const side = terminal.slice(separator + 1)
+        if (separator <= 0 || (side !== 'a' && side !== 'b')) {
+          continue
+        }
+        const id = terminal.slice(0, separator)
+        const loose = looseByNode.get(id) ?? new Set<'a' | 'b'>()
+        loose.add(side)
+        looseByNode.set(id, loose)
+      }
+    }
+    return nodes.map((node) => ({
+      ...node,
+      data: { ...node.data, loose: [...(looseByNode.get(node.id) ?? [])] },
+    }))
+  }, [mode, nodes, unwiredTerminals])
   const nextBuildStep =
     mode === 'experiment'
       ? null
       : nodes.length === 0
         ? 'Start by placing a battery on the canvas.'
         : !nodes.some((node) => node.data.kind === 'bulb')
-          ? 'Add a bulb, then connect its terminals into the circuit.'
+        ? 'Add a bulb, then connect its dots to the circuit.'
           : unwiredTerminals.length > 0
             ? nextTerminalInstruction(
                 unwiredTerminals,
@@ -1444,7 +1467,7 @@ function CanvasInner({
                 ? simulateLocked !== null
                   ? 'All parts are connected. Confirm the proposal before testing it.'
                   : 'All parts are connected. The circuit is ready when you are.'
-                : 'All terminals have wires, but the parts are not in one complete path. Check for disconnected components.'
+                : 'The dots are connected, but the parts do not form one loop. Check the connections.'
 
   /** Preset Test: a runRequest change runs once through the normal path.
    * The timer clears StrictMode's simulated unmount (whose abort cleanup
@@ -1912,7 +1935,7 @@ function CanvasInner({
       <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
-            nodes={nodes}
+            nodes={canvasNodes}
             edges={edges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
@@ -2032,7 +2055,7 @@ function CanvasInner({
                   : 'Ready to test your circuit.'
                 : loopClosed
                   ? 'Loop closed  -  checking your circuit…'
-                  : 'Connect the open terminal dots to complete the loop.'}
+                  : 'Connect the loose dots to complete the loop.'}
           </span>
         </div>
       )}

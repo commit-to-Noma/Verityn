@@ -30,7 +30,7 @@ describe('explainLitVerdict', () => {
         power: 0,
         netlist: OPEN_SWITCH,
       }),
-    ).toBe('L1 stayed dark because the open switch S1 left a gap in the loop.')
+    ).toBe('The bulb stayed dark because the open switch left a gap in the loop.')
   })
 
   test('joins several open switches honestly', () => {
@@ -48,7 +48,7 @@ describe('explainLitVerdict', () => {
         power: 0,
         netlist,
       }),
-    ).toBe('L1 stayed dark because the open switches S1 and S2 left gaps in the loop.')
+    ).toBe('The bulb stayed dark because open switches left gaps in the loop.')
   })
 
   test('stays silent when no open switch explains the dark bulb', () => {
@@ -72,7 +72,7 @@ describe('explainLitVerdict', () => {
         power: 3.6,
         netlist: CLOSED_LOOP,
       }),
-    ).toBe('L1 lit because the completed loop carries current to it.')
+    ).toBe('The bulb lit because the completed loop carries current to it.')
   })
 
   test('stays silent on matching predictions', () => {

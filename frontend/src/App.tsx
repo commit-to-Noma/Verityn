@@ -1034,7 +1034,7 @@ export default function App() {
             proofStage="l1-build"
             seed={L1.seed}
             eyebrow="Build · Light the bulb"
-            instructions="Connect the two open ends with one wire, then press Test to check your prediction."
+            instructions="Connect the loose ends to complete the loop."
             onSolved={handleL1Solved}
             onDirty={handleDirty}
             onEvidence={handleEvidence}
@@ -1071,7 +1071,7 @@ export default function App() {
             proofStage="reality-build"
             seed={L1.twist.seed}
             eyebrow="Reality Check · The open switch"
-            instructions="The loop is fully wired and the switch is open. We will test it right away  -  don't change the switch."
+            instructions="The loop is wired and the switch is open. Test it as is; don't change the switch."
             choice={realityPrediction.choice}
             claim={L1.twist.claim}
             coachSession={realitySession}
@@ -1128,7 +1128,7 @@ export default function App() {
             proofStage="transfer-build"
             seed={TRANSFER.seed}
             eyebrow="Solo · The second bulb"
-            instructions="Connect the second bulb across L1's two terminals. We will test the circuit as soon as the loop closes."
+            instructions="Connect the loose end of the second bulb to the loop, then test your prediction."
             choice={transferPrediction.choice}
             claim={TRANSFER.claim}
             onSolved={handleTransferSolved}

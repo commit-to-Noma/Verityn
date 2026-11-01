@@ -1,9 +1,9 @@
 import type { TerminalNode } from './openTerminals'
 
 const PART_NAMES: Record<string, string> = {
-  battery: 'Battery',
-  bulb: 'Light',
-  switch: 'Switch',
+  battery: 'battery',
+  bulb: 'bulb',
+  switch: 'switch',
 }
 
 const ORDINALS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
@@ -15,18 +15,26 @@ export interface GuidanceNode extends TerminalNode {
 function describeTerminal(terminal: string, nodes: GuidanceNode[]): string {
   const separator = terminal.lastIndexOf('.')
   if (separator <= 0) {
-    return `terminal ${terminal}`
+    return 'loose connection dot'
   }
   const id = terminal.slice(0, separator)
   const side = terminal.slice(separator + 1)
   const node = nodes.find((candidate) => candidate.id === id)
-  if (node === undefined) {
-    return `terminal ${terminal}`
+  if (node === undefined || (side !== 'a' && side !== 'b')) {
+    return 'loose connection dot'
   }
-  const name = PART_NAMES[node.kind] ?? node.kind
+  const name = PART_NAMES[node.kind]
+  if (name === undefined) {
+    return 'loose connection dot'
+  }
   const suffix = /^([A-Z]+)(\d+)$/.exec(id)
-  const number = suffix === null ? id : ORDINALS[Number(suffix[2])] ?? suffix[2]
-  return `the ${side} terminal on ${name} ${number}`
+  const matchingParts = nodes.filter((candidate) => candidate.kind === node.kind)
+  const ordinal =
+    matchingParts.length > 1 && suffix !== null
+      ? ORDINALS[Number(suffix[2])]
+      : undefined
+  const partName = ordinal === undefined ? name : `${ordinal} ${name}`
+  return `${partName}'s ${side === 'a' ? 'left' : 'right'} dot`
 }
 
 /** Stuck-helper: on stages that test the open switch, name the closed switch
@@ -44,16 +52,16 @@ export function closedSwitchNotice(
   if (closed === undefined) {
     return null
   }
-  return `${closed.id} is closed, but this challenge tests the open switch. Open it and press Test again to compare with your prediction.`
+  return 'The switch is closed, but this challenge uses it open. Open the switch and test again to compare with your prediction.'
 }
 
 export function nextTerminalInstruction(terminals: string[], nodes: GuidanceNode[]): string {
   const descriptions = terminals.map((terminal) => describeTerminal(terminal, nodes))
   if (descriptions.length === 2) {
-    return `Next, connect ${descriptions[0]} to ${descriptions[1]}.`
+    return `Drag from the ${descriptions[0]} to the ${descriptions[1]}.`
   }
   if (descriptions.length > 0) {
-    return `Open terminals: ${descriptions.join(', ')}. Connect the right terminals to complete the path.`
+    return 'Connect the loose dots to complete the loop.'
   }
   return ''
 }

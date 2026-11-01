@@ -26,9 +26,11 @@ const LIT_RESULT = {
 
 describe('soloPredictionLine', () => {
   test('restates the recorded choice about the claimed bulb', () => {
-    expect(soloPredictionLine('yes', 'L2')).toBe('You predicted that L2 would light.')
-    expect(soloPredictionLine('no', 'L2')).toBe('You predicted that L2 would stay dark.')
-    expect(soloPredictionLine('not_sure', 'L2')).toBe('You were not sure whether L2 would light.')
+    expect(soloPredictionLine('yes', 'second bulb')).toBe('You predicted that the second bulb would light.')
+    expect(soloPredictionLine('no', 'second bulb')).toBe('You predicted that the second bulb would stay dark.')
+    expect(soloPredictionLine('not_sure', 'second bulb')).toBe(
+      'You were not sure whether the second bulb would light.',
+    )
   })
 })
 
@@ -46,7 +48,7 @@ describe('describeAddedWires', () => {
         ...seedEdges,
         { source: 'L2', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
       ]),
-    ).toBe('You connected L2.b to L1.b.')
+    ).toBe("You connected the second bulb's right dot to the first bulb's right dot.")
   })
 
   test('ignores seed wires in either direction', () => {
@@ -63,8 +65,8 @@ describe('describeAddedWires', () => {
 describe('soloBulbReadings', () => {
   test('reads every bulb in netlist order', () => {
     expect(soloBulbReadings(LIT_RESULT, NETLIST)).toEqual([
-      { id: 'L1', current: 0.6, power: 3.6, lit: true },
-      { id: 'L2', current: 0.6, power: 3.6, lit: true },
+      { id: 'L1', label: 'first bulb', current: 0.6, power: 3.6, lit: true },
+      { id: 'L2', label: 'second bulb', current: 0.6, power: 3.6, lit: true },
     ])
   })
 
@@ -75,6 +77,7 @@ describe('soloBulbReadings', () => {
     } as unknown as SimulateResult
     expect(soloBulbReadings(partial, NETLIST)[1]).toEqual({
       id: 'L2',
+      label: 'second bulb',
       current: 0,
       power: 0,
       lit: false,
@@ -86,20 +89,20 @@ describe('soloSuggestion', () => {
   test('states the complete path when every bulb is lit', () => {
     expect(
       soloSuggestion([
-        { id: 'L1', current: 0.6, power: 3.6, lit: true },
-        { id: 'L2', current: 0.6, power: 3.6, lit: true },
+        { id: 'L1', label: 'first bulb', current: 0.6, power: 3.6, lit: true },
+        { id: 'L2', label: 'second bulb', current: 0.6, power: 3.6, lit: true },
       ]),
     ).toBe(
-      'L1 and L2 are each lit: every bulb is part of a complete path, so current reaches each one.',
+      'The first bulb and the second bulb are lit. Each bulb has a complete path, so current reaches each one.',
     )
   })
 
   test('names the dark bulb and where to look', () => {
     expect(
       soloSuggestion([
-        { id: 'L1', current: 0.6, power: 3.6, lit: true },
-        { id: 'L2', current: 0, power: 0, lit: false },
+        { id: 'L1', label: 'first bulb', current: 0.6, power: 3.6, lit: true },
+        { id: 'L2', label: 'second bulb', current: 0, power: 0, lit: false },
       ]),
-    ).toBe('L2 stays dark in the circuit you built. Trace where its terminals connect.')
+    ).toBe('The second bulb stays dark in the circuit you built. Check how its dots are connected.')
   })
 })

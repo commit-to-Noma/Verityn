@@ -70,7 +70,7 @@ body {
   background: radial-gradient(circle, var(--color-flow) 0 5px, transparent 6px);
 }
 
-/* Loose terminals in read-only previews get an expanding ring. The global
+/* Loose terminals in guided canvases and read-only previews get an expanding ring. The global
    reduced-motion guard collapses this to a static ring. */
 .react-flow__handle.terminal-handle.terminal-loose::after {
   content: '';

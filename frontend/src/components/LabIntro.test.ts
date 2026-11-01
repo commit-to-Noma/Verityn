@@ -3,6 +3,7 @@ import {
   HOMEPAGE_ENTRIES,
   HOMEPAGE_HEADLINE,
   HOMEPAGE_SUBHEAD,
+  LAB_LOOP,
   LABORATORY_STATIONS,
   STEM_FIELDS,
 } from '../content/homepage'
@@ -51,5 +52,12 @@ describe('homepage copy', () => {
   it('offers a clear, real guided demo from the homepage', () => {
     expect(HOMEPAGE_ENTRIES.demo).toBe('Watch a walkthrough')
     expect(HOMEPAGE_ENTRIES.startLab).toBe('Start your own lab')
+  })
+
+  it('uses plain-language guidance and solver-grounded wording', () => {
+    expect(LABORATORY_STATIONS[0]?.details).toContain('Measured by the solver')
+    expect(LAB_LOOP[3]?.doing).toBe(
+      'Answer in your own words, then try it without the coach in Solo.',
+    )
   })
 })

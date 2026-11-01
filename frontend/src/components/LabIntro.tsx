@@ -6,17 +6,11 @@ import {
   HOMEPAGE_ENTRIES,
   HOMEPAGE_HEADLINE,
   HOMEPAGE_SUBHEAD,
+  LAB_LOOP,
   STEM_FIELDS,
   type STEMFieldId,
   type LaboratoryStation,
 } from '../content/homepage'
-
-const LAB_LOOP = [
-  { step: 'Make a claim', doing: 'Predict what will happen before any help unlocks.' },
-  { step: 'Build or bring a model', doing: 'Wire a circuit on the canvas or confirm a Reality Lens proposal.' },
-  { step: 'Test with the simulator', doing: 'Current, power, and validity are measured, not guessed.' },
-  { step: 'Explain the evidence', doing: 'Answer the coach, then prove it independently in Solo.' },
-] as const
 
 const IMPACT_CASES = [
   {
