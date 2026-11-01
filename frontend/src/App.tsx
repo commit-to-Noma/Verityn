@@ -580,6 +580,12 @@ export default function App() {
     announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
   }, [resetJourney, announceCoach])
 
+  const handleRestartJourney = useCallback(() => {
+    if (window.confirm('Restart the lab and clear saved predictions?')) {
+      handleStartJourney()
+    }
+  }, [handleStartJourney])
+
   /** Enter the guided demo: a clean journey that performs itself. */
   const startDemo = useCallback(() => {
     if (!demoRef.current.active) {
@@ -1180,7 +1186,26 @@ export default function App() {
         </div>
       )}
       {stage === 'finale' && (
-        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing your recap…</p>}>
+        <Suspense
+          fallback={(
+            <div
+              role="status"
+              aria-label="Preparing your recap"
+              className="glass-panel motion-safe:animate-pulse flex min-h-64 flex-col gap-5 p-6"
+            >
+              <p className="text-sm text-ink-muted">Preparing your recap…</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} className="flex flex-col gap-3 rounded-xl border border-glass-border p-4">
+                    <div className="h-5 w-2/3 rounded bg-glass-border" />
+                    <div className="h-36 rounded-lg bg-glass-border/60" />
+                    <div className="h-4 w-full rounded bg-glass-border/60" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        >
           <JourneyFinale
             chapters={finaleChapters}
             onReturnHub={() => handleNavigate('hub')}
@@ -1188,6 +1213,7 @@ export default function App() {
               jumpToLens()
             }}
             onTryExperiment={handleTryExperiment}
+            onRestart={handleRestartJourney}
           />
         </Suspense>
       )}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { flowDurationForCurrent, flowForCurrent, glowIntensity } from './visuals'
+import {
+  flowDurationForCurrent,
+  flowForCurrent,
+  glowIntensity,
+  shouldBurstGlow,
+} from './visuals'
 
 describe('glowIntensity', () => {
   it.each([
@@ -13,6 +18,14 @@ describe('glowIntensity', () => {
     [14.4, 1],
   ])('maps %s W to glow %s', (power, expected) => {
     expect(glowIntensity(power)).toBeCloseTo(expected, 10)
+  })
+
+  describe('shouldBurstGlow', () => {
+    it('bursts only when a solver reading changes a dark bulb to lit', () => {
+      expect(shouldBurstGlow(0, 3.6)).toBe(true)
+      expect(shouldBurstGlow(0.5, 3.6)).toBe(false)
+      expect(shouldBurstGlow(0, 0)).toBe(false)
+    })
   })
 })
 

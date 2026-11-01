@@ -8,6 +8,8 @@ export type CircuitNodeData = {
   label: string
   /** Continuous bulb glow 0..1 from solver power; 0 for other kinds. */
   glow: number
+  /** One-shot transition when a solver run first lights this bulb. */
+  glowBurst?: boolean
   invalid: boolean
   /** Battery voltage for display and conversion; 6 when absent. */
   volts?: number
@@ -92,7 +94,11 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         ) : data.kind === 'bulb' ? (
           <>
             {data.glow > 0 && (
-              <div aria-hidden="true" className="bulb-glow" style={{ opacity: data.glow }} />
+              <div
+                aria-hidden="true"
+                className={`bulb-glow${data.glowBurst ? ' bulb-glow-burst' : ''}`}
+                style={{ opacity: data.glow }}
+              />
             )}
             <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
             <path d="M35 5c-10 0-17 7-17 16 0 7 4 11 8 15v4h18v-4c4-4 8-8 8-15 0-9-7-16-17-16Z" />

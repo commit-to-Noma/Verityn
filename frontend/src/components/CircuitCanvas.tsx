@@ -32,7 +32,12 @@ import {
 } from '../coach/actions'
 import type { CanvasImportRequest } from '../canvas/layout'
 import { counterStarts } from '../canvas/layout'
-import { flowDurationForCurrent, flowForCurrent, glowIntensity } from '../canvas/visuals'
+import {
+  flowDurationForCurrent,
+  flowForCurrent,
+  glowIntensity,
+  shouldBurstGlow,
+} from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
 import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
@@ -1125,6 +1130,7 @@ function CanvasInner({
             data: {
               ...node.data,
               glow: 0,
+              glowBurst: false,
               invalid: false,
               measurement: undefined,
               demonstrated: false,
@@ -1143,7 +1149,7 @@ function CanvasInner({
         ...edge,
         style: uncertainRef.current.includes(edge.id) ? UNCERTAIN_EDGE_STYLE : FLOW_EDGE_STYLE,
         animated: false,
-        className: undefined,
+        className: edge.className === 'wire-connect-pulse' ? edge.className : undefined,
       })),
     )
     setVerdictState({ phase: 'idle' })
@@ -1256,7 +1262,13 @@ function CanvasInner({
     counters.current.wire += 1
     const id = `W${counters.current.wire}`
     setEdges((current) =>
-      addEdge({ ...connection, id, type: 'smoothstep', style: FLOW_EDGE_STYLE }, current),
+      addEdge({
+        ...connection,
+        id,
+        type: 'smoothstep',
+        style: FLOW_EDGE_STYLE,
+        className: 'wire-connect-pulse',
+      }, current),
     )
     invalidate()
   }
@@ -1318,10 +1330,11 @@ function CanvasInner({
             ...node,
             data: {
               ...node.data,
-              glow:
-                result.ok && node.data.kind === 'bulb'
-                  ? glowIntensity(result.components[node.id]?.power ?? 0)
-                  : 0,
+              glow: result.ok && node.data.kind === 'bulb'
+                ? glowIntensity(result.components[node.id]?.power ?? 0)
+                : 0,
+              glowBurst: result.ok && node.data.kind === 'bulb' &&
+                shouldBurstGlow(node.data.glow, result.components[node.id]?.power ?? 0),
               invalid: offenders.has(node.id),
               measurement: result.ok ? result.components[node.id] : undefined,
             condition:

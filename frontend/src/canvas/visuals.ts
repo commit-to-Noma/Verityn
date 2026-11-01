@@ -21,6 +21,11 @@ export function glowIntensity(powerW: number): number {
   return Math.min(1, powerW / NOMINAL_BULB_W)
 }
 
+/** Burst only on the solver transition from dark to a measured lit state. */
+export function shouldBurstGlow(previousGlow: number, powerW: number): boolean {
+  return previousGlow <= 0 && glowIntensity(powerW) > 0
+}
+
 export type CurrentFlow = 'forward' | 'reverse' | 'still'
 
 /** Flow direction along the drawn edge from solver branch current. */

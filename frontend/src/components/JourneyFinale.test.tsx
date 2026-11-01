@@ -56,11 +56,13 @@ describe('JourneyFinale', () => {
         onReturnHub={vi.fn()}
         onExploreLens={vi.fn()}
         onTryExperiment={vi.fn()}
+        onRestart={vi.fn()}
       />,
     )
 
     expect(markup).toContain('Explain with Muse Spark')
     expect(markup).toContain('Try it in the Experiment Bay')
     expect(markup).toContain('aria-label="Try Light the bulb in the Experiment Bay"')
+    expect(markup).toContain('Restart the lab')
   })
 })

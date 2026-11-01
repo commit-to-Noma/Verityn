@@ -133,11 +133,13 @@ export default function JourneyFinale({
   onReturnHub,
   onExploreLens,
   onTryExperiment,
+  onRestart,
 }: {
   chapters: ChapterRecap[]
   onReturnHub: () => void
   onExploreLens: () => void
   onTryExperiment: (seed: LessonSeed, label: string) => void
+  onRestart: () => void
 }) {
   const [explanations, setExplanations] = useState<Record<string, ExplanationState>>({})
   const [reflection, setReflection] = useState('')
@@ -379,6 +381,13 @@ export default function JourneyFinale({
       </section>
 
       <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onRestart}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Restart the lab
+        </button>
         <button
           type="button"
           onClick={onExploreLens}
