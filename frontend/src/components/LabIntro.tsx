@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
+import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
 import UnderTheHoodTryIts from './UnderTheHoodTryIts'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
@@ -437,6 +438,9 @@ export default function LabIntro({
             {HOMEPAGE_HEADLINE}
           </h2>
           <p className="max-w-md text-base text-ink-muted">{HOMEPAGE_SUBHEAD}</p>
+          <div className="w-full max-w-md">
+            <HealthStatus />
+          </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <button
               type="button"

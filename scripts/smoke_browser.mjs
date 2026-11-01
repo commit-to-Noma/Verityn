@@ -50,6 +50,7 @@ let msgId = 0
 const pending = new Map()
 const askRequestIds = []
 const explainRequestIds = []
+let healthAttempts = 0
 let chrome = null
 let originalViewportWidth = null
 
@@ -348,6 +349,24 @@ async function drive() {
       }
     } else if (msg.method === 'Fetch.requestPaused') {
       const { requestId, request } = msg.params
+      if (request.url.includes('/api/health')) {
+        healthAttempts += 1
+        if (healthAttempts === 1) {
+          send('Fetch.fulfillRequest', {
+            requestId,
+            responseCode: 503,
+            responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+            body: Buffer.from('{"status":"starting"}').toString('base64'),
+          }).catch(() => {})
+        } else if (healthAttempts === 2) {
+          setTimeout(() => {
+            send('Fetch.continueRequest', { requestId }).catch(() => {})
+          }, 1500)
+        } else {
+          send('Fetch.continueRequest', { requestId }).catch(() => {})
+        }
+        return
+      }
       const stub = request.url.includes('/api/vision/propose') ? visionStubs.shift() : undefined
       if (stub !== undefined) {
         send('Fetch.fulfillRequest', {
@@ -363,9 +382,26 @@ async function drive() {
   }
   await new Promise((resolve) => { ws.onopen = resolve })
   await send('Network.enable')
+  await send('Fetch.enable', {
+    patterns: [
+      { urlPattern: '*/api/health*' },
+      { urlPattern: '*/api/vision/propose*' },
+    ],
+  })
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'hub')
+  await waitFor(
+    () => hasText('Waking the simulator. First load can take up to 30 seconds.'),
+    'hub waking state',
+  )
+  await waitFor(() => healthAttempts >= 2, 'automatic health retry')
+  check(
+    'hub health check retries with visible progress',
+    healthAttempts >= 2 && await ev(`!!document.querySelector('[role="progressbar"][aria-label="Simulator startup"]')`),
+    `attempts=${healthAttempts}`,
+  )
+  await waitFor(() => hasText('Simulator ready'), 'hub health check')
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
   check('proof on via param', await ev(`document.querySelector('[aria-label="Proof mode"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
@@ -604,7 +640,6 @@ async function drive() {
   check('upload panel first', await hasText('Choose an image'))
   check('samples below upload', await hasText('Verified samples'))
   // Stub the proposal at the network layer: no live Meta call in smoke.
-  await send('Fetch.enable', { patterns: [{ urlPattern: '*/api/vision/propose*' }] })
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await uploadLensFile(switchImage)
   await waitFor(() => hasText('Interpret with Meta Spark'), 'lens selected')
