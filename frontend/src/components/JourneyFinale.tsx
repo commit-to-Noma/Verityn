@@ -11,6 +11,7 @@ import EvidenceCard from './EvidenceCard'
 import EvidenceTrace from './EvidenceTrace'
 import MicButton from '../voice/MicButton'
 import { useProofMode } from '../proof/store'
+import { finaleRevealDelay } from '../journey/finaleMotion'
 
 const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
 
@@ -202,7 +203,11 @@ export default function JourneyFinale({
           const polishState = polish[chapter.id]
           const title = CHAPTER_TITLES[index] ?? chapter.title
           return (
-            <li key={chapter.id}>
+            <li
+              key={chapter.id}
+              className="finale-reveal"
+              style={{ animationDelay: finaleRevealDelay(index) }}
+            >
               <article className="glass-panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                 <section aria-label={`${title} circuit`} className="min-w-0">
                   <h3 className="mb-2 text-lg font-semibold">

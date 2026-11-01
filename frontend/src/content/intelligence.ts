@@ -52,4 +52,19 @@ export const SMART_DETAILS = [
     where: 'Coach Dock playback',
     evidence: 'frontend/src/voice/coachVoice.test.ts',
   },
+  {
+    behavior: 'Current flow and bulb glow follow solver measurements',
+    where: 'Circuit test result',
+    evidence: 'frontend/src/canvas/visuals.test.ts',
+  },
+  {
+    behavior: 'Solver readouts count up to the measured value',
+    where: 'Guided result card and circuit readouts',
+    evidence: 'frontend/src/components/ReadoutValue.test.ts',
+  },
+  {
+    behavior: 'Finale circuits reveal in order with reduced motion respected',
+    where: 'Finale timeline',
+    evidence: 'frontend/src/journey/finaleMotion.test.ts',
+  },
 ] as const

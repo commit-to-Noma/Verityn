@@ -13,3 +13,6 @@ the Under the hood Smart details section, and the README.
 - Typed errors with actionable next steps — [error-safety tests](../backend/tests/test_error_safety.py).
 - Prediction lock-in with a short undo window — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
 - Ranked English browser voice with measured pacing — [coach voice tests](../frontend/src/voice/coachVoice.test.ts).
+- Current flow and bulb glow follow solver measurements — [visual mapping tests](../frontend/src/canvas/visuals.test.ts).
+- Solver readouts count up to the measured value — [readout tests](../frontend/src/components/ReadoutValue.test.ts).
+- Finale circuits reveal in order with reduced motion respected — [Finale motion tests](../frontend/src/journey/finaleMotion.test.ts).
