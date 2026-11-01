@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Netlist } from '../api/client'
-import { netlistPreviewSeed } from './netlistPreview'
+import { loopOrderPartIds, netlistPreviewSeed, perimeterSlots } from './netlistPreview'
 
 describe('netlistPreviewSeed', () => {
   it('preserves actual parts, switch state, and wire endpoints', () => {
@@ -21,9 +21,9 @@ describe('netlistPreviewSeed', () => {
     expect(netlistPreviewSeed(netlist)).toEqual({
       nodes: [
         { id: 'B1', kind: 'battery', volts: 6, closed: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 80, y: 80 },
-        { id: 'S1', kind: 'switch', closed: true, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 290, y: 80 },
-        { id: 'L1', kind: 'bulb', closed: undefined, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 500, y: 80 },
-        { id: 'L2', kind: 'bulb', closed: undefined, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 80, y: 250 },
+        { id: 'S1', kind: 'switch', closed: true, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 340, y: 80 },
+        { id: 'L1', kind: 'bulb', closed: undefined, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 340, y: 290 },
+        { id: 'L2', kind: 'bulb', closed: undefined, volts: undefined, ratedVolts: undefined, maxSafeWatts: undefined, x: 80, y: 290 },
       ],
       edges: [
         { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
@@ -33,6 +33,39 @@ describe('netlistPreviewSeed', () => {
         { id: 'W5', source: 'L2', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
       ],
     })
+  })
+
+  it('walks the loop from the battery regardless of part order', () => {
+    const ends = (node: string) => ({ node, terminal: 'a' as const })
+    const wires = [
+      { id: 'W1', source: ends('B1'), target: ends('S1') },
+      { id: 'W2', source: ends('S1'), target: ends('L1') },
+      { id: 'W3', source: ends('L1'), target: ends('B1') },
+    ]
+    expect(loopOrderPartIds(['L1', 'S1', 'B1'], wires, 'B1')).toEqual(['B1', 'S1', 'L1'])
+    expect(loopOrderPartIds(['L1', 'S1', 'B1', 'LX'], wires, 'B1')).toEqual([
+      'B1',
+      'S1',
+      'L1',
+      'LX',
+    ])
+  })
+
+  it('places consecutive loop parts on adjacent perimeter cells', () => {
+    expect(perimeterSlots(4)).toEqual([
+      { col: 0, row: 0 },
+      { col: 1, row: 0 },
+      { col: 1, row: 1 },
+      { col: 0, row: 1 },
+    ])
+    const slots = perimeterSlots(6)
+    expect(slots).toHaveLength(6)
+    for (let index = 1; index < slots.length; index++) {
+      const manhattan =
+        Math.abs(slots[index].col - slots[index - 1].col) +
+        Math.abs(slots[index].row - slots[index - 1].row)
+      expect(manhattan).toBe(1)
+    }
   })
 
   it('rejects topology that cannot be represented without omission', () => {

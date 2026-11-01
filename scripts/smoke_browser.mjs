@@ -488,6 +488,12 @@ async function drive() {
   await clickButtonStarts('View completed journey')
   await waitFor(() => hasText('JOURNEY COMPLETE'), 'finale')
   check('finale solo matched', await hasText('Your solo prediction matched'))
+  check('solo preview rebuilt cleanly', await ev(`(() => {
+    const flow = document.querySelector('[aria-label="Reconstructed solo circuit from the tested wiring"]');
+    if (!flow) return false;
+    const labels = [...flow.querySelectorAll('.react-flow__node')].map((n) => n.querySelector('[aria-label]')?.getAttribute('aria-label') ?? '');
+    return labels.length === 4 && ['B1', 'S1', 'L1', 'L2'].every((id) => labels.some((t) => t.includes(id)));
+  })()`))
   check('learning path personal', await hasText('Your learning path') && await hasText('3/3 challenges') && await hasText('Complete the loop') && await hasText('You predicted') && await hasText('You connected'))
   check('evidence card shown', await hasText('Evidence card') && await hasText('Computed by a solver. Not an AI score.'))
   await clickButton('Download card')
