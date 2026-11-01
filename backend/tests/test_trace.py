@@ -5,6 +5,7 @@ trace because no provider was touched. All provider calls are mocked.
 """
 
 import io
+import json
 from datetime import datetime
 
 import pytest
@@ -72,8 +73,9 @@ def _record_twist(client):
 
 def _assert_trace_shape(event):
     assert set(event) == {"tool", "input", "output", "guard",
-                          "decided_by", "ms", "t"}
+                          "decided_by", "ms", "attempts", "t"}
     assert isinstance(event["ms"], int) and event["ms"] >= 0
+    assert isinstance(event["attempts"], int) and event["attempts"] >= 1
     datetime.fromisoformat(event["t"])
 
 
@@ -103,6 +105,34 @@ def test_ask_r1_template_trace():
     assert body["trace"]["output"] == "structured-hint"
     assert body["trace"]["guard"] == "fallback:template"
     assert body["trace"]["decided_by"] == "none"
+    assert body["trace"]["attempts"] == 1
+
+
+def test_ask_r1_trace_reports_single_validation_retry(monkeypatch):
+    responses = iter([
+        {"misconception_id": "open_switch_conducts",
+         "question": "Is it dark?"},
+        {"misconception_id": "open_switch_conducts",
+         "question": "What does the open switch change about the loop?"},
+    ])
+    calls = []
+
+    def reply(*_args):
+        calls.append(True)
+        return 200, {"choices": [{"message": {
+            "content": json.dumps(next(responses))}}]}
+
+    monkeypatch.setattr(meta_coach, "_post_json", reply)
+    app = create_app(meta_coach.MetaSparkProvider(api_key="dummy"))
+    client = app.test_client()
+    session_id = _record_twist(client)
+    body = client.post("/api/coach/ask", json={
+        "session_id": session_id, "netlist": TWIST_START,
+        "rung": "R1"}).get_json()
+
+    assert body["provider"] == "meta-spark"
+    assert len(calls) == 2
+    assert body["trace"]["attempts"] == 2
 
 
 def test_ask_r2_deterministic_trace():

@@ -6,6 +6,7 @@ import JourneyProgress from './JourneyProgress'
 import ProofSwitch from './ProofSwitch'
 import TracePanel from './TracePanel'
 import { useProofMode } from '../proof/store'
+import { META_EVIDENCE_BASE } from '../content/intelligence'
 
 /** Laboratory frame: brand header, persistent nav, workspace, dev controls. */
 export default function JourneyShell({
@@ -148,6 +149,38 @@ export default function JourneyShell({
         {children}
       </main>
       <footer className="flex flex-col gap-4">
+        <section aria-labelledby="built-with-meta-heading" className="glass-panel p-4">
+          <h2 id="built-with-meta-heading" className="text-sm font-semibold">Built with Meta</h2>
+          <ul className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <li>
+              <span className="font-medium">Muse Spark</span>
+              <span className="text-ink-muted"> — R1 questions, explanations, and Reality Lens vision. </span>
+              <a
+                className="text-flow underline underline-offset-2"
+                href={`${META_EVIDENCE_BASE}backend/tests/test_trace.py`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mocked trace tests
+              </a>
+            </li>
+            <li>
+              <span className="font-medium">Muse Voice Transcribe</span>
+              <span className="text-ink-muted"> — speech-to-text for Predict, Reality Check, and Solo. </span>
+              <a
+                className="text-flow underline underline-offset-2"
+                href={`${META_EVIDENCE_BASE}backend/tests/test_meta_voice.py`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Mocked voice tests
+              </a>
+            </li>
+          </ul>
+          <p className="mt-3 text-xs text-ink-muted">
+            Pointer and Demonstration are deterministic by design. SAM is sample-only, not a live inference.
+          </p>
+        </section>
         {proof && <TracePanel />}
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">

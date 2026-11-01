@@ -7,6 +7,7 @@ import {
   LABORATORY_STATIONS,
   STEM_FIELDS,
 } from '../content/homepage'
+import { SMART_DETAILS } from '../content/intelligence'
 
 describe('homepage copy', () => {
   it('leads with an idea that applies across STEM', () => {
@@ -59,5 +60,13 @@ describe('homepage copy', () => {
     expect(LAB_LOOP[3]?.doing).toBe(
       'Answer in your own words, then try it without the coach in Solo.',
     )
+  })
+
+  it('documents each smart behavior with a place to see it and evidence', () => {
+    expect(SMART_DETAILS).toHaveLength(9)
+    for (const detail of SMART_DETAILS) {
+      expect(detail.where).not.toBe('')
+      expect(detail.evidence).toMatch(/(test|trace)[^/]*\.(tsx?|py)$/)
+    }
   })
 })

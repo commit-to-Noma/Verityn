@@ -19,14 +19,14 @@ outputs are proposals and pass grounded evidence verification before reaching
 the learner. See `docs/` for the architecture, UI spec, product plan, and test
 plan.
 
-## Implemented (submission state)
+## Features
 
 - Guided lab: Predict → Build → Reality Check → Solo → Finale.
   The learner commits to a Yes / No / Not sure prediction with a
   one-line Why, repairs the open-gap circuit (0.6 A / 3.6 W lit),
   meets the open-switch contradiction (0.0 A dark), climbs the
-  Question → Pointer → Demonstration coach ladder, and proves transfer on a fresh
-  second-bulb circuit with the coach fully off.
+  Question → Pointer → Demonstration coach ladder, and tries a fresh
+  second-bulb circuit without the coach.
 - Socratic coach ladder: one Question grounded in the measured
   numbers, a Pointer citing the 0.0 A open-switch discrepancy, and a
   Demonstration confirmation. Served
@@ -82,10 +82,23 @@ plan.
   HTTP 400 `MALFORMED_REQUEST`; errors are JSON, never
   tracebacks; keys stay server-side in an untracked `.env`.
 - Test suites (mocked model HTTP, zero live calls in tests):
-  564 backend tests, 337 frontend tests, lint clean,
-  production build clean, plus `scripts/smoke_live.py` and
-  `scripts/smoke_browser.mjs` end-to-end checks.
+  backend and frontend suites, lint, production build, plus
+  `scripts/smoke_live.py` and `scripts/smoke_browser.mjs` end-to-end checks.
 - Pinned backend dependencies (`backend/requirements.txt`).
+
+## Smart details
+
+| Behavior | Where to see it | Test or trace |
+|---|---|---|
+| Spoken correction of a choice | Predict, Reality Check, and Solo | [Spoken prediction tests](./frontend/src/voice/spokenPrediction.test.ts) |
+| Coach replies use the learner's own words | Coach Dock follow-up | [Meta coach tests](./backend/tests/test_meta_coach.py) |
+| Solver-grounded explanations with a number guard | Experiment Bay and Finale | [Explanation tests](./backend/tests/test_explain.py) |
+| Leak guard and one validation retry | R1 coach question | [Retry trace test](./backend/tests/test_trace.py) |
+| Stale-state protection for cancelled or superseded requests | Reality Lens and circuit runs | [API cancellation tests](./frontend/src/api/client.test.ts) |
+| Honest `needs_review` and `unsupported` Reality Lens proposals | Reality Lens review | [Vision validation tests](./backend/tests/test_vision.py) |
+| Server-enforced Solo with zero coach calls | Solo second-bulb challenge | [Transfer tests](./backend/tests/test_transfer.py) |
+| Typed errors with actionable next steps | API responses and learner notices | [Error-safety tests](./backend/tests/test_error_safety.py) |
+| Prediction lock-in with a short undo window | Voice replies in every stage | [Spoken prediction tests](./frontend/src/voice/spokenPrediction.test.ts) |
 
 ## Deliberately out of scope
 
@@ -172,13 +185,17 @@ python scripts/smoke_live.py   # live judging-path smoke check (venv active)
 BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journey
 ```
 
-## Built with Muse Code
+## Built with Meta
 
-The deterministic solver, prediction evaluator, validation guards, Flask
-API, lesson packs, and the backend/frontend test suites were built with
-Muse Code (agentic CLI, Meta Muse Spark) under human direction: the human
-set every milestone scope, reviewed each diff, ran the live API
-diagnostics, and made all product decisions.
+| Tool | Used for | Evidence |
+|---|---|---|
+| Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Mocked trace tests](./backend/tests/test_trace.py) |
+| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, and Solo | [Mocked voice tests](./backend/tests/test_meta_voice.py) |
+
+Pointer and Demonstration are deterministic by design, not model calls.
+SAM is sample-only; no live SAM inference is used. Browser speech playback
+is browser-native, not Meta text-to-speech. Provider labels and trace rows
+identify the provider that actually served each response.
 
 ## Notes
 

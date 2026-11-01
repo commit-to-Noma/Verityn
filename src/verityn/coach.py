@@ -79,12 +79,13 @@ class CoachProviderError(RuntimeError):
     """
 
     def __init__(self, message, *, stage, http_status=None, shape=None,
-                 reason=None):
+                 reason=None, attempts=1):
         super().__init__(message)
         self.stage = stage
         self.http_status = http_status
         self.shape = shape
         self.reason = reason
+        self.attempts = attempts
 
 
 LEAK_PHRASES = ("dark", "lit", "won't", "will not", "does not light",
@@ -528,6 +529,7 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
                         "The claim cannot be judged against this circuit.")
     facts = solver_facts(result)
     primary_error = None
+    attempts = 1
     if rung in ("R2", "R4"):
         builder = r2_pointer if rung == "R2" else r4_prompt
         text = builder(claim_component=claim["component"], facts=facts,
@@ -535,11 +537,19 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         serving = DETERMINISTIC_PROVIDER
     else:
         try:
-            text = provider.r1_question(choice=recorded["choice"],
-                                        why=recorded["why"],
-                                        facts=rounded_solver_facts(facts))
+            r1_with_attempts = getattr(provider, "r1_question_with_attempts",
+                                       None)
+            if callable(r1_with_attempts):
+                text, attempts = r1_with_attempts(
+                    choice=recorded["choice"], why=recorded["why"],
+                    facts=rounded_solver_facts(facts))
+            else:
+                text = provider.r1_question(
+                    choice=recorded["choice"], why=recorded["why"],
+                    facts=rounded_solver_facts(facts))
             serving = provider.name
         except CoachProviderError as err:
+            attempts = err.attempts
             log.warning("coach primary failed: stage=%s http_status=%s "
                         "shape=%s reason=%s",
                         err.stage, err.http_status, err.shape, err.reason)
@@ -560,6 +570,7 @@ def derive_eligibility(store, session_id, netlist, provider, pack=None,
         "claim": claim,
         "actions": suggest_actions(netlist=netlist, facts=facts,
                                    claim_component=claim["component"]),
+        "attempts": attempts,
     }
     if primary_error is not None:
         response["primary_error"] = primary_error

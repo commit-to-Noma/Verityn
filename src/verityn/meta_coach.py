@@ -376,6 +376,11 @@ class MetaSparkProvider:
         self.timeout_s = timeout_s
 
     def r1_question(self, *, choice, why, facts=None):
+        question, _attempts = self.r1_question_with_attempts(
+            choice=choice, why=why, facts=facts)
+        return question
+
+    def r1_question_with_attempts(self, *, choice, why, facts=None):
         if facts is None:
             raise CoachProviderError("Missing solver facts.",
                                      stage="internal")
@@ -400,13 +405,14 @@ class MetaSparkProvider:
             try:
                 _, question = validate_model_output(
                     _parse_output(_chat_content(body)), facts)
-                return question
+                return question, attempt + 1
             except CoachProviderError as err:
                 if err.stage == "parse" and ",finish=" not in (err.shape or ""):
                     err.shape = _with_completion(err.shape or "unknown", body)
                 if attempt == 0 and err.stage == "validate":
                     payload["messages"].append({"role": "user", "content": _R1_RETRY_PROMPT})
                     continue
+                err.attempts = attempt + 1
                 raise
 
     def explain(self, *, facts, valid, error_code, component_ids,

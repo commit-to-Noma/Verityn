@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import LaboratoryTurntable from './LaboratoryTurntable'
 import UnderTheHoodTryIts from './UnderTheHoodTryIts'
+import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
   HOMEPAGE_ENTRIES,
   HOMEPAGE_HEADLINE,
@@ -506,11 +507,47 @@ export default function LabIntro({
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Under the hood</p>
         <h3 id="under-the-hood-heading" className="mt-1 text-xl font-semibold">Try the real building blocks</h3>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">Meta Muse Spark</h4><p className="text-sm text-ink-muted">Live coach questions are grounded in solver facts; fallback is labelled when used.</p></article>
-          <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">Voice Transcribe</h4><p className="text-sm text-ink-muted">Record a reason and receive editable transcript text from the configured voice provider.</p></article>
-          <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">SAM sample only</h4><p className="text-sm text-ink-muted">Segmentation examples are labelled samples, not a live inference claim.</p></article>
-          <article className="glass-panel flex flex-col gap-2 p-4"><h4 className="font-semibold">Verityn Solver</h4><p className="text-sm text-ink-muted">Every netlist is read and measured locally for current, voltage, power, and validity.</p></article>
+          <article className="glass-panel flex flex-col gap-2 p-4">
+            <h4 className="font-semibold">Muse Spark</h4>
+            <p className="text-sm text-ink-muted">Used for R1 coach questions, solver-grounded explanations, and Reality Lens image proposals. A deterministic fallback is labelled when served.</p>
+          </article>
+          <article className="glass-panel flex flex-col gap-2 p-4">
+            <h4 className="font-semibold">Muse Voice Transcribe</h4>
+            <p className="text-sm text-ink-muted">Turns learner speech into editable Why text in Predict, Reality Check, and Solo.</p>
+          </article>
+          <article className="glass-panel flex flex-col gap-2 p-4">
+            <h4 className="font-semibold">Verityn Solver</h4>
+            <p className="text-sm text-ink-muted">Measures each circuit locally for current, voltage, power, and validity.</p>
+          </article>
+          <article className="glass-panel flex flex-col gap-2 p-4">
+            <h4 className="font-semibold">SAM: sample only</h4>
+            <p className="text-sm text-ink-muted">Segmentation examples are samples; no live SAM inference is used.</p>
+          </article>
         </div>
+        <p className="mt-3 text-sm text-ink-muted">
+          Pointer and Demonstration are deterministic by design. Browser speech playback is not a Meta voice tool.
+        </p>
+        <details className="glass-panel mt-4 p-4">
+          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
+            Smart details
+          </summary>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {SMART_DETAILS.map((item) => (
+              <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
+                <p className="text-sm font-medium">{item.behavior}</p>
+                <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
+                <a
+                  className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
+                  href={`${META_EVIDENCE_BASE}${item.evidence}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Test or trace
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
         <UnderTheHoodTryIts />
       </section>
 

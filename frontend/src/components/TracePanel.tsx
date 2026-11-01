@@ -36,6 +36,9 @@ function TraceRow({ event }: { event: TraceEvent }) {
         <p className="text-ink-muted text-xs">
           {event.input} → {event.output} · {event.ms} ms
         </p>
+        {event.attempts !== undefined && event.attempts > 1 && (
+          <p className="text-ink-muted text-xs">{event.attempts} attempts</p>
+        )}
       </div>
       <div className="min-w-0">
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">

@@ -540,10 +540,18 @@ describe('guardTraceEvent', () => {
     expect(guardTraceEvent(TRACE)).toEqual(TRACE)
   })
 
+  it('preserves a validated attempt count', () => {
+    expect(guardTraceEvent({ ...TRACE, attempts: 2 })).toEqual({
+      ...TRACE,
+      attempts: 2,
+    })
+  })
+
   it.each([
     ['missing', undefined],
     ['mistyped ms', { ...TRACE, ms: '842' }],
     ['mistyped guard', { ...TRACE, guard: null }],
+    ['invalid attempts', { ...TRACE, attempts: 0 }],
     ['not an object', []],
   ])('drops malformed traces without throwing: %s', (_label, body) => {
     expect(guardTraceEvent(body)).toBeUndefined()

@@ -1,0 +1,14 @@
+# Intelligence log
+
+This behavior list is mirrored in `frontend/src/content/intelligence.ts`,
+the Under the hood Smart details section, and the README.
+
+- Spoken correction of a choice in Predict, Reality Check, and Solo — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
+- Coach replies use the learner's own words in Coach Dock follow-up — [Meta coach tests](../backend/tests/test_meta_coach.py).
+- Solver-grounded explanations with a number guard in Experiment Bay and Finale — [explanation tests](../backend/tests/test_explain.py).
+- Leak guard and one validation retry for the R1 coach question — [retry trace test](../backend/tests/test_trace.py).
+- Stale-state protection for cancelled or superseded Reality Lens and circuit requests — [API cancellation tests](../frontend/src/api/client.test.ts), with request-id guards in the relevant components.
+- Honest `needs_review` and `unsupported` Reality Lens proposals — [vision validation tests](../backend/tests/test_vision.py).
+- Server-enforced Solo with zero coach calls — [transfer tests](../backend/tests/test_transfer.py).
+- Typed errors with actionable next steps — [error-safety tests](../backend/tests/test_error_safety.py).
+- Prediction lock-in with a short undo window — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).

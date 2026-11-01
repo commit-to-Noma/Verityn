@@ -32,7 +32,7 @@ def guard_for(serving, primary, failed_stage=None):
 
 
 def build_trace(*, tool, input_kind, output_kind, serving, primary, ms,
-               failed_stage=None, decided_by=None):
+               failed_stage=None, decided_by=None, attempts=1):
     """Build one trace event for a served AI response."""
     guard, derived = guard_for(serving, primary, failed_stage)
     decided_by = derived if decided_by is None else decided_by
@@ -43,6 +43,7 @@ def build_trace(*, tool, input_kind, output_kind, serving, primary, ms,
         "guard": guard,
         "decided_by": decided_by,
         "ms": ms,
+        "attempts": attempts,
         "t": _utcnow_iso(),
     }
 
@@ -57,5 +58,6 @@ def rejection_trace(*, tool, input_kind, output_kind, reason, ms):
         "guard": f"rejected:{code}",
         "decided_by": "validator",
         "ms": ms,
+        "attempts": 1,
         "t": _utcnow_iso(),
     }

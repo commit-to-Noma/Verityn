@@ -9,6 +9,7 @@ export interface TraceEvent {
   guard: string
   decided_by: string
   ms: number
+  attempts?: number
   t: string
   /** Client-stamped app stage; never sent by the server. */
   stage?: string | null
@@ -24,6 +25,10 @@ export function guardTraceEvent(body: unknown): TraceEvent | undefined {
     typeof body.guard !== 'string' ||
     typeof body.decided_by !== 'string' ||
     typeof body.ms !== 'number' ||
+    (body.attempts !== undefined &&
+      (typeof body.attempts !== 'number' ||
+        !Number.isInteger(body.attempts) ||
+        body.attempts < 1)) ||
     typeof body.t !== 'string'
   ) {
     return undefined
@@ -35,6 +40,7 @@ export function guardTraceEvent(body: unknown): TraceEvent | undefined {
     guard: body.guard,
     decided_by: body.decided_by,
     ms: body.ms,
+    ...(body.attempts === undefined ? {} : { attempts: body.attempts }),
     t: body.t,
   }
 }

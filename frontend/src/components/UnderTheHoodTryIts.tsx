@@ -95,6 +95,9 @@ function TraceRow({ event }: { event: TraceEvent }) {
       <p className="text-ink-muted mt-1 text-xs">
         {event.input} → {event.output} · {event.ms} ms
       </p>
+      {event.attempts !== undefined && event.attempts > 1 && (
+        <p className="text-ink-muted text-xs">{event.attempts} attempts</p>
+      )}
       <p className="text-ink-muted text-xs">
         {event.guard} · {event.decided_by}
       </p>

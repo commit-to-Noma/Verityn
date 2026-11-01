@@ -260,7 +260,8 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 input_kind="text", output_kind="structured-hint",
                 serving=serving, primary=active_provider.name,
                 ms=_elapsed_ms(start),
-                failed_stage=response.get("primary_error"))
+                failed_stage=response.get("primary_error"),
+                attempts=response.get("attempts", 1))
         return jsonify(response)
 
     @app.post("/api/coach/conversation")
