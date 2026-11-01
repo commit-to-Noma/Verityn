@@ -108,7 +108,7 @@ const STAGE_CONTENT: Record<Stage, null> = {
 }
 
 const COACH_INTRODUCTION =
-  "Hi, I'm your coach. This is the Guided Lab: you'll make a prediction, build a circuit, and test it. First question: if you connect the two loose ends, what do you think will happen to the bulb?"
+  "Hi, I'm your coach. Predict first — then build the circuit and test it."
 
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)

@@ -147,6 +147,10 @@ export default function PredictionScreen({
           label={`${challenge.title} starting circuit`}
           className="h-64 sm:h-72 md:h-[min(60vh,460px)]"
         />
+        <p className="text-ink-muted text-sm">
+          <span className="text-flow font-medium">Coach: </span>
+          study the circuit, then lock in your prediction.
+        </p>
       </div>
       <div className="flex min-w-0 flex-col gap-4">
       {onCoachVoiceEnabledChange !== undefined && (
