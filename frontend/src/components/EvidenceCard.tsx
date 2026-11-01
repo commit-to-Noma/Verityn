@@ -94,6 +94,7 @@ export default function EvidenceCard({
   return (
     <section aria-label="Evidence card" className="glass-panel flex flex-col gap-3 p-4">
       <h3 className="font-semibold">Evidence card</h3>
+      <p className="text-sm text-ink-muted">A shareable record of this session.</p>
       {preview !== null && preview !== undefined ? (
         <img
           src={preview}
