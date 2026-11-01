@@ -6,6 +6,7 @@ separately. Voice audio is forwarded to Meta only after a learner starts
 a microphone recording. Stack traces never leave the server.
 """
 
+import math
 import os
 import sys
 import time
@@ -23,6 +24,50 @@ MALFORMED_REQUEST = "MALFORMED_REQUEST"
 # 2 MB admits the longest honest clip (~40 s) with framing headroom.
 MAX_VOICE_BYTES = 2 * 1024 * 1024
 MAX_COACH_MESSAGE_CHARS = 500
+MIN_BATTERY_VOLTS = 0.1
+MAX_BATTERY_VOLTS = 24.0
+MIN_OHMS = 0.1
+MAX_OHMS = 1_000_000.0
+MIN_RATED_VOLTS = 0.1
+MAX_RATED_VOLTS = 24.0
+MIN_SAFE_WATTS = 0.1
+MAX_SAFE_WATTS = 1000.0
+
+
+def _in_range(value, low, high):
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(float(value)) and low <= float(value) <= high)
+
+
+def _numeric_range_error(netlist):
+    if not isinstance(netlist, dict):
+        return None
+    comps = netlist.get("components")
+    if not isinstance(comps, list):
+        return None
+    for item in comps:
+        if not isinstance(item, dict):
+            continue
+        ctype = item.get("type")
+        cid = item.get("id")
+        if ctype == "battery" and "volts" in item \
+                and not _in_range(item["volts"], MIN_BATTERY_VOLTS, MAX_BATTERY_VOLTS):
+            return (f"Battery '{cid}' volts must be finite "
+                    f"{MIN_BATTERY_VOLTS} to {MAX_BATTERY_VOLTS} V.")
+        if ctype == "resistor" and "ohms" in item \
+                and not _in_range(item["ohms"], MIN_OHMS, MAX_OHMS):
+            return (f"Resistor '{cid}' ohms must be finite "
+                    f"{MIN_OHMS} to {MAX_OHMS}.")
+        if ctype == "bulb":
+            if "rated_volts" in item and not _in_range(
+                    item["rated_volts"], MIN_RATED_VOLTS, MAX_RATED_VOLTS):
+                return (f"Bulb '{cid}' rated_volts must be finite "
+                        f"{MIN_RATED_VOLTS} to {MAX_RATED_VOLTS} V.")
+            if "max_safe_watts" in item and not _in_range(
+                    item["max_safe_watts"], MIN_SAFE_WATTS, MAX_SAFE_WATTS):
+                return (f"Bulb '{cid}' max_safe_watts must be finite "
+                        f"{MIN_SAFE_WATTS} to {MAX_SAFE_WATTS} W.")
+    return None
 
 
 def _elapsed_ms(start):
@@ -131,6 +176,9 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         body = _read_json_object()
         if body is None:
             return _malformed_request("Request body must be a JSON object.")
+        range_error = _numeric_range_error(body)
+        if range_error is not None:
+            return _malformed_request(range_error)
         return jsonify(_result_to_dict(solver.solve(body)))
 
     @app.post("/api/evaluate")
@@ -143,6 +191,14 @@ def create_app(provider=None, fallback=None, vision_provider=None,
                 "error_code": MALFORMED_REQUEST,
                 "error_message": "Request body must be a JSON object "
                                  "with 'claim' and 'netlist'.",
+            }), 400
+        range_error = _numeric_range_error(body["netlist"])
+        if range_error is not None:
+            return jsonify({
+                "result": None,
+                "verdict": None,
+                "error_code": MALFORMED_REQUEST,
+                "error_message": range_error,
             }), 400
         result = solver.solve(body["netlist"])
         verdict = evaluator.evaluate(body["claim"], body["netlist"], result)
@@ -185,6 +241,9 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         if rung not in coach.VALID_RUNGS:
             return _malformed_request(
                 "Rung must be one of R1, R2, R4.")
+        range_error = _numeric_range_error(netlist)
+        if range_error is not None:
+            return _malformed_request(range_error)
         start = time.perf_counter()
         response = coach.derive_eligibility(
             store, session_id, netlist, active_provider,
@@ -253,6 +312,9 @@ def create_app(provider=None, fallback=None, vision_provider=None,
         netlist = body.get("netlist")
         if not isinstance(netlist, dict):
             return _malformed_request("Request needs a netlist object.")
+        range_error = _numeric_range_error(netlist)
+        if range_error is not None:
+            return _malformed_request(range_error)
         start = time.perf_counter()
         response = coach.explain_result(
             netlist, active_provider, fallback=active_fallback)
