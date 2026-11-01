@@ -98,7 +98,10 @@ export function perimeterSlots(count: number): Array<{ col: number; row: number 
 }
 
 /** Rebuild a readable diagram from the exact component and wire topology that was solved. */
-export function netlistPreviewSeed(netlist: Netlist): LessonSeed | null {
+export function netlistPreviewSeed(
+  netlist: Netlist,
+  positions?: Record<string, { x: number; y: number }>,
+): LessonSeed | null {
   const parts = netlist.components.filter((component) => component.type !== 'wire')
   if (
     parts.length === 0 ||
@@ -134,6 +137,11 @@ export function netlistPreviewSeed(netlist: Netlist): LessonSeed | null {
     battery?.id ?? null,
   )
   const slots = perimeterSlots(orderedIds.length)
+  const hasSavedPositions = orderedIds.every(
+    (id) =>
+      Number.isFinite(positions?.[id]?.x) &&
+      Number.isFinite(positions?.[id]?.y),
+  )
   const byId = new Map(parts.map((part) => [part.id, part]))
   const nodes: SeedNode[] = orderedIds.map((id, index) => {
     const component = byId.get(id)
@@ -141,6 +149,7 @@ export function netlistPreviewSeed(netlist: Netlist): LessonSeed | null {
       throw new Error(`Preview lost part ${id}`)
     }
     const slot = slots[index] ?? { col: 0, row: 0 }
+    const savedPosition = hasSavedPositions ? positions?.[id] : undefined
     return {
       id: component.id,
       kind: component.type,
@@ -148,8 +157,8 @@ export function netlistPreviewSeed(netlist: Netlist): LessonSeed | null {
       volts: component.type === 'battery' ? component.volts : undefined,
       ratedVolts: component.type === 'bulb' ? component.rated_volts : undefined,
       maxSafeWatts: component.type === 'bulb' ? component.max_safe_watts : undefined,
-      x: 80 + slot.col * PREVIEW_X_STEP,
-      y: 80 + slot.row * PREVIEW_Y_STEP,
+      x: savedPosition?.x ?? 80 + slot.col * PREVIEW_X_STEP,
+      y: savedPosition?.y ?? 80 + slot.row * PREVIEW_Y_STEP,
     }
   })
   const edges: SeedEdge[] = wires.map((wire) => ({

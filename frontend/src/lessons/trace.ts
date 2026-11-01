@@ -78,6 +78,8 @@ export interface TraceInput {
   expectedLit: boolean | null
   coach: CoachTraceOutcome | null
   coachAvailable: boolean
+  /** Canvas node positions captured with the tested netlist for the finale. */
+  nodePositions?: Record<string, { x: number; y: number }>
   /** Demonstration timeline; only events that actually occurred. */
   demonstrations?: DemoTraceEvent[]
 }

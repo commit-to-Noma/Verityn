@@ -17,6 +17,7 @@ export interface EvidenceCardModel {
   /** Distinct Meta tool short labels, first-seen order. */
   metaTools: string[]
   appUrl: string
+  reflection: string | null
 }
 
 export interface TraceCountInput {
@@ -109,6 +110,7 @@ export function buildEvidenceCard(
   counts: TraceCountInput,
   appUrl: string,
   includeWhy = false,
+  reflection?: string | null,
 ): EvidenceCardModel | null {
   const first = chapters[0]
   if (first?.input == null) {
@@ -132,6 +134,7 @@ export function buildEvidenceCard(
     fallbacks: counts.fallbacks,
     metaTools: metaToolChips(counts.tools),
     appUrl,
+    reflection: reflection?.trim() || null,
   }
 }
 
@@ -144,6 +147,7 @@ export function cardLines(model: EvidenceCardModel): string[] {
   return [
     `Verityn · ${model.lesson}`,
     ...model.chapterLines,
+    ...(model.reflection === null ? [] : [`My reflection: ${model.reflection}`]),
     model.rung === null ? 'Coach: not asked' : `Help reached: ${RUNG_NAME[model.rung] ?? model.rung}`,
     `Trace: ${plural(model.total, 'call')} · ${model.metaCalls} Meta · ${plural(model.rejections, 'rejection')} · ${plural(model.fallbacks, 'fallback')}`,
     'Computed by a solver. Not an AI score.',
@@ -349,6 +353,13 @@ export async function renderEvidencePng(
     ctx.fillStyle = '#cbd5e1'
     ctx.fillText(line, 72, y, 700)
     y += 56
+  }
+  if (model.reflection !== null) {
+    ctx.fillStyle = '#cbd5e1'
+    ctx.font = '18px sans-serif'
+    wrapLine(`My reflection: ${model.reflection}`, 70).forEach((line, index) => {
+      ctx.fillText(line, 72, y + index * 22, 700)
+    })
   }
   drawMiniCircuit(ctx, 800, 140, model.lit)
   drawRungDots(ctx, 72, 452, model.rung)

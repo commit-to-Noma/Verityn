@@ -51,6 +51,30 @@ describe('netlistPreviewSeed', () => {
     ])
   })
 
+  it('uses the saved node positions when every circuit part has one', () => {
+    const netlist: Netlist = {
+      components: [
+        { id: 'B1', type: 'battery', volts: 6, a: 'B1.a', b: 'B1.b' },
+        { id: 'L1', type: 'bulb', a: 'L1.a', b: 'L1.b' },
+        { id: 'W1', type: 'wire', a: 'B1.a', b: 'L1.a' },
+        { id: 'W2', type: 'wire', a: 'L1.b', b: 'B1.b' },
+      ],
+    }
+    const positions = {
+      B1: { x: 460, y: 120 },
+      L1: { x: 120, y: 360 },
+    }
+
+    expect(netlistPreviewSeed(netlist, positions)?.nodes.map(({ id, x, y }) => ({ id, x, y }))).toEqual([
+      { id: 'B1', x: 460, y: 120 },
+      { id: 'L1', x: 120, y: 360 },
+    ])
+    expect(netlistPreviewSeed(netlist, { B1: positions.B1 })?.nodes.map(({ id, x, y }) => ({ id, x, y }))).toEqual([
+      { id: 'B1', x: 80, y: 80 },
+      { id: 'L1', x: 340, y: 80 },
+    ])
+  })
+
   it('places consecutive loop parts on adjacent perimeter cells', () => {
     expect(perimeterSlots(4)).toEqual([
       { col: 0, row: 0 },

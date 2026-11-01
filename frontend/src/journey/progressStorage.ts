@@ -43,6 +43,22 @@ function isNumberRecord(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every((item) => typeof item === 'number')
 }
 
+function isNodePositionRecord(
+  value: unknown,
+): value is Record<string, { x: number; y: number }> {
+  return (
+    isRecord(value) &&
+    Object.values(value).every(
+      (position) =>
+        isRecord(position) &&
+        typeof position.x === 'number' &&
+        Number.isFinite(position.x) &&
+        typeof position.y === 'number' &&
+        Number.isFinite(position.y),
+    )
+  )
+}
+
 function isSimulateResult(value: unknown): value is SimulateResult {
   return (
     isRecord(value) &&
@@ -122,6 +138,7 @@ function isTraceInput(value: unknown): value is TraceInput {
     (value.expectedLit === null || typeof value.expectedLit === 'boolean') &&
     (value.coach === null || isCoachOutcome(value.coach)) &&
     typeof value.coachAvailable === 'boolean' &&
+    (value.nodePositions === undefined || isNodePositionRecord(value.nodePositions)) &&
     (value.demonstrations === undefined ||
       (Array.isArray(value.demonstrations) && value.demonstrations.every(isDemoEvent)))
   )

@@ -72,6 +72,20 @@ describe('buildEvidenceCard', () => {
     expect(model?.chapterLines[0]).toBe('1 · Light the bulb: predicted No → 0.6 A · 3.6 W')
   })
 
+  it('adds an opted-in reflection without changing the three chapter lines', () => {
+    const model = buildEvidenceCard(
+      [chapter({ input: SOLVED_INPUT })],
+      { total: 0, metaCalls: 0, rejections: 0, fallbacks: 0, tools: [] },
+      'http://x',
+      false,
+      'I noticed the switch gap.',
+    )
+    expect(model?.chapterLines).toHaveLength(3)
+    expect(cardLines(model ?? fail('model is null'))).toContain(
+      'My reflection: I noticed the switch gap.',
+    )
+  })
+
   it('omits solo and rung when the session never produced them', () => {
     const model = buildEvidenceCard(
       [chapter({ input: SOLVED_INPUT })],

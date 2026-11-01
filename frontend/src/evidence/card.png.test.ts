@@ -26,6 +26,7 @@ function model(partial: Partial<EvidenceCardModel> = {}): EvidenceCardModel {
     fallbacks: 1,
     metaTools: ['Spark', 'Voice'],
     appUrl: 'http://127.0.0.1:5173',
+    reflection: null,
     ...partial,
   }
 }
@@ -143,6 +144,21 @@ describe('renderEvidencePng layout', () => {
     expect(drawn).toContain('Meta Spark')
     expect(drawn).toContain('Meta Voice')
     expect(drawn).toContain('Reached Pointer')
+  })
+
+  it('draws an opted-in reflection above the help ladder without overlap', async () => {
+    const { texts } = installCanvasStub()
+    try {
+      await renderEvidencePng(
+        model({ reflection: 'I noticed the open switch leaves a gap in the loop.' }),
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    const reflection = texts.filter((call) => call.text.startsWith('My reflection:'))
+    expect(reflection).toHaveLength(1)
+    expect(reflection[0].y).toBeLessThan(438)
+    expect(reflection[0].y).toBeGreaterThan(340)
   })
 
   it('omits chips and reports honestly when the session used no Meta tools', async () => {

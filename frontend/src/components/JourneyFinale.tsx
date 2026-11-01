@@ -1,14 +1,104 @@
+import { useEffect, useRef, useState } from 'react'
 import type { ChapterRecap } from '../journey/story'
-import { learningProgress, MISSING_CHAPTER } from '../journey/story'
-import { L1 } from '../lessons/l1'
+import { MISSING_CHAPTER } from '../journey/story'
+import { ApiError, explainResult, providerBadge } from '../api/client'
+import { formatReading } from './format'
 import { netlistPreviewSeed } from '../canvas/netlistPreview'
+import { CHOICE_LABELS } from '../lessons/lesson'
+import type { TraceInput } from '../lessons/trace'
 import CircuitPreview from './CircuitPreview'
 import EvidenceCard from './EvidenceCard'
 import EvidenceTrace from './EvidenceTrace'
-import JourneyStory from './JourneyStory'
+import MicButton from '../voice/MicButton'
 import { useProofMode } from '../proof/store'
 
-/** Finale: show the verified circuit first, with detailed evidence on demand. */
+const CHAPTER_TITLES = ['Light the bulb', 'Open switch', 'Solo']
+
+type PolishState =
+  | { phase: 'loading' }
+  | { phase: 'done'; text: string; provider: string }
+  | { phase: 'error'; message: string }
+
+function hasSavedPositions(input: TraceInput | null): boolean {
+  const netlist = input?.netlist
+  const positions = input?.nodePositions
+  if (netlist === null || netlist === undefined || positions === undefined) {
+    return false
+  }
+  const parts = netlist.components.filter((component) => component.type !== 'wire')
+  return parts.length > 0 && parts.every((part) => {
+    const position = positions[part.id]
+    return position !== undefined && Number.isFinite(position.x) && Number.isFinite(position.y)
+  })
+}
+
+function readingsFor(input: TraceInput | null): string[] {
+  if (input?.result?.ok !== true || input.netlist === null) {
+    return []
+  }
+  const bulbIndexes = new Map<string, number>()
+  let nextBulb = 0
+  for (const component of input.netlist.components) {
+    if (component.type === 'bulb') {
+      nextBulb += 1
+      bulbIndexes.set(component.id, nextBulb)
+    }
+  }
+  return input.netlist.components.flatMap((component) => {
+    if (component.type !== 'battery' && component.type !== 'bulb') {
+      return []
+    }
+    const reading = input.result?.components[component.id]
+    if (reading === undefined) {
+      return []
+    }
+    const label =
+      component.type === 'battery'
+        ? 'Battery'
+        : `Bulb ${bulbIndexes.get(component.id) ?? 1}`
+    return [
+      `${label}: ${formatReading(reading.voltage)} V · ${formatReading(reading.current)} A · ${formatReading(reading.power)} W`,
+    ]
+  })
+}
+
+function conceptFor(chapter: ChapterRecap, input: TraceInput | null): string | null {
+  if (input?.result?.ok !== true || input.netlist === null) {
+    return null
+  }
+  const bulb = input.netlist.components.find((component) => component.type === 'bulb')
+  const reading = bulb === undefined ? undefined : input.result.components[bulb.id]
+  if (chapter.solo) {
+    const bulbs = input.netlist.components.filter((component) => component.type === 'bulb')
+    const second = bulbs[1]
+    const secondReading = second === undefined ? undefined : input.result.components[second.id]
+    const battery = input.netlist.components.find((component) => component.type === 'battery')
+    const batteryReading = battery === undefined ? undefined : input.result.components[battery.id]
+    if (secondReading !== undefined && batteryReading !== undefined) {
+      return `The second bulb is connected across the source; the solver measured ${formatReading(secondReading.voltage)} V across it and ${formatReading(batteryReading.voltage)} V at the battery.`
+    }
+  }
+  if (chapter.id === 'L1T1' && reading !== undefined) {
+    return `The open switch breaks the loop; the solver measured ${formatReading(reading.current)} A through the bulb.`
+  }
+  if (reading !== undefined) {
+    return `A complete loop gives current a path through the bulb; the solver measured ${formatReading(reading.current)} A.`
+  }
+  return 'The solver recorded this circuit; its component readings are shown above.'
+}
+
+function saidByLearner(input: TraceInput | null): string {
+  const prediction = input?.prediction
+  if (prediction === null || prediction === undefined) {
+    return 'No prediction was recorded.'
+  }
+  const why = prediction.why.trim()
+  return why === ''
+    ? `You predicted ${CHOICE_LABELS[prediction.choice]}.`
+    : `You said: “${why}”`
+}
+
+/** Finale: three saved circuits, their predictions, and solver measurements. */
 export default function JourneyFinale({
   chapters,
   onReturnHub,
@@ -18,178 +108,260 @@ export default function JourneyFinale({
   onReturnHub: () => void
   onExploreLens: () => void
 }) {
-  const transfer = chapters.find((chapter) => chapter.solo)?.input
-  const previewSeed =
-    transfer?.netlist === null || transfer?.netlist === undefined
-      ? null
-      : netlistPreviewSeed(transfer.netlist)
-  const verifiedTransfer =
-    transfer?.result?.ok === true &&
-    transfer.verdict?.status === 'CONSISTENT' &&
-    previewSeed !== null
-  const soloBuilt = transfer?.netlist !== null && transfer?.netlist !== undefined && previewSeed !== null
+  const [polish, setPolish] = useState<Record<string, PolishState>>({})
+  const [reflection, setReflection] = useState('')
+  const [includeReflection, setIncludeReflection] = useState(false)
+  const [reflectionStatus, setReflectionStatus] = useState('')
+  const controllers = useRef(new Map<string, AbortController>())
   const proof = useProofMode()
-  const progress = learningProgress(chapters)
-  const completedSteps = progress.filter((step) => step.complete).length
-  const progressPercent = Math.round((completedSteps / progress.length) * 100)
+
+  useEffect(
+    () => () => {
+      controllers.current.forEach((controller) => controller.abort())
+    },
+    [],
+  )
+
+  const polishConcept = async (chapter: ChapterRecap) => {
+    const input = chapter.input
+    if (input?.netlist === null || input?.netlist === undefined || input.result?.ok !== true) {
+      return
+    }
+    controllers.current.get(chapter.id)?.abort()
+    const controller = new AbortController()
+    controllers.current.set(chapter.id, controller)
+    setPolish((current) => ({ ...current, [chapter.id]: { phase: 'loading' } }))
+    try {
+      const answer = await explainResult(input.netlist, controller.signal)
+      if (controller.signal.aborted) {
+        return
+      }
+      if (!answer.valid) {
+        setPolish((current) => ({
+          ...current,
+          [chapter.id]: {
+            phase: 'error',
+            message: 'The explanation did not pass the number guard; the template remains.',
+          },
+        }))
+        return
+      }
+      setPolish((current) => ({
+        ...current,
+        [chapter.id]: {
+          phase: 'done',
+          text: answer.text,
+          provider: answer.provider,
+        },
+      }))
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return
+      }
+      setPolish((current) => ({
+        ...current,
+        [chapter.id]: {
+          phase: 'error',
+          message: error instanceof ApiError
+            ? error.message
+            : 'Could not reach the explanation service; the template remains.',
+        },
+      }))
+    } finally {
+      if (controllers.current.get(chapter.id) === controller) {
+        controllers.current.delete(chapter.id)
+      }
+    }
+  }
+
   return (
     <section aria-labelledby="finale-heading" className="flex flex-col gap-5">
       <header>
         <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-flow">
-          Journey complete
+          Guided Lab
         </p>
-        <h2 id="finale-heading" className="text-2xl font-semibold">
-          {verifiedTransfer ? 'Your solo prediction matched' : 'Your solo test is complete'}
-        </h2>
+        <h2 id="finale-heading" className="text-2xl font-semibold">Your journey</h2>
         <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-          Review what you predicted, what this circuit measured, and what you tried independently.
+          Three circuits from this session, with what you said and what the solver measured.
         </p>
       </header>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
-        <article className="glass-panel flex min-w-0 flex-col gap-3 p-4">
-          <div>
-            <h3 className="font-semibold">See what changed</h3>
-            <p className="text-ink-muted mt-1 text-sm">
-              Compare the first open gap with the circuit you built independently.
-            </p>
-          </div>
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            <section className="min-w-0" aria-label="Starting circuit">
-              <h4 className="mb-1 text-sm font-semibold">Start · open gap</h4>
-              <p className="mb-2 text-xs text-ink-muted">One bulb, with a loose terminal.</p>
-              <CircuitPreview
-                seed={L1.seed}
-                label="Starting circuit with one bulb and an open gap"
-                className="h-[190px] sm:h-[230px]"
-              />
-            </section>
-            <section className="min-w-0" aria-label="Independent solo circuit">
-              <h4 className="mb-1 text-sm font-semibold">Your solo test · complete loop</h4>
-              <p className="mb-2 text-xs text-ink-muted">
-                {verifiedTransfer
-                  ? 'Your tested two-bulb circuit, completed without a coach.'
-                  : soloBuilt
-                    ? 'Your tested wiring, completed without a coach.'
-                    : 'Available after a solo run.'}
-              </p>
-              {soloBuilt && transfer?.result !== null && transfer?.result !== undefined ? (
-                <CircuitPreview
-                  seed={previewSeed}
-                  label="Reconstructed solo circuit from the tested wiring"
-                  result={transfer.result}
-                  className="h-[190px] sm:h-[230px]"
-                />
-              ) : (
-                <div
-                  aria-label="Verified solo circuit unavailable"
-                  className="canvas-grid flex h-[190px] items-center justify-center rounded-2xl border border-glass-border p-6 text-center text-sm text-ink-muted sm:h-[230px]"
-                >
-                  {MISSING_CHAPTER}
-                </div>
-              )}
-            </section>
-          </div>
-          {soloBuilt && transfer?.result !== null && transfer?.result !== undefined && (
-            <div className="flex flex-wrap gap-2" aria-label="Final circuit measurements">
-              {Object.entries(transfer.result.components)
-                .filter(([id]) => id.startsWith('L'))
-                .map(([id, reading]) => (
-                  <span
-                    key={id}
-                    className="rounded-full border border-ok/50 px-3 py-1 text-xs font-medium text-ink"
-                  >
-                    {id}: {reading.current.toFixed(1)} A · {reading.power.toFixed(1)} W
-                  </span>
-                ))}
-            </div>
-          )}
-          <p className="rounded-xl border border-flow/30 bg-flow/5 p-3 text-sm text-ink">
-            Reflection: Which connection brought the second bulb into the complete path, and what readings support your conclusion?
-          </p>
-          {verifiedTransfer && (
-            <p className="text-ink-muted text-xs">
-              Circuit layout is rearranged for readability. The solo diagram’s parts and connections come from your tested run.
-            </p>
-          )}
-        </article>
-        <div className="flex min-w-0 flex-col gap-3">
-          <section aria-label="Your learning path" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-semibold">Your learning path</h3>
-              <span className="text-ink-muted text-xs">
-                {completedSteps}/{progress.length} challenges
-              </span>
-            </div>
-            <div
-              role="progressbar"
-              aria-label="Challenges tested"
-              aria-valuemin={0}
-              aria-valuemax={progress.length}
-              aria-valuenow={completedSteps}
-              className="h-2 overflow-hidden rounded-full bg-glass-strong"
-            >
-              <div
-                className="h-full rounded-full bg-flow transition-[width]"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            <ol className="flex flex-col gap-2">
-              {progress.map((step, index) => (
-                <li key={step.title} className="glass-panel p-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h4 className="text-sm font-semibold">
-                      <span className="text-flow mr-1.5">{String(index + 1).padStart(2, '0')}</span>
-                      {step.title}
-                    </h4>
-                    {!step.complete && (
-                      <span className="text-ink-muted shrink-0 text-[11px]">Not reached</span>
+
+      <ol aria-label="Your circuit journey" className="flex flex-col gap-4">
+        {chapters.map((chapter, index) => {
+          const input = chapter.input
+          const exactLayout = hasSavedPositions(input)
+          const seed =
+            input?.netlist === null || input?.netlist === undefined
+              ? null
+              : netlistPreviewSeed(
+                  input.netlist,
+                  exactLayout ? input.nodePositions : undefined,
+                )
+          const readings = readingsFor(input)
+          const concept = conceptFor(chapter, input)
+          const polishState = polish[chapter.id]
+          const title = CHAPTER_TITLES[index] ?? chapter.title
+          return (
+            <li key={chapter.id}>
+              <article className="glass-panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <section aria-label={`${title} circuit`} className="min-w-0">
+                  <h3 className="mb-2 text-lg font-semibold">
+                    <span className="mr-2 text-flow">{index + 1}</span>
+                    {title}
+                  </h3>
+                  {seed !== null && input?.result !== null && input?.result !== undefined ? (
+                    <>
+                      <CircuitPreview
+                        seed={seed}
+                        label={`${exactLayout ? 'Saved' : 'Redrawn'} ${title} circuit`}
+                        result={input.result}
+                        className="h-[210px] sm:h-[250px]"
+                      />
+                      {!exactLayout && (
+                        <p className="mt-2 text-xs text-ink-muted">Redrawn from your netlist.</p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="canvas-grid flex h-[210px] items-center justify-center rounded-2xl border border-glass-border p-6 text-center text-sm text-ink-muted sm:h-[250px]">
+                      {MISSING_CHAPTER}
+                    </div>
+                  )}
+                </section>
+
+                <div className="flex min-w-0 flex-col gap-3">
+                  <div>
+                    <h4 className="text-sm font-semibold">You said</h4>
+                    <p className="mt-1 break-words text-sm text-ink-muted">{saidByLearner(input)}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold">The solver measured</h4>
+                    {readings.length > 0 ? (
+                      <ul className="mt-1 flex flex-col gap-1 text-sm text-ink-muted">
+                        {readings.map((reading) => <li key={reading}>{reading}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="mt-1 text-sm text-ink-muted">No solver measurements were saved.</p>
                     )}
                   </div>
-                  <p className="mt-2 text-sm">{step.summary}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={onExploreLens}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Open Reality Lens
-            </button>
-            <button
-              type="button"
-              onClick={onReturnHub}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Return to Laboratory
-            </button>
-          </div>
+                  <div className="rounded-xl border border-flow/30 bg-flow/5 p-3">
+                    <h4 className="text-sm font-semibold">Concept</h4>
+                    <p className="mt-1 text-sm">{concept ?? MISSING_CHAPTER}</p>
+                    {input?.netlist !== null &&
+                      input?.netlist !== undefined &&
+                      input.result?.ok === true && (
+                        <div className="mt-3 flex flex-col items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void polishConcept(chapter)}
+                            disabled={polishState?.phase === 'loading'}
+                            className="border-glass-border min-h-[40px] rounded-[10px] border px-3 text-xs font-medium disabled:opacity-50"
+                          >
+                            {polishState?.phase === 'loading'
+                              ? 'Asking Muse Spark…'
+                              : 'Polish with Muse Spark'}
+                          </button>
+                          {polishState?.phase === 'done' && (
+                            <div aria-live="polite">
+                              <p className="text-sm">{polishState.text}</p>
+                              <p className="mt-1 text-xs text-ink-muted">
+                                {polishState.provider === 'meta-spark'
+                                  ? 'Meta Spark'
+                                  : providerBadge(polishState.provider)}
+                              </p>
+                            </div>
+                          )}
+                          {polishState?.phase === 'error' && (
+                            <p className="text-sm text-bad" role="alert">{polishState.message}</p>
+                          )}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              </article>
+            </li>
+          )
+        })}
+      </ol>
+
+      <section aria-label="Reflection" className="glass-panel flex flex-col gap-3 p-4">
+        <h3 className="font-semibold">What connection changed the circuit, and what reading helped you notice?</h3>
+        <div className="relative">
+          <textarea
+            value={reflection}
+            onChange={(event) => {
+              setReflection(event.target.value)
+              setReflectionStatus('')
+            }}
+            maxLength={120}
+            rows={3}
+            aria-label="Your reflection"
+            className="border-glass-border min-h-24 w-full rounded-[10px] border p-3 pr-14 text-base"
+            placeholder="Type your reflection, or use voice."
+          />
+          <MicButton
+            onTranscript={(text) => {
+              setReflection(text.slice(0, 120))
+              setReflectionStatus('Transcript added. Edit it before saving.')
+            }}
+            onStatus={setReflectionStatus}
+          />
         </div>
+        {reflectionStatus !== '' && (
+          <p className="text-ink-muted text-xs" role="status">{reflectionStatus}</p>
+        )}
+        <label className="flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={includeReflection}
+            onChange={(event) => setIncludeReflection(event.target.checked)}
+            className="mt-1"
+          />
+          Add my reflection to the Evidence card
+        </label>
+        {includeReflection && reflection.trim() !== '' && (
+          <div className="rounded-xl border border-flow/30 p-3" aria-label="Saved reflection card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-flow">My reflection</p>
+            <p className="mt-1 break-words text-sm">{reflection.trim()}</p>
+          </div>
+        )}
+      </section>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onExploreLens}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Open Reality Lens
+        </button>
+        <button
+          type="button"
+          onClick={onReturnHub}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Return to Laboratory
+        </button>
       </div>
-      <EvidenceCard chapters={chapters} />
+
+      <EvidenceCard
+        chapters={chapters}
+        reflection={includeReflection ? reflection : null}
+      />
       <details className="glass-panel p-4">
         <summary className="min-h-[44px] cursor-pointer content-center text-sm font-medium">
-          See the full journey and measurements
+          See the full session trace
         </summary>
         <div className="mt-4 flex flex-col gap-5">
-          <JourneyStory chapters={chapters} />
           {chapters.map((chapter) => (
             <article key={chapter.id} className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold">{chapter.title}</h3>
-                {chapter.solo && (
-                  <span className="rounded-full border border-glass-border px-3 py-1 text-xs font-medium text-ink">
-                    Coach off · independent
-                  </span>
-                )}
-              </div>
+              <h3 className="text-lg font-semibold">{chapter.title}</h3>
               {chapter.input === null ? (
                 <p className="text-ink-muted text-sm">{MISSING_CHAPTER}</p>
               ) : proof ? (
                 <EvidenceTrace input={chapter.input} />
-              ) : null}
+              ) : (
+                <p className="text-ink-muted text-sm">Enable Proof to see the solver trace.</p>
+              )}
             </article>
           ))}
         </div>

@@ -1678,9 +1678,12 @@ function CanvasInner({
       expectedLit: choice === undefined ? challenge.expectedStart.lit : null,
       coach: solo ? { phase: 'unavailable', message: SOLO_COACH_MESSAGE } : coachOutcome,
       coachAvailable: choice !== undefined || solo,
+      nodePositions: Object.fromEntries(
+        nodes.map((node) => [node.id, { x: node.position.x, y: node.position.y }]),
+      ),
       demonstrations: demoEvents.length > 0 ? demoEvents : undefined,
     })
-  }, [runState, verdictState, coachOutcome, prediction, challenge, choice, solo, demoEvents])
+  }, [runState, verdictState, coachOutcome, prediction, challenge, choice, solo, demoEvents, nodes])
 
   const handleCoached = (outcome: CoachTraceOutcome) => {
     setCoachOutcome(outcome)

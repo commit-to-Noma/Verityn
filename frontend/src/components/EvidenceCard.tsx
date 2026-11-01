@@ -7,7 +7,13 @@ import { publicUrl } from '../config'
 const PNG_FILENAME = 'verityn-evidence.png'
 
 /** Shareable evidence card: the rendered PNG is the preview and the download. */
-export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] }) {
+export default function EvidenceCard({
+  chapters,
+  reflection,
+}: {
+  chapters: ChapterRecap[]
+  reflection?: string | null
+}) {
   const [tick, setTick] = useState(0)
   const [status, setStatus] = useState('')
   const [includeWhy, setIncludeWhy] = useState(false)
@@ -20,6 +26,7 @@ export default function EvidenceCard({ chapters }: { chapters: ChapterRecap[] })
     { ...traceCounts(events), total: events.length, tools: events.map((event) => event.tool) },
     publicUrl(),
     includeWhy,
+    reflection,
   )
   const lines = model === null ? [] : cardLines(model)
   const key = model === null ? null : `${tick}:${lines.join('\n')}`

@@ -63,6 +63,7 @@ describe('journey progress storage', () => {
           expectedLit: null,
           coach: null,
           coachAvailable: false,
+          nodePositions: { B1: { x: 80, y: 80 }, L1: { x: 340, y: 80 } },
         },
       },
     }
@@ -93,6 +94,31 @@ describe('journey progress storage', () => {
     storage.setItem(
       JOURNEY_PROGRESS_KEY,
       JSON.stringify({ ...checkpoint, savedAt: 1_000, snapshots: { L1: { broken: true } } }),
+    )
+    expect(readJourneyCheckpoint(storage, 1_500).status).toBe('invalid')
+  })
+
+  it('rejects non-finite saved node positions', () => {
+    const storage = memoryStorage()
+    storage.setItem(
+      JOURNEY_PROGRESS_KEY,
+      JSON.stringify({
+        ...checkpoint,
+        savedAt: 1_000,
+        snapshots: {
+          L1: {
+            prediction: null,
+            question: 'q',
+            netlist: null,
+            result: null,
+            verdict: null,
+            expectedLit: null,
+            coach: null,
+            coachAvailable: false,
+            nodePositions: { B1: { x: Number.NaN, y: 80 } },
+          },
+        },
+      }),
     )
     expect(readJourneyCheckpoint(storage, 1_500).status).toBe('invalid')
   })
