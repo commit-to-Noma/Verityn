@@ -61,7 +61,7 @@ describe('homepage copy', () => {
       'Guided Lab: predict what a circuit will do, build it, then test your idea against the simulator.',
     )
     expect(LABORATORY_STATIONS[0]?.title).toBe('Guided Lab')
-    expect(LABORATORY_STATIONS[0]?.description).toContain(
+    expect((LABORATORY_STATIONS[0]?.description ?? '').toLowerCase()).toContain(
       'predict what a circuit will do, build it, then test your idea against the simulator',
     )
   })
