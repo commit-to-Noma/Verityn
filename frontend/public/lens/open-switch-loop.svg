@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500" role="img" aria-label="Open switch loop schematic">
+  <rect x="0" y="0" width="800" height="500" fill="#0b1120"/>
+  <g stroke="#67e8f9" stroke-width="3" stroke-linecap="round" fill="none">
+    <line x1="150" y1="120" x2="150" y2="380"/>
+    <line x1="650" y1="120" x2="650" y2="380"/>
+    <line x1="150" y1="120" x2="370" y2="120"/>
+    <line x1="430" y1="120" x2="650" y2="120"/>
+    <line x1="150" y1="380" x2="650" y2="380"/>
+  </g>
+  <g stroke="#e2e8f0" stroke-linecap="round">
+    <line x1="118" y1="240" x2="182" y2="240" stroke-width="4"/>
+    <line x1="135" y1="262" x2="165" y2="262" stroke-width="7"/>
+  </g>
+  <circle cx="650" cy="250" r="30" fill="#0b1120" stroke="#e2e8f0" stroke-width="3"/>
+  <g stroke="#e2e8f0" stroke-width="2" stroke-linecap="round">
+    <line x1="631" y1="231" x2="669" y2="269"/>
+    <line x1="669" y1="231" x2="631" y2="269"/>
+  </g>
+  <g fill="#e2e8f0">
+    <circle cx="370" cy="120" r="5"/>
+    <circle cx="430" cy="120" r="5"/>
+  </g>
+  <line x1="370" y1="120" x2="416" y2="94" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round"/>
+  <g font-family="ui-monospace, monospace" font-size="20" fill="#94a3b8" text-anchor="middle">
+    <text x="150" y="312">B1 · 6 V</text>
+    <text x="650" y="330">L1</text>
+    <text x="400" y="70">S1 · open</text>
+  </g>
+</svg>

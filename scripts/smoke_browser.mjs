@@ -832,6 +832,7 @@ async function drive() {
   check('lens back button', await hasText('← Back to guided journey'))
   await waitFor(() => hasText('Your diagram'), 'lens lab', 20000)
   check('upload panel first', await hasText('Choose an image'))
+  check('lens hero focuses the upload', await hasText('Drop a circuit diagram to see it'))
   check('samples below upload', await hasText('Sample diagrams'))
   // Stub the proposal at the network layer: no live Meta call in smoke.
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
@@ -839,8 +840,12 @@ async function drive() {
   await waitFor(() => hasText('Interpret with Meta Spark'), 'lens selected')
   check('preview visible', await ev(`!!document.querySelector('img[alt="Uploaded schematic"]')`))
   check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
+  check('drop zone offered', await ev(`!!document.querySelector('[aria-label="Diagram drop zone"]')`))
+  check('lens prediction offered', await hasText('Before we interpret: will it light?'))
+  await clickButton('No')
   await clickButton('Interpret with Meta Spark')
   await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
+  check('gallery collapses during review', !(await hasText('Textbook loop')))
   check('review defaults to Compare', await ev(`(() => {
     const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Compare');
     return b?.getAttribute('aria-pressed') === 'true';
@@ -860,8 +865,15 @@ async function drive() {
   check('proof attribution', await hasText("Computed by Verityn's solver."))
   check('triptych photo panel', await hasText('Your photo or sketch'))
   check('triptych reading panel', await hasText('Confirmed circuit') && await hasText('Proposed by Meta, reviewed by you.'))
-  await clickButton('Try another image')
-  await waitFor(() => hasText('Choose an image'), 'lens reset')
+  check('lens verdict uses the prediction', await hasText('You predicted No.') && await hasText('it stayed dark'))
+  check('photo readings measured', await hasText('dark ·'))
+  await clickButton('Test this in the Experiment Bay')
+  await waitFor(() => hasText('FREE BENCH'), 'lens handoff')
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Run 1 - Reality Lens import'), 'handoff seed runs', 25000)
+  check('lens handoff seeds the bay', await hasText('Run 1 - Reality Lens import'))
+  await clickButton('Reality Lens')
+  await waitFor(() => hasText('Choose an image'), 'lens fresh after handoff')
   visionStubs.push(JSON.stringify({
     proposal: { status: 'unsupported', components: [], connections: [] },
     assumptions: [],

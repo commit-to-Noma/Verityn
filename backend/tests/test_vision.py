@@ -43,10 +43,11 @@ GOOD_PROPOSAL = {
     "connections": [
         {"from": {"node": "B1", "terminal": "a"},
          "to": {"node": "S1", "terminal": "a"}, "uncertain": False,
-         "evidence": {"region_id": "r-wire-1"}},
+         "evidence": {"region_id": "r-wire-1",
+                       "path": [[0.22, 0.2], [0.3, 0.1], [0.4, 0.2]]}},
         {"from": {"node": "S1", "terminal": "b"},
          "to": {"node": "L1", "terminal": "a"}, "uncertain": True,
-         "evidence": {"region_id": "r-wire-2"}},
+         "evidence": {"region_id": "r-wire-2", "path": None}},
     ],
 }
 
@@ -149,6 +150,30 @@ def test_validate_proposal_rejects_malformed(bad):
         vision.validate_proposal(bad)
     assert exc.value.stage == "validate"
     assert str(exc.value) == "Vision proposal rejected."
+
+
+def test_validate_proposal_keeps_wire_paths():
+    out = vision.validate_proposal(copy.deepcopy(GOOD_PROPOSAL))
+    assert out["connections"][0]["evidence"]["path"] == [
+        [0.22, 0.2], [0.3, 0.1], [0.4, 0.2]]
+    assert out["connections"][1]["evidence"]["path"] is None
+
+
+@pytest.mark.parametrize("path", [
+    [[0.1]],                      # ragged point
+    [[0.1, 0.2, 0.3]],            # 3-D point
+    [[0.1, 0.2]],                 # single point
+    [[[0.1, 0.2]] * 33][0],       # too many points
+    [[-0.1, 0.2], [0.3, 0.4]],    # out of range
+    [[0.1, 1.2], [0.3, 0.4]],     # out of range
+    [[0.1, "x"], [0.3, 0.4]],     # non-numeric
+    "straight across",
+    [["a"], ["b"]],
+])
+def test_validate_proposal_rejects_bad_wire_paths(path):
+    bad = _mutated(("connections", 0, "evidence", "path"), path)
+    with pytest.raises(coach.CoachProviderError):
+        vision.validate_proposal(bad)
 
 
 def test_propose_sends_image_and_schema(monkeypatch, provider):
@@ -571,7 +596,9 @@ def test_system_prompt_states_readiness_rule():
                    "every switch state is explicitly true or false",
                    "every battery polarity is determined",
                    "Otherwise mark the proposal needs_review",
-                   "Never invent missing information to obtain ready"):
+                   "Never invent missing information to obtain ready",
+                   "traces its visible wire",
+                   "Never invent a path"):
         assert phrase in prompt, phrase
 
 
@@ -599,6 +626,21 @@ def test_switch_fixture_validates_needs_review():
                    if c["type"] == "battery")
     assert battery["polarity"] is None
     assert len(out["connections"]) == 3
+
+
+def test_wired_fixture_mixes_traced_and_untraced_wires():
+    from pathlib import Path
+    path = (Path(__file__).resolve().parents[2] / "tests" / "fixtures"
+            / "vision_live" / "07_wired_loop.proposal.json")
+    doc = json.loads(path.read_text())
+    assert doc["source"] == "synthetic"
+    out = vision.validate_proposal(doc["proposal"])
+    assert out["status"] == "needs_review"
+    paths = [c["evidence"]["path"] for c in out["connections"]]
+    assert paths[0] is not None and len(paths[0]) == 4
+    assert paths[1] is not None and len(paths[1]) == 3
+    assert paths[2] is None
+    assert out["connections"][2]["uncertain"] is True
 
 
 def test_switch_fixture_topology_is_single_loop():

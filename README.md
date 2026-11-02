@@ -38,12 +38,13 @@ plan.
   from a closed action vocabulary; the app validates, previews,
   applies, re-solves, and offers Undo. Invalid actions never
   mutate state.
-- Reality Lens: upload a schematic or photo (or use a verified
-  sample); Meta Spark Vision proposes components, connections,
-  polarity, and provenance; the learner reviews the original
-  beside the editable replica in Compare mode and must confirm
+- Reality Lens: drop, paste, or upload a schematic or photo (or use a
+  sample); Meta Spark Vision proposes components, wire traces,
+  connections, polarity, and provenance; the learner reviews
+  the original beside the editable replica in Compare mode and must confirm
   before the solver runs. `needs_review` and `unsupported`
-  diagrams are refused honestly  -  nothing is guessed.
+  diagrams are refused honestly  -  nothing is guessed. A confirmed circuit
+  can move to the Experiment Bay for free-form testing.
 - Experiment bench: free-form canvas with five starter presets,
   explicit runs, session-local history with current-vs-previous
   comparison, and an optional solver-first explanation.
@@ -109,6 +110,9 @@ plan.
 | Hub health checks retry with visible startup progress | Hub on first load | [Health status tests](./frontend/src/components/HealthStatus.test.tsx) |
 | Voice capture stops after silence and records per-stage timings | Coach Dock voice timing details | [Voice timing tests](./frontend/src/voice/voiceTimings.test.ts) |
 | Finale handoff reuses the saved circuit in Experiment Bay | Journey Finale experiment action | [Finale tests](./frontend/src/components/JourneyFinale.test.tsx) |
+| Lens diagrams upload by drop, paste, picker, or camera | Reality Lens drop zone | [Upload tests](./frontend/src/vision/upload.test.ts) |
+| Traced wires overlay the uploaded photo | Lens review original | [Review tests](./frontend/src/vision/review.test.ts) |
+| Confirmed Lens circuit opens in Experiment Bay | Lens review handoff action | [Experiment Bay seed tests](./frontend/src/experiment/ExperimentPage.test.tsx) |
 
 ## Deliberately out of scope
 

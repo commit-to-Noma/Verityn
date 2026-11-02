@@ -28,6 +28,16 @@ function formatBytes(bytes: number): string {
  * extension also authorizes the upload. Anything else is rejected before any
  * network request can be made.
  */
+/** First file from a drop, paste, or picker list, if any. */
+export function firstLensFile<T extends { name: string; type: string; size: number }>(
+  files: ArrayLike<T> | null | undefined,
+): T | undefined {
+  if (files === null || files === undefined || files.length === 0) {
+    return undefined
+  }
+  return files[0]
+}
+
 export function validateLensFile(file: { name: string; type: string; size: number }): LensFileProblem {
   const byMime = VISION_MIME_TYPES.includes(file.type as (typeof VISION_MIME_TYPES)[number])
   const byExtension = LENS_EXTENSIONS.includes(extensionOf(file.name))

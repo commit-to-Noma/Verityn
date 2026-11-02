@@ -14,9 +14,9 @@ const PROPOSAL: VisionProposal = {
   ],
   connections: [
     { from: { node: 'B1', terminal: 'a' }, to: { node: 'S1', terminal: 'a' }, uncertain: false,
-      evidence: { region_id: 'w1' } },
+      evidence: { region_id: 'w1', path: null } },
     { from: { node: 'S1', terminal: 'b' }, to: { node: 'L1', terminal: 'a' }, uncertain: true,
-      evidence: { region_id: 'w2' } },
+      evidence: { region_id: 'w2', path: null } },
   ],
 }
 

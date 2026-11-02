@@ -403,7 +403,7 @@ describe('proposeCircuit', () => {
     ],
     connections: [
       { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: true,
-        evidence: { region_id: 'r-w1' } },
+        evidence: { region_id: 'r-w1', path: [[0.2, 0.3], [0.5, 0.2], [0.7, 0.3]] } },
     ],
   }
   const good = { proposal, assumptions: ['Battery voltage assumed 6 V.'], provider: 'meta-spark' }
@@ -434,6 +434,18 @@ describe('proposeCircuit', () => {
     await expect(proposeCircuit('data:image/png;base64,AA==')).resolves.toEqual(nulled)
   })
 
+  it('accepts a null wire path for untraced wires', async () => {
+    const nulled = {
+      ...good,
+      proposal: {
+        ...proposal,
+        connections: [{ ...proposal.connections[0], evidence: { region_id: 'r-w1', path: null } }],
+      },
+    }
+    stubFetch(() => okResponse(nulled))
+    await expect(proposeCircuit('data:image/png;base64,AA==')).resolves.toEqual(nulled)
+  })
+
   it.each([
     ['missing proposal', { assumptions: [], provider: 'meta-spark' }],
     ['bad component type', { ...good, proposal: { ...proposal, components: [{ id: 'X1', type: 'resistor' }] } }],
@@ -441,6 +453,8 @@ describe('proposeCircuit', () => {
     ['uncertain mistyped', { ...good, proposal: { ...proposal, connections: [{ from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: 'no' }] } }],
     ['bulb with closed state', { ...good, proposal: { ...proposal, components: [{ ...proposal.components[1], closed: true }] } }],
     ['missing closed key', { ...good, proposal: { ...proposal, components: [{ ...proposal.components[0], closed: undefined }] } }],
+    ['wire path out of range', { ...good, proposal: { ...proposal, connections: [{ ...proposal.connections[0], evidence: { region_id: 'r-w1', path: [[0.2, 0.3], [1.5, 0.2]] } }] } }],
+    ['wire path single point', { ...good, proposal: { ...proposal, connections: [{ ...proposal.connections[0], evidence: { region_id: 'r-w1', path: [[0.2, 0.3]] } }] } }],
     ['assumptions mistyped', { ...good, assumptions: 'none' }],
     ['not an object', []],
   ])('rejects malformed payloads: %s', async (_label, body) => {

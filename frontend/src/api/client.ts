@@ -572,7 +572,8 @@ export interface VisionConnection {
   from: VisionEndpoint
   to: VisionEndpoint
   uncertain: boolean
-  evidence: { region_id: string }
+  /** Traced wire polyline in normalized 0..1 image coords, or null when untraced. */
+  evidence: { region_id: string; path: [number, number][] | null }
 }
 
 export interface VisionProposal {
@@ -647,12 +648,28 @@ function guardVisionProposal(body: unknown): VisionProposal {
       typeof connection.uncertain !== 'boolean' ||
       !isRecord(connection.evidence) ||
       typeof connection.evidence.region_id !== 'string' ||
-      connection.evidence.region_id.trim() === ''
+      connection.evidence.region_id.trim() === '' ||
+      !isWirePath(connection.evidence.path)
     ) {
       throw new ApiError('payload', 'Unexpected response from the server.')
     }
   }
   return body as unknown as VisionProposal
+}
+
+function isWirePath(value: unknown): value is [number, number][] | null {
+  if (value === null) {
+    return true
+  }
+  if (!Array.isArray(value) || value.length < 2 || value.length > 32) {
+    return false
+  }
+  return value.every(
+    (point) =>
+      Array.isArray(point) &&
+      point.length === 2 &&
+      point.every((axis) => typeof axis === 'number' && Number.isFinite(axis) && axis >= 0 && axis <= 1),
+  )
 }
 
 function isVisionComponentEvidence(value: unknown): value is VisionComponentEvidence {

@@ -1,10 +1,11 @@
 """Lens sample pack: curated diagrams against the real solver.
 
-Each Reality Lens sample ships a verified SAM box pair plus a
-hand-authored netlist. Code stays the source of truth for physics:
-these tests prove the solver really produces the pack's expected
-numbers (closed and, where modeled, switch-open), and that every
-box, path, and switch rect lies inside its image.
+Each Reality Lens sample ships detection boxes (spike-verified for
+captures, hand-placed for drawn rehearsals) plus a hand-authored
+netlist. Code stays the source of truth for physics: these tests
+prove the solver really produces the pack's expected numbers
+(closed and, where modeled, switch-open), and that every box,
+path, and switch rect lies inside its image.
 """
 
 import copy
@@ -28,7 +29,7 @@ def pack():
 
 @pytest.fixture(scope="module")
 def samples(pack):
-    assert len(pack["samples"]) == 2
+    assert len(pack["samples"]) == 4
     return {sample["id"]: sample for sample in pack["samples"]}
 
 
@@ -40,7 +41,12 @@ def check_rect(rect, width, height, label):
 
 
 def test_samples_have_honest_metadata(samples):
-    assert set(samples) == {"textbook-loop", "workbench-switch"}
+    assert set(samples) == {
+        "textbook-loop",
+        "workbench-switch",
+        "low-voltage-loop",
+        "open-switch-loop",
+    }
     for sample in samples.values():
         assert sample["modelNote"], sample["id"]
         assert sample["guide"], sample["id"]
@@ -95,3 +101,27 @@ def test_sample_1_has_no_switch(samples):
     assert sample["expectedOpen"] is None
     kinds = [c["type"] for c in sample["netlist"]["components"]]
     assert "switch" not in kinds
+
+
+def test_low_voltage_sample_runs_dimmer(samples):
+    sample = samples["low-voltage-loop"]
+    assert sample["switch"] is None
+    assert sample["expectedOpen"] is None
+    expected = sample["expected"]
+    assert expected["lit"] is True
+    assert expected["current"] == pytest.approx(0.3)
+    assert expected["power"] == pytest.approx(0.9)
+
+
+def test_open_switch_sample_lights_when_closed(samples):
+    sample = samples["open-switch-loop"]
+    assert sample["expected"]["lit"] is False
+    closed = copy.deepcopy(sample["netlist"])
+    for component in closed["components"]:
+        if component["id"] == sample["switch"]["id"]:
+            component["closed"] = True
+    result = solve(closed)
+    assert result.ok is True
+    measurement = result.components["L1"]
+    assert measurement["current"] == pytest.approx(0.6)
+    assert measurement["power"] == pytest.approx(3.6)

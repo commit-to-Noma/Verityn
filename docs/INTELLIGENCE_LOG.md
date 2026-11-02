@@ -19,3 +19,6 @@ the Under the hood Smart details section, and the README.
 - Hub health checks retry with visible startup progress — [health status tests](../frontend/src/components/HealthStatus.test.tsx), also exercised by the browser smoke.
 - Voice capture stops after silence and records per-stage timings — [voice timing tests](../frontend/src/voice/voiceTimings.test.ts).
 - Finale handoff reuses the saved circuit in Experiment Bay — [Finale tests](../frontend/src/components/JourneyFinale.test.tsx) and [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx).
+- Lens diagrams upload by drop, paste, picker, or camera — [upload tests](../frontend/src/vision/upload.test.ts).
+- Traced wires overlay the uploaded photo — [review tests](../frontend/src/vision/review.test.ts) and [vision path tests](../backend/tests/test_vision.py).
+- Confirmed Lens circuit opens in Experiment Bay — [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx), also exercised by the browser smoke.

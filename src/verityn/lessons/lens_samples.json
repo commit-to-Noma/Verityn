@@ -56,6 +56,63 @@
       "question": "The switch is closed. Will the bulb light?",
       "claim": {"type": "lit", "component": "L1"},
       "guide": "The battery still holds 6 V, yet the bulb reads 0 A. Which component prevents charge from completing the loop?"
+    },
+    {
+      "id": "low-voltage-loop",
+      "title": "Low-voltage loop",
+      "image": "/lens/low-voltage-loop.svg",
+      "width": 800,
+      "height": 500,
+      "source": "frontend/public/lens/low-voltage-loop.svg",
+      "modelNote": "Drawn schematic for rehearsal; regions hand-placed. Battery labeled 3 V.",
+      "boxes": {
+        "battery": {"left": 105, "top": 222, "right": 195, "bottom": 283, "confidence": 1.0},
+        "bulb": {"left": 612, "top": 212, "right": 688, "bottom": 288, "confidence": 1.0}
+      },
+      "paths": [
+        [[150, 240], [150, 120], [650, 120], [650, 212], [650, 288], [650, 380], [150, 380], [150, 262]]
+      ],
+      "switch": null,
+      "netlist": {
+        "components": [
+          {"id": "B1", "type": "battery", "volts": 3, "a": "p", "b": "0"},
+          {"id": "L1", "type": "bulb", "a": "p", "b": "0"}
+        ]
+      },
+      "expected": {"ok": true, "lit": true, "component": "L1", "current": 0.3, "power": 0.9},
+      "expectedOpen": null,
+      "question": "A weak 3 V battery drives this loop. Will the bulb light?",
+      "claim": {"type": "lit", "component": "L1"},
+      "guide": "Lower voltage means less current, but a complete loop still lights the bulb. Compare 0.9 W with the textbook 3.6 W."
+    },
+    {
+      "id": "open-switch-loop",
+      "title": "Open switch loop",
+      "image": "/lens/open-switch-loop.svg",
+      "width": 800,
+      "height": 500,
+      "source": "frontend/public/lens/open-switch-loop.svg",
+      "modelNote": "Drawn schematic for rehearsal; regions hand-placed. Switch drawn open.",
+      "boxes": {
+        "battery": {"left": 105, "top": 222, "right": 195, "bottom": 283, "confidence": 1.0},
+        "bulb": {"left": 612, "top": 212, "right": 688, "bottom": 288, "confidence": 1.0}
+      },
+      "paths": [
+        [[150, 240], [150, 120], [370, 120], [430, 120], [650, 120], [650, 212], [650, 288], [650, 380], [150, 380], [150, 262]]
+      ],
+      "switch": {"id": "S1", "left": 358, "top": 78, "right": 442, "bottom": 132},
+      "netlist": {
+        "components": [
+          {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+          {"id": "S1", "type": "switch", "closed": false, "a": "p", "b": "m"},
+          {"id": "L1", "type": "bulb", "a": "m", "b": "0"}
+        ]
+      },
+      "expected": {"ok": true, "lit": false, "component": "L1", "current": 0, "power": 0},
+      "expectedOpen": {"ok": true, "lit": false, "component": "L1", "current": 0, "power": 0},
+      "question": "The switch sits open. Will the bulb light?",
+      "claim": {"type": "lit", "component": "L1"},
+      "guide": "An open switch is a gap: no loop, no current. Close it with the what-if toggle and test again."
     }
   ]
 }

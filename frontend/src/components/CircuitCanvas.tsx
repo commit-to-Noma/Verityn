@@ -1046,6 +1046,29 @@ function CanvasInner({
       window.cancelAnimationFrame(frame)
     }
   }, [fitView])
+  const importNonce = importRequest?.nonce ?? null
+  useEffect(() => {
+    // Imports land mid-choreography (Lens reveal); refit once nodes settle
+    // so the replica fills its canvas instead of huddling.
+    if (importNonce === null) {
+      return
+    }
+    let second = 0
+    const first = window.requestAnimationFrame(() => {
+      second = window.requestAnimationFrame(() => {
+        const mobile = window.innerWidth <= 640
+        void fitView({
+          padding: mobile ? MOBILE_FIT_VIEW_PADDING : 0.2,
+          minZoom: mobile ? MOBILE_MIN_ZOOM : 0.5,
+          maxZoom: 1.25,
+        })
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(first)
+      window.cancelAnimationFrame(second)
+    }
+  }, [fitView, importNonce])
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   /** Experiment copy: idle after a run means the circuit changed. */
@@ -1889,7 +1912,7 @@ function CanvasInner({
           </button>
         ))}
       </div>
-      {challenge === undefined && (
+      {challenge === undefined && importRequest == null && (
         <p className="text-ink-muted text-sm">
           {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
         </p>
@@ -2046,7 +2069,8 @@ function CanvasInner({
         )}
       </div>
       {runState.phase === 'idle' &&
-        !(challenge !== undefined && nextBuildStep !== null) && (
+        !(challenge !== undefined && nextBuildStep !== null) &&
+        importRequest == null && (
         <div className={`flow-status ${loopClosed ? 'flow-status-ready' : ''}`} role="status">
           <span className="flow-status-dot" aria-hidden="true" />
           <span>
@@ -2217,7 +2241,11 @@ function CanvasInner({
               </div>
               {!completed && (
                 <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-3 py-1 text-xs">
-                  {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+                  {nodes.length === 0
+                    ? 'Start with a battery'
+                    : loopClosed
+                      ? simulateLocked !== null ? 'Confirm to test' : 'Ready to test'
+                      : 'Keep building'}
                 </span>
               )}
             </div>
@@ -2279,7 +2307,11 @@ function CanvasInner({
             </div>
             {!completed && (
               <span className="border-glass-border text-ink-muted rounded-full border px-3 py-1 text-xs">
-                {nodes.length === 0 ? 'Start with a battery' : loopClosed ? 'Ready to test' : 'Keep building'}
+                {nodes.length === 0
+                  ? 'Start with a battery'
+                  : loopClosed
+                    ? simulateLocked !== null ? 'Confirm to test' : 'Ready to test'
+                    : 'Keep building'}
               </span>
             )}
           </div>

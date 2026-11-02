@@ -3,6 +3,7 @@ import type { VisionProposal } from '../api/client'
 import {
   DEFAULT_LENS_VIEW,
   LENS_VIEW_MODES,
+  ambiguousWireNote,
   canLoadProposal,
   canTestProposal,
   componentReviewStatus,
@@ -12,6 +13,8 @@ import {
   regionStyle,
   reviewBanner,
   reviewSummary,
+  wirePathPoints,
+  wireTraceSummary,
 } from './review'
 
 const EVIDENCE = (region_id: string) => ({
@@ -37,7 +40,7 @@ function proposal(overrides: Partial<VisionProposal>): VisionProposal {
         from: { node: 'B1', terminal: 'a' },
         to: { node: 'B1', terminal: 'b' },
         uncertain: true,
-        evidence: { region_id: 'r-w' },
+        evidence: { region_id: 'r-w', path: null },
       },
     ],
     ...overrides,
@@ -225,5 +228,30 @@ describe('nextRevealStep', () => {
   it('jumps to review on interrupt', () => {
     expect(nextRevealStep('image', true)).toBe('review')
     expect(nextRevealStep('regions', true)).toBe('review')
+  })
+})
+
+describe('wire traces', () => {
+  it('formats normalized paths as SVG points', () => {
+    expect(
+      wirePathPoints([
+        [0.12, 0.3],
+        [0.4, 0.2],
+      ]),
+    ).toBe('12.0,30.0 40.0,20.0')
+  })
+
+  it('tells traced and untraced ambiguous wires apart', () => {
+    expect(ambiguousWireNote(true)).toContain('traced on your photo')
+    expect(ambiguousWireNote(false)).toContain('no image region')
+  })
+
+  it('counts traced wires honestly', () => {
+    expect(wireTraceSummary(0, 0)).toBe('No wires proposed.')
+    expect(wireTraceSummary(3, 3)).toContain('traced on your photo')
+    expect(wireTraceSummary(0, 3)).toContain('not traced from the image')
+    expect(wireTraceSummary(2, 3)).toBe(
+      '2 of 3 wires traced on your photo; the rest are terminal relationships only. The replica reconstructs all routes.',
+    )
   })
 })

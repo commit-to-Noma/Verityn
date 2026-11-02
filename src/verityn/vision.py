@@ -127,8 +127,15 @@ _PROPOSAL_JSON_SCHEMA = {
                             "type": "object",
                             "properties": {
                                 "region_id": {"type": "string"},
+                                "path": {
+                                    "type": ["array", "null"],
+                                    "items": {
+                                        "type": "array",
+                                        "items": {"type": "number"},
+                                    },
+                                },
                             },
-                            "required": ["region_id"],
+                            "required": ["region_id", "path"],
                             "additionalProperties": False,
                         },
                     },
@@ -155,7 +162,11 @@ _SYSTEM_PROMPT = (
     "parts use polarity null. Each connection must include "
     "evidence.region_id. Components use type battery|bulb|switch. "
     "Connections use from/to node plus terminal a|b and uncertain true "
-    "when unsure. Mark status ready only when every connection is "
+    "when unsure. Each connection traces its visible wire as "
+    "evidence.path: a normalized 0..1 polyline of 2..32 [x, y] points "
+    "following the wire from the from-terminal to the to-terminal, or "
+    "null when the wire is not clearly visible. Never invent a path. "
+    "Mark status ready only when every connection is "
     "certain, every switch state is explicitly true or false, and "
     "every battery polarity is determined. Otherwise mark the proposal "
     "needs_review. Never invent missing information to obtain ready. "
@@ -182,9 +193,12 @@ def _validate_evidence(value, *, connection=False):
     if not isinstance(value, dict) or not isinstance(value.get("region_id"), str):
         raise _rejected()
     if connection:
-        if set(value) != {"region_id"} or not value["region_id"].strip():
+        if set(value) != {"region_id", "path"} or not value["region_id"].strip():
             raise _rejected()
-        return {"region_id": value["region_id"]}
+        return {
+            "region_id": value["region_id"],
+            "path": _validate_path(value["path"]),
+        }
     if set(value) != {"region_id", "bounds", "rotation"}:
         raise _rejected()
     bounds = value.get("bounds")
@@ -205,6 +219,25 @@ def _validate_evidence(value, *, connection=False):
         "bounds": {key: bounds[key] for key in ("x", "y", "width", "height")},
         "rotation": rotation,
     }
+
+
+MAX_PATH_POINTS = 32
+
+
+def _validate_path(value):
+    """Return a canonical wire polyline, None, or raise on garbage."""
+    if value is None:
+        return None
+    if (not isinstance(value, list) or not 2 <= len(value) <= MAX_PATH_POINTS):
+        raise _rejected()
+    points = []
+    for point in value:
+        if (not isinstance(point, list) or len(point) != 2
+                or not all(_finite_number(axis) for axis in point)
+                or not all(0 <= axis <= 1 for axis in point)):
+            raise _rejected()
+        points.append([point[0], point[1]])
+    return points
 
 
 def parse_data_url(image):

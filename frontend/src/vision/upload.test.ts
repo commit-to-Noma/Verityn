@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { VISION_MAX_IMAGE_BYTES } from '../api/client'
-import { LENS_ACCEPT, validateLensFile } from './upload'
+import { LENS_ACCEPT, firstLensFile, validateLensFile } from './upload'
 
 describe('validateLensFile', () => {
   test('accepts PNG, JPEG, and WebP by MIME type', () => {
@@ -46,5 +46,19 @@ describe('validateLensFile', () => {
     expect(LENS_ACCEPT).toContain('image/png')
     expect(LENS_ACCEPT).toContain('image/jpeg')
     expect(LENS_ACCEPT).toContain('image/webp')
+  })
+})
+
+describe('firstLensFile', () => {
+  const file = { name: 'diagram.png', type: 'image/png', size: 10 }
+
+  test('takes the first file from drop, paste, and picker lists', () => {
+    expect(firstLensFile([file, { ...file, name: 'second.png' }])).toBe(file)
+  })
+
+  test('returns undefined for missing or empty lists', () => {
+    expect(firstLensFile(null)).toBeUndefined()
+    expect(firstLensFile(undefined)).toBeUndefined()
+    expect(firstLensFile([])).toBeUndefined()
   })
 })

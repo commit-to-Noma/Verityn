@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { LENS_SAMPLES } from './samples'
+import { LENS_SAMPLES, sampleLevel } from './samples'
 
 describe('LENS_SAMPLES', () => {
-  it('ships exactly the two spike-verified samples', () => {
+  it('ships the two spike-verified samples plus two drawn rehearsals', () => {
     expect(LENS_SAMPLES.map((sample) => sample.id).sort()).toEqual([
+      'low-voltage-loop',
+      'open-switch-loop',
       'textbook-loop',
       'workbench-switch',
     ])
+  })
+
+  it('labels every sample with a gallery difficulty', () => {
+    for (const sample of LENS_SAMPLES) {
+      expect(['Starter', 'Challenge']).toContain(sampleLevel(sample.id))
+    }
+    expect(sampleLevel('unknown-id')).toBe('Starter')
   })
 
   it('keeps every box, path, and switch rect inside its image', () => {

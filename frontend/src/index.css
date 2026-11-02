@@ -239,6 +239,15 @@ body {
   animation: finale-reveal 520ms ease-out both;
 }
 
+@keyframes lens-show-glow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.55; }
+}
+
+.lens-show-glow {
+  animation: lens-show-glow 3.2s ease-in-out infinite;
+}
+
 .react-flow__edge.flow-reverse.animated path {
   animation-direction: reverse;
 }
@@ -271,6 +280,10 @@ body {
   }
 
   .finale-reveal {
+    animation: none !important;
+  }
+
+  .lens-show-glow {
     animation: none !important;
   }
 }

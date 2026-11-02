@@ -50,3 +50,17 @@ export interface LensSample {
 export const LENS_SAMPLES: LensSample[] = (
   pack as unknown as { samples: LensSample[] }
 ).samples
+
+export type SampleLevel = 'Starter' | 'Challenge'
+
+/** Gallery difficulty, kept frontend-only so the solver pack stays physics-only. */
+const SAMPLE_LEVELS: Record<string, SampleLevel> = {
+  'textbook-loop': 'Starter',
+  'workbench-switch': 'Starter',
+  'low-voltage-loop': 'Challenge',
+  'open-switch-loop': 'Challenge',
+}
+
+export function sampleLevel(id: string): SampleLevel {
+  return SAMPLE_LEVELS[id] ?? 'Starter'
+}

@@ -82,4 +82,19 @@ export const SMART_DETAILS = [
     where: 'Journey Finale experiment action',
     evidence: 'frontend/src/components/JourneyFinale.test.tsx',
   },
+  {
+    behavior: 'Lens diagrams upload by drop, paste, picker, or camera',
+    where: 'Reality Lens drop zone',
+    evidence: 'frontend/src/vision/upload.test.ts',
+  },
+  {
+    behavior: 'Traced wires overlay the uploaded photo',
+    where: 'Lens review original',
+    evidence: 'frontend/src/vision/review.test.ts',
+  },
+  {
+    behavior: 'Confirmed Lens circuit opens in Experiment Bay',
+    where: 'Lens review handoff action',
+    evidence: 'frontend/src/experiment/ExperimentPage.test.tsx',
+  },
 ] as const

@@ -60,6 +60,37 @@ export function canTestProposal(proposal: VisionProposal, confirmed: boolean): b
   return canLoadProposal(proposal) && confirmed
 }
 
+/**
+ * Ambiguous-wire note, honest about whether the route itself was traced.
+ * Traced wires still need endpoint verification; untraced ones are
+ * terminal relationships only.
+ */
+export function ambiguousWireNote(traced: boolean): string {
+  if (traced) {
+    return 'Ambiguous endpoints, but the wire route is traced on your photo - verify both before confirming.'
+  }
+  return 'Ambiguous: verify these endpoints on the replica before confirming. Wires carry no image region - only the terminal relationship was proposed.'
+}
+
+/** Disclaimer under the evidence list, counted from the traced wires. */
+export function wireTraceSummary(traced: number, total: number): string {
+  if (total === 0) {
+    return 'No wires proposed.'
+  }
+  if (traced === total) {
+    return 'Wire routes are traced on your photo; the replica still reconstructs its own between terminals.'
+  }
+  if (traced === 0) {
+    return 'Terminal relationships are model-proposed; contact geometry is not traced from the image. Verify each wire on the replica before confirming.'
+  }
+  return `${traced} of ${total} wires traced on your photo; the rest are terminal relationships only. The replica reconstructs all routes.`
+}
+
+/** Normalized path to SVG points; one decimal keeps assertions exact. */
+export function wirePathPoints(path: [number, number][]): string {
+  return path.map(([x, y]) => `${(x * 100).toFixed(1)},${(y * 100).toFixed(1)}`).join(' ')
+}
+
 /** Normalized 0..1 evidence bounds as CSS percentage offsets. */
 export function regionStyle(bounds: { x: number; y: number; width: number; height: number }): {
   left: string

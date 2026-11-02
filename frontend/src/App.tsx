@@ -14,6 +14,7 @@ import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import HealthStatus from './components/HealthStatus'
 import LabIntro from './components/LabIntro'
+import LensShowcase from './components/LensShowcase'
 import PredictionScreen, { type PredictionDemo } from './components/PredictionScreen'
 
 /** Drawer-only weight: split out so the first paint stays lean. */
@@ -902,23 +903,26 @@ export default function App() {
             ← Back to guided journey
           </button>
           <section aria-labelledby="lens-page-heading" className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
-                Meta vision workspace
-              </p>
-              <h1 id="lens-page-heading" className="text-3xl font-semibold tracking-tight">
-                Reality Lens
-              </h1>
-              <p className="max-w-2xl text-base text-ink-muted">
-                Turn a diagram into an experiment. Review what the vision model proposes,
-                correct the circuit yourself, then confirm it before the simulator runs.
-              </p>
-              <div className="flex items-center gap-2">
-                <HealthStatus compact />
+            <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <div className="flex min-w-0 flex-col gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
+                  Meta vision workspace
+                </p>
+                <h1 id="lens-page-heading" className="text-3xl font-semibold tracking-tight">
+                  Reality Lens
+                </h1>
+                <p className="max-w-2xl text-base text-ink-muted">
+                  Turn a diagram into an experiment: Meta Muse Spark proposes what it sees,
+                  you review and confirm, then Verityn Solver measures.
+                </p>
               </div>
+              <LensShowcase />
             </div>
             <Suspense fallback={<p className="text-ink-muted text-sm">Preparing Reality Lens…</p>}>
-              <SnapBuildLab onReturnToLab={() => handleNavigate('lab')} />
+              <SnapBuildLab
+                onReturnToLab={() => handleNavigate('lab')}
+                onTryExperiment={handleTryExperiment}
+              />
             </Suspense>
           </section>
         </div>
