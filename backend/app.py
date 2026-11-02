@@ -440,7 +440,26 @@ def create_app(provider=None, fallback=None, vision_provider=None,
 app = create_app()
 
 
+def _load_dotenv(path=None):
+    """Load repo-root .env into os.environ; exported values win."""
+    if path is None:
+        path = Path(__file__).resolve().parent.parent / ".env"
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 if __name__ == "__main__":
+    _load_dotenv()
     # Test-only switch for the provider-failure path; never set it live.
     if os.environ.get("VERITYN_COACH_FAIL") == "1":
         app = create_app(fake_coach.FakeCoachProvider(fail=True))

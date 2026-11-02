@@ -9,6 +9,7 @@ import base64
 import copy
 import io
 import json
+import os
 import urllib.error
 import urllib.request
 
@@ -653,3 +654,31 @@ def test_switch_fixture_topology_is_single_loop():
     assert len(endpoints) == 6
     assert len(set(endpoints)) == 6
     assert len({node for node, _ in endpoints}) == 3
+
+
+def test_vision_default_timeout_exceeds_chat_timeout():
+    provider = vision.MetaVisionProvider(api_key="test-key")
+    assert provider.timeout_s == vision.VISION_TIMEOUT_S
+    assert vision.VISION_TIMEOUT_S > meta_coach.META_TIMEOUT_S
+
+
+def test_load_dotenv_sets_missing_keys_only(tmp_path, monkeypatch):
+    from app import _load_dotenv
+
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "# comment\nMODEL_API_KEY=test-from-file\nEMPTY=\nNOEQUALS\n")
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    monkeypatch.delenv("EMPTY", raising=False)
+    _load_dotenv(env_file)
+    assert os.environ["MODEL_API_KEY"] == "test-from-file"
+    assert os.environ["EMPTY"] == ""
+    monkeypatch.setenv("MODEL_API_KEY", "exported-wins")
+    _load_dotenv(env_file)
+    assert os.environ["MODEL_API_KEY"] == "exported-wins"
+
+
+def test_load_dotenv_missing_file_is_silent(tmp_path):
+    from app import _load_dotenv
+
+    _load_dotenv(tmp_path / ".env")

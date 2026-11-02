@@ -381,6 +381,10 @@ def validate_proposal(output):
             "connections": canon_connections}
 
 
+#: Image reasoning takes longer than text chat; live calls run ~8s.
+VISION_TIMEOUT_S = 45
+
+
 class MetaVisionProvider:
     """Muse Spark vision provider. Tests mock the transport."""
 
@@ -388,7 +392,7 @@ class MetaVisionProvider:
 
     def __init__(self, api_key, model=meta_coach.META_MODEL,
                  base_url=meta_coach.META_API_BASE,
-                 timeout_s=meta_coach.META_TIMEOUT_S):
+                 timeout_s=VISION_TIMEOUT_S):
         if not api_key:
             raise ValueError("Meta API key missing.")
         self.api_key = api_key
