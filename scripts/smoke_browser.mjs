@@ -882,6 +882,13 @@ async function drive() {
   check('all three chapter traces',
     await hasText('Light the bulb') && await hasText('Reality Check: the open switch')
       && await hasText('Solo: the second bulb'))
+  await clickButton('Explain with Muse Spark')
+  await waitFor(async () => (await hasText('Meta Spark')) || (await hasText('Fallback coach')), 'explain answered', 25000)
+  check('explain never ends red', !(await hasText('ended with a question')))
+  check('explain buttons side by side', await ev(`(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Explain with Muse Spark');
+    return btn?.parentElement?.classList.contains('flex-row') === true;
+  })()`))
   await clickButton('Open Reality Lens')
   // innerText reflects the CSS uppercase transform on the eyebrow.
   await waitFor(() => hasText('META VISION WORKSPACE'), 'lens page')

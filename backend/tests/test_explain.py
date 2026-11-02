@@ -199,6 +199,66 @@ def test_meta_explain_rejects_numbers_for_rejections(monkeypatch):
     assert err.value.reason == "number"
 
 
+def _explain_facts():
+    return {"L1.power_W": 3.6, "L1.current_A": 0.6, "L1.voltage_V": 6.0}
+
+
+def _explain_call(provider, facts):
+    return provider.explain(facts=facts, valid=True, error_code=None,
+                            component_ids=[], switches={"S1": True},
+                            bulbs=["L1"])
+
+
+def test_meta_explain_trims_trailing_question(monkeypatch):
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    calls = []
+
+    def fake_post(*args):
+        calls.append(args[1])
+        return 200, chat_response(
+            {"explanation": "L1 lit at 0.6 A and 3.6 W. What will you try next?"})
+    monkeypatch.setattr(meta_coach, "_post_json", fake_post)
+    assert _explain_call(provider, _explain_facts()) == "L1 lit at 0.6 A and 3.6 W."
+    assert len(calls) == 1
+
+
+def test_meta_explain_retries_when_trim_keeps_bad_numbers(monkeypatch):
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    calls = []
+    replies = [
+        {"explanation": "L1 reads 9.9 A everywhere. Agree with that?"},
+        {"explanation": "L1 reads 0.6 A with S1 closed."},
+    ]
+
+    def fake_post(url, payload, headers, timeout_s):
+        calls.append(payload)
+        return 200, chat_response(replies[min(len(calls) - 1, 1)])
+    monkeypatch.setattr(meta_coach, "_post_json", fake_post)
+    assert _explain_call(provider, _explain_facts()) == "L1 reads 0.6 A with S1 closed."
+    assert len(calls) == 2
+    assert "ended with a question" in calls[1]["messages"][-1]["content"]
+
+
+def test_meta_explain_retry_exhaustion_raises_question(monkeypatch):
+    provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
+    calls = []
+
+    def fake_post(url, payload, headers, timeout_s):
+        calls.append(payload)
+        return 200, chat_response({"explanation": "Why do you think so?"})
+    monkeypatch.setattr(meta_coach, "_post_json", fake_post)
+    with pytest.raises(coach.CoachProviderError) as err:
+        _explain_call(provider, _explain_facts())
+    assert err.value.reason == "question"
+    assert err.value.attempts == 2
+    assert len(calls) == 2
+
+
+def test_explain_system_prompt_forbids_trailing_questions():
+    assert "never a question" in meta_coach._EXPLAIN_SYSTEM
+    assert "optionally one question" not in meta_coach._EXPLAIN_SYSTEM
+
+
 def test_meta_explain_rejects_empty_output(monkeypatch):
     provider = meta_coach.MetaSparkProvider(api_key="test-key-1")
     monkeypatch.setattr(meta_coach, "_post_json",

@@ -293,16 +293,28 @@ export default function JourneyFinale({
                       input?.netlist !== undefined &&
                       input.result?.ok === true && (
                         <div className="mt-3 flex flex-col items-start gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void explainConcept(chapter)}
-                            disabled={explanationState?.phase === 'loading'}
-                            className="border-glass-border min-h-[40px] rounded-[10px] border px-3 text-xs font-medium disabled:opacity-50"
-                          >
-                            {explanationState?.phase === 'loading'
-                              ? 'Explaining with Muse Spark…'
-                              : 'Explain with Muse Spark'}
-                          </button>
+                          <div className="flex flex-row flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void explainConcept(chapter)}
+                              disabled={explanationState?.phase === 'loading'}
+                              className="border-glass-border min-h-[40px] rounded-[10px] border px-3 text-xs font-medium disabled:opacity-50"
+                            >
+                              {explanationState?.phase === 'loading'
+                                ? 'Explaining with Muse Spark…'
+                                : 'Explain with Muse Spark'}
+                            </button>
+                            {seed !== null && (
+                              <button
+                                type="button"
+                                aria-label={`Try ${title} in the Experiment Bay`}
+                                onClick={() => onTryExperiment(seed, `${title} from your journey`)}
+                                className="bg-flow text-on-accent min-h-[40px] rounded-[10px] px-3 text-xs font-medium"
+                              >
+                                Try it in the Experiment Bay
+                              </button>
+                            )}
+                          </div>
                           {explanationState?.phase === 'done' && (
                             <div aria-live="polite">
                               <p className="text-sm">{explanationState.text}</p>
@@ -314,17 +326,7 @@ export default function JourneyFinale({
                             </div>
                           )}
                           {explanationState?.phase === 'error' && (
-                            <p className="text-sm text-bad" role="alert">{explanationState.message}</p>
-                          )}
-                          {seed !== null && (
-                            <button
-                              type="button"
-                              aria-label={`Try ${title} in the Experiment Bay`}
-                              onClick={() => onTryExperiment(seed, `${title} from your journey`)}
-                              className="bg-flow text-on-accent min-h-[40px] rounded-[10px] px-3 text-xs font-medium"
-                            >
-                              Try it in the Experiment Bay
-                            </button>
+                            <p className="text-sm text-ink-muted" role="status">{explanationState.message}</p>
                           )}
                         </div>
                       )}

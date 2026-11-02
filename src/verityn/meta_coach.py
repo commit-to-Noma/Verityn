@@ -105,9 +105,10 @@ _EXPLAIN_SYSTEM = (
     "You explain a circuit experiment the student just ran. "
     "Cite only numbers from the solver facts. Never invent "
     "measurements, and never state a bulb outcome the facts "
-    "contradict. Write two to three sentences, then optionally one "
-    "question or one safe next experiment (toggle a listed switch, "
-    "add or remove a wire). Never suggest wiring that shorts the "
+    "contradict. Write two to three sentences and end with a "
+    "statement, never a question. You may close with one safe next "
+    "experiment stated as a fact (toggling a listed switch, adding "
+    "or removing a wire). Never suggest wiring that shorts the "
     "battery."
 )
 
@@ -143,20 +144,71 @@ def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
     )
 
 
+_QUESTION_END = re.compile(r"[?？][\"'”’)\]]*\s*$")
+
+
+def _validate_explain_text(text, facts):
+    """Return the cleaned explanation or raise CoachProviderError."""
+    if not isinstance(text, str) or not text.strip():
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="not-explanation")
+    cleaned = text.strip()
+    if _QUESTION_END.search(cleaned):
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="question")
+    if _numbers_outside_facts(cleaned, facts):
+        raise CoachProviderError("Meta output rejected.", stage="validate",
+                                 reason="number")
+    return cleaned
+
+
 def validate_explain_output(output, facts):
     """Return the explanation string or raise CoachProviderError."""
     if not isinstance(output, dict):
         raise CoachProviderError("Meta output malformed.", stage="parse",
                                  shape=describe_shape(output))
+    return _validate_explain_text(output.get("explanation"), facts)
+
+
+def _explanation_text(body):
+    """Best-effort raw explanation string for question-trimming."""
+    try:
+        output = _parse_output(_chat_content(body))
+    except CoachProviderError:
+        return None
+    if not isinstance(output, dict):
+        return None
     text = output.get("explanation")
-    if not isinstance(text, str) or not text.strip():
-        raise CoachProviderError("Meta output rejected.", stage="validate",
-                                 reason="not-explanation")
+    return text if isinstance(text, str) else None
+
+
+def _drop_trailing_question(text):
+    """Return text minus a trailing question, or None if none remains."""
+    if not isinstance(text, str):
+        return None
     cleaned = text.strip()
-    if _numbers_outside_facts(cleaned, facts):
-        raise CoachProviderError("Meta output rejected.", stage="validate",
-                                 reason="number")
-    return cleaned
+    if not _QUESTION_END.search(cleaned):
+        return cleaned
+    parts = re.split(r"(?<=[.?!？])\s+", cleaned)
+    while parts and (_QUESTION_END.search(parts[-1]) or not parts[-1].strip()):
+        parts.pop()
+    if not parts:
+        return None
+    return " ".join(parts).strip() or None
+
+
+_EXPLAIN_RETRY_PROMPTS = {
+    "question": (
+        "Validator feedback: the explanation was rejected because it "
+        "ended with a question. Rewrite it to end with a statement, "
+        "keeping only the solver numbers. Reply again with the fixed JSON."
+    ),
+    "number": (
+        "Validator feedback: the explanation was rejected for citing "
+        "numbers outside the solver facts. Rewrite it citing only the "
+        "given numbers. Reply again with the fixed JSON."
+    ),
+}
 
 
 def validate_conversation_output(output):
@@ -418,6 +470,15 @@ class MetaSparkProvider:
 
     def explain(self, *, facts, valid, error_code, component_ids,
                 switches, bulbs, conditions=None, batteries=None):
+        text, _attempts = self.explain_with_attempts(
+            facts=facts, valid=valid, error_code=error_code,
+            component_ids=component_ids, switches=switches, bulbs=bulbs,
+            conditions=conditions, batteries=batteries)
+        return text
+
+    def explain_with_attempts(self, *, facts, valid, error_code,
+                              component_ids, switches, bulbs,
+                              conditions=None, batteries=None):
         payload = {
             "model": self.model,
             "messages": [
@@ -437,15 +498,37 @@ class MetaSparkProvider:
         }
         headers = {"Content-Type": "application/json",
                    "Authorization": f"Bearer {self.api_key}"}
-        _, body = _post_json(f"{self.base_url}/chat/completions", payload,
-                             headers, self.timeout_s)
-        try:
-            return validate_explain_output(
-                _parse_output(_chat_content(body)), facts or {})
-        except CoachProviderError as err:
-            if err.stage == "parse" and ",finish=" not in (err.shape or ""):
-                err.shape = _with_completion(err.shape or "unknown", body)
-            raise
+        for attempt in range(2):
+            _, body = _post_json(f"{self.base_url}/chat/completions",
+                                 payload, headers, self.timeout_s)
+            try:
+                text = validate_explain_output(
+                    _parse_output(_chat_content(body)), facts or {})
+                return text, attempt + 1
+            except CoachProviderError as err:
+                if err.stage == "parse":
+                    if ",finish=" not in (err.shape or ""):
+                        err.shape = _with_completion(err.shape or "unknown",
+                                                     body)
+                    err.attempts = attempt + 1
+                    raise
+                if err.stage == "validate" and err.reason == "question":
+                    trimmed = _drop_trailing_question(
+                        _explanation_text(body))
+                    if trimmed is not None:
+                        try:
+                            return (_validate_explain_text(
+                                trimmed, facts or {}), attempt + 1)
+                        except CoachProviderError:
+                            pass
+                if attempt == 0 and err.stage == "validate":
+                    retry = _EXPLAIN_RETRY_PROMPTS.get(err.reason)
+                    if retry is not None:
+                        payload["messages"].append(
+                            {"role": "user", "content": retry})
+                        continue
+                err.attempts = attempt + 1
+                raise
 
     def conversation_reply(self, message, context=""):
         payload = {
