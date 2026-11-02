@@ -941,6 +941,21 @@ async function drive() {
   check('samples below upload', await hasText('Sample diagrams'))
   await captureScreenshot('lens-idle')
   await captureScreenshot('lens-idle-390', 390)
+  await ev(`(() => {
+    const card = [...document.querySelectorAll('#lens-samples button')]
+      .find((button) => button.textContent.includes('Textbook loop'));
+    card?.scrollIntoView({ block: 'center' });
+    card?.click();
+    return !!card;
+  })()`)
+  await waitFor(() => hasText('Tap a highlighted point'), 'sample segment points', 20000)
+  await ev(`document.querySelector('button[data-segment="battery"]')?.click()`)
+  await waitFor(() => hasText('Battery sample segment'), 'sample segment selected', 10000)
+  check('sample tap names the saved SAM segment', await hasText('SAM confidence 0.91'))
+  check('sample taps stay honest', await hasText('no live SAM call is made'))
+  await captureScreenshot('lens-sample-segment', 1440, '#lens-samples')
+  await clickButton('← Sample gallery')
+  await waitFor(() => hasText('Sample diagrams'), 'sample gallery restored', 20000)
   // Stub the proposal at the network layer: no live Meta call in smoke.
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await uploadLensFile(switchImage)

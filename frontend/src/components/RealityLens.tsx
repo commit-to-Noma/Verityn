@@ -6,6 +6,8 @@ import type { Choice } from '../lessons/lesson'
 import { CHOICE_LABELS, LIT_POWER_W, choiceToClaim } from '../lessons/lesson'
 import { lensCulprit } from '../lens/culprit'
 import type { LensSample } from '../lens/samples'
+import type { SampleSegmentId } from '../lens/sampleSegments'
+import { sampleSegmentCaption, sampleSegmentPoints } from '../lens/sampleSegments'
 import ReadoutValue from './ReadoutValue'
 import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
@@ -25,10 +27,14 @@ function DiagramOverlay({
   sample,
   result,
   culprit,
+  selected,
+  onSelect,
 }: {
   sample: LensSample
   result: SimulateResult | null
   culprit: string | null
+  selected: SampleSegmentId | null
+  onSelect: (segment: SampleSegmentId) => void
 }) {
   const bulb = sample.boxes.bulb
   const power = result?.ok ? (result.components[sample.claim.component]?.power ?? 0) : 0
@@ -42,6 +48,7 @@ function DiagramOverlay({
   const stroke = Math.max(4, Math.round(sample.width / 140))
   const labelSize = Math.max(13, Math.round(sample.width / 46))
   const culpritRect = culprit !== null ? sample.switch : null
+  const points = sampleSegmentPoints(sample)
   return (
     <div className="border-glass-border relative overflow-hidden rounded-2xl border">
       <img
@@ -77,26 +84,31 @@ function DiagramOverlay({
             ['battery', sample.boxes.battery],
             ['bulb', sample.boxes.bulb],
           ] as const
-        ).map(([name, box]) => (
-          <g key={name}>
-            <rect
-              x={box.left}
-              y={box.top}
-              width={box.right - box.left}
-              height={box.bottom - box.top}
-              rx={6}
-              className="lens-box"
-            />
-            <text
-              x={box.left}
-              y={Math.max(labelSize + 2, box.top - 6)}
-              fontSize={labelSize}
-              className="lens-label"
-            >
-              {name} · detected region
-            </text>
-          </g>
-        ))}
+        ).map(([name, box]) => {
+          const active = selected === name
+          return (
+            <g key={name}>
+              <rect
+                x={box.left}
+                y={box.top}
+                width={box.right - box.left}
+                height={box.bottom - box.top}
+                rx={6}
+                className="lens-box"
+                style={active ? { stroke: 'var(--color-ok)', strokeWidth: 3 } : undefined}
+              />
+              <text
+                x={box.left}
+                y={Math.max(labelSize + 2, box.top - 6)}
+                fontSize={labelSize}
+                className="lens-label"
+                style={active ? { fill: 'var(--color-ok)' } : undefined}
+              >
+                {name} · detected region
+              </text>
+            </g>
+          )
+        })}
         {result !== null &&
           sample.paths.map((path, index) => (
             <polyline
@@ -108,6 +120,31 @@ function DiagramOverlay({
             />
           ))}
       </svg>
+      {points.map((point) => {
+        const active = selected === point.id
+        return (
+          <button
+            key={point.id}
+            type="button"
+            data-segment={point.id}
+            aria-pressed={active}
+            aria-label={`${point.label} sample segment`}
+            title={sampleSegmentCaption(point)}
+            onClick={() => onSelect(point.id)}
+            className="absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-flow"
+            style={{ left: `${point.xPct}%`, top: `${point.yPct}%` }}
+          >
+            <span
+              aria-hidden="true"
+              className={`block h-4 w-4 rounded-full border-2 ${
+                active
+                  ? 'border-white bg-ok shadow-[0_0_0_2px_var(--color-ok),0_0_12px_var(--color-ok)]'
+                  : 'border-white bg-flow shadow-[0_0_0_2px_var(--color-flow),0_0_12px_var(--color-flow)]'
+              }`}
+            />
+          </button>
+        )
+      })}
       {culpritRect !== null && (
         <div
           aria-hidden="true"
@@ -135,6 +172,7 @@ export default function RealityLens({
 }) {
   const proof = useProofMode()
   const [choice, setChoice] = useState<Choice | null>(null)
+  const [selectedSegment, setSelectedSegment] = useState<SampleSegmentId | null>(null)
   const [switchOpen, setSwitchOpen] = useState(false)
   const [run, setRun] = useState<LensRun>({ phase: 'ready' })
   const [verdict, setVerdict] = useState<{
@@ -217,6 +255,8 @@ export default function RealityLens({
     result?.ok && claim?.type === 'lit'
       ? result.components[claim.component]
       : undefined
+  const selectedPoint =
+    sampleSegmentPoints(sample).find((point) => point.id === selectedSegment) ?? null
 
   return (
     <div className="flex flex-col gap-4">
@@ -247,9 +287,21 @@ export default function RealityLens({
           </button>
         ))}
       </div>
-      <DiagramOverlay sample={sample} result={result} culprit={culprit} />
+      <DiagramOverlay
+        sample={sample}
+        result={result}
+        culprit={culprit}
+        selected={selectedSegment}
+        onSelect={setSelectedSegment}
+      />
+      <p className="text-sm" role="status">
+        {selectedPoint === null
+          ? 'Tap a highlighted point to name that saved segment.'
+          : sampleSegmentCaption(selectedPoint)}
+      </p>
       <p className="text-ink-muted text-xs">
-        Segmentation preview · deterministic physics.
+        Segmentation preview · deterministic physics. Taps only select saved regions; no live SAM
+        call is made.
       </p>
       <div className="flex flex-wrap gap-2">
         <button
