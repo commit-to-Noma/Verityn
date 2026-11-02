@@ -10,7 +10,7 @@ import {
 } from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
 import { latchedDamage, validateBatteryVolts } from './bench'
-import { batteriesOppose, compareRuns, describeRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
+import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 import { isSoundEnabled, setSoundEnabled } from './sound'
 
@@ -174,6 +174,18 @@ function LatestResult({
                       : `${delta > 0 ? '+' : ''}${delta.toFixed(1)} W vs run ${previous.n}.`}
                   </p>
                 )}
+                {measured !== undefined && (
+                  <details>
+                    <summary className="text-flow w-fit cursor-pointer text-sm font-medium">
+                      Why?
+                    </summary>
+                    <p className="text-ink-muted mt-1 font-mono text-sm">
+                      {condition === 'damaged'
+                        ? `Filament broken: no current flows (bulb reads ${measured.voltage.toFixed(1)} V, 0.0 A).`
+                        : `I = V/R = ${measured.voltage.toFixed(1)} V / ${BULB_OHMS} Ω = ${(measured.voltage / BULB_OHMS).toFixed(1)} A (measured ${measured.current.toFixed(1)} A).`}
+                    </p>
+                  </details>
+                )}
               </li>
             )
           })}
@@ -184,6 +196,34 @@ function LatestResult({
       )}
       <p className="text-ink-muted text-xs">Measured by Verityn Solver.</p>
     </section>
+  )
+}
+
+/** Auto failure analysis from the solver's numbers (no model call). */
+function DiagnosticsCard({
+  fresh,
+  previous,
+}: {
+  fresh: { result: SimulateResult; netlist: Netlist }
+  previous: RunRecord | null
+}) {
+  const lines = diagnoseRun(fresh.result, fresh.netlist, previous)
+  if (lines.length === 0) {
+    return null
+  }
+  return (
+    <div className="border-bad/50 bg-bad/5 rounded-[10px] border p-3" role="status">
+      <p className="text-bad text-xs font-semibold uppercase tracking-[0.14em]">
+        ⚠️ Bench diagnostics · from solver numbers
+      </p>
+      <ul className="mt-1 flex flex-col gap-1">
+        {lines.map((line) => (
+          <li key={line} className="text-sm">
+            {line}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -484,6 +524,7 @@ export default function ExperimentPage({
               Optional: the coach explains the measurements above. It cannot change your circuit.
             </p>
           )}
+          {fresh !== null && <DiagnosticsCard fresh={fresh} previous={prevRun} />}
           <div>
             <button
               type="button"

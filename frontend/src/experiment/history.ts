@@ -192,3 +192,45 @@ export function compareRuns(previous: RunRecord | null, current: RunRecord): str
   }
   return `Compared with run ${previous.n}: ${parts.join(', ')}.`
 }
+
+/** Fixed bulb resistance, mirrored from the solver (BULB_OHMS). Display math only. */
+export const BULB_OHMS = 10
+
+/**
+ * Bench diagnostics: code-written failure lines from the solver's own
+ * numbers (no model call). One line per overloaded or damaged bulb.
+ */
+export function diagnoseRun(
+  result: SimulateResult,
+  netlist: Netlist,
+  previous: RunRecord | null,
+): string[] {
+  if (!result.ok) {
+    return []
+  }
+  const lines: string[] = []
+  for (const bulb of netlist.components.filter((part) => part.type === 'bulb')) {
+    const condition = result.conditions?.[bulb.id]
+    const measured = result.components[bulb.id]
+    const limit = result.ratings?.[bulb.id]?.max_safe_watts
+    if (condition === 'overloaded' && measured !== undefined && limit !== undefined) {
+      lines.push(
+        `${bulb.id} took ${measured.power.toFixed(1)} W against a ${limit.toFixed(1)} W safe limit ` +
+          `(${measured.voltage.toFixed(1)} V, ${measured.current.toFixed(1)} A). ` +
+          'Lower a battery voltage or add another bulb to share the load.',
+      )
+    } else if (condition === 'damaged') {
+      const before = previous?.bulbs.find((entry) => entry.id === bulb.id) ?? null
+      const blew =
+        before !== null && previous !== null && before.watts > 0
+          ? ` Run ${previous.n} pushed it to ${before.watts.toFixed(1)} W.`
+          : limit === undefined
+            ? ' It blew past its safe limit.'
+            : ` It blew past its ${limit.toFixed(1)} W limit.`
+      lines.push(
+        `${bulb.id} is damaged and passes no current.${blew} Reset the bench to restore it.`,
+      )
+    }
+  }
+  return lines
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Netlist, SimulateResult } from '../api/client'
-import { batteriesOppose, compareRuns, describeRun, summarizeRun } from './history'
+import { batteriesOppose, compareRuns, describeRun, diagnoseRun, summarizeRun } from './history'
 
 const LOOP: Netlist = {
   components: [
@@ -63,6 +63,51 @@ describe('describeRun', () => {
     const record = describeRun(1, 'Light a bulb', solved(3.6, 0.6), LOOP)
     expect(record.bulbs).toEqual([
       { id: 'L1', volts: 6, amps: 0.6, watts: 3.6, condition: null },
+    ])
+  })
+})
+
+describe('diagnoseRun', () => {
+  function overloaded(): SimulateResult {
+    return {
+      ...solved(14.4, 1.2),
+      conditions: { L1: 'overloaded' },
+      ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
+    } as unknown as SimulateResult
+  }
+
+  it('stays silent for healthy and rejected runs', () => {
+    expect(diagnoseRun(solved(3.6, 0.6), LOOP, null)).toEqual([])
+    expect(diagnoseRun(REJECTED, LOOP, null)).toEqual([])
+  })
+
+  it('names the overloaded bulb with its measured numbers', () => {
+    expect(diagnoseRun(overloaded(), LOOP, null)).toEqual([
+      'L1 took 14.4 W against a 6.0 W safe limit (6.0 V, 1.2 A). ' +
+        'Lower a battery voltage or add another bulb to share the load.',
+    ])
+  })
+
+  it('cites the previous run when a bulb is damaged', () => {
+    const damaged = {
+      ...solved(0, 0),
+      conditions: { L1: 'damaged' },
+      ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
+    } as unknown as SimulateResult
+    const before = describeRun(5, 'Overload the bulb', overloaded(), LOOP)
+    expect(diagnoseRun(damaged, LOOP, before)).toEqual([
+      'L1 is damaged and passes no current. Run 5 pushed it to 14.4 W. Reset the bench to restore it.',
+    ])
+  })
+
+  it('falls back to the limit when no previous run exists', () => {
+    const damaged = {
+      ...solved(0, 0),
+      conditions: { L1: 'damaged' },
+      ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
+    } as unknown as SimulateResult
+    expect(diagnoseRun(damaged, LOOP, null)).toEqual([
+      'L1 is damaged and passes no current. It blew past its 6.0 W limit. Reset the bench to restore it.',
     ])
   })
 })
