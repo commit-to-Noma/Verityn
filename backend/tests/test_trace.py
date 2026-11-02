@@ -42,10 +42,11 @@ PROPOSAL = {
     "connections": [
         {"from": {"node": "B1", "terminal": "a"},
          "to": {"node": "L1", "terminal": "a"}, "uncertain": False,
-         "evidence": {"region_id": "r-wire-1"}},
+         "evidence": {"region_id": "r-wire-1", "path": None}},
         {"from": {"node": "L1", "terminal": "b"},
          "to": {"node": "B1", "terminal": "b"}, "uncertain": False,
-         "evidence": {"region_id": "r-wire-2"}},
+         "evidence": {"region_id": "r-wire-2",
+                      "path": [[0.2, 0.5], [0.5, 0.5], [0.7, 0.4]]}},
     ],
 }
 
