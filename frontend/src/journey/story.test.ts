@@ -108,17 +108,17 @@ describe('storyNodes', () => {
       chapter('L1T2', TRANSFER_INPUT),
     ])
     expect(nodes.map((node) => node.title)).toEqual([
-      'First belief',
-      'Reality check evidence',
+      'First prediction',
+      'Reality Check reading',
       'Coach question',
       'Solo prediction',
-      'Verified transfer',
+      'Solo circuit reading',
     ])
     expect(nodes[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(nodes[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
     expect(nodes[2].detail).toBe('One guiding question (Fallback coach)')
     expect(nodes[3].detail).toBe('Predicted “Yes”')
-    expect(nodes[4].detail).toBe('Verified: 2 bulbs lit')
+    expect(nodes[4].detail).toBe('Solver reading: 2 bulbs lit')
   })
 
   it('handles a consistent reality check with no coaching', () => {
@@ -247,7 +247,7 @@ describe('evidenceCards', () => {
     ])
     expect(cards[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(cards[1].detail).toBe('Prediction did not match: L1 dark at 0 W')
-    expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
+    expect(cards[2].detail).toBe('Solver reading: 2 bulbs lit')
   })
 
   it('degrades gracefully when chapters are missing', () => {
@@ -266,6 +266,6 @@ describe('evidenceCards', () => {
     ])
     expect(cards[0].detail).toBe('Predicted “Yes”  -  “Looks complete.”')
     expect(cards[1].detail).toBe('Complete this chapter to unlock its evidence.')
-    expect(cards[2].detail).toBe('Verified: 2 bulbs lit')
+    expect(cards[2].detail).toBe('Solver reading: 2 bulbs lit')
   })
 })

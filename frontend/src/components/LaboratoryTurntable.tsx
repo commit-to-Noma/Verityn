@@ -13,7 +13,7 @@ function FeatureArtwork({ stationId }: { stationId: LaboratoryStationId }) {
     experiment: 'A circuit experiment with adjustable controls and measured output',
     lens: 'A circuit diagram inspected through a magnifying lens',
     coach: 'A coach conversation linked to a question',
-    solver: 'A measured circuit waveform and verified result',
+    solver: 'A measured circuit waveform and solver result',
   }
   return (
     <div className="flex h-[76px] w-[96px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-glass-border bg-[radial-gradient(circle_at_50%_45%,rgb(56_214_233/0.13),transparent_65%),rgb(10_14_28/0.55)] sm:w-[112px]">

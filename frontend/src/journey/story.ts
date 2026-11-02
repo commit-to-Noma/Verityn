@@ -79,7 +79,7 @@ function transferDetail(chapter: ChapterRecap | undefined): string {
   if (input.verdict.status !== 'CONSISTENT') {
     return `${input.verdict.status === 'CONTRADICTED' ? 'Did not match' : "Couldn't assess"}  -  see trace`
   }
-  return lit === 1 ? 'Verified: 1 bulb lit' : `Verified: ${lit} bulbs lit`
+  return lit === 1 ? 'Solver reading: 1 bulb lit' : `Solver reading: ${lit} bulbs lit`
 }
 
 /** Shown on proof cards and traces for chapters without saved evidence. */
@@ -277,10 +277,10 @@ export function learningProgress(chapters: ChapterRecap[]): LearningMilestone[] 
 export function storyNodes(chapters: ChapterRecap[]): StoryNode[] {
   const [l1, reality, transfer] = chapters
   return [
-    { title: 'First belief', detail: choiceDetail(l1) },
-    { title: 'Reality check evidence', detail: realityDetail(reality) },
+    { title: 'First prediction', detail: choiceDetail(l1) },
+    { title: 'Reality Check reading', detail: realityDetail(reality) },
     { title: 'Coach question', detail: coachDetail(reality) },
     { title: 'Solo prediction', detail: choiceDetail(transfer) },
-    { title: 'Verified transfer', detail: transferDetail(transfer) },
+    { title: 'Solo circuit reading', detail: transferDetail(transfer) },
   ]
 }

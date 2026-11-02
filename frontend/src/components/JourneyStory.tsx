@@ -4,7 +4,6 @@ import { storyNodes } from '../journey/story'
 /** Responsive story grid plus honest closing copy for the finale. */
 export default function JourneyStory({ chapters }: { chapters: ChapterRecap[] }) {
   const nodes = storyNodes(chapters)
-  const beganWithMisconception = chapters[0]?.input?.prediction?.choice === 'yes'
   return (
     <div className="flex flex-col gap-3">
       <ol
@@ -23,9 +22,7 @@ export default function JourneyStory({ chapters }: { chapters: ChapterRecap[] })
         ))}
       </ol>
       <p className="text-ink-muted text-sm">
-        {beganWithMisconception
-          ? 'You began by trusting the appearance of the circuit. You finished by reasoning from current, power, and loop topology.'
-          : 'You predicted carefully, tested every idea against the simulator, and proved the last one solo.'}
+        These notes keep your choices beside what the solver measured.
       </p>
     </div>
   )

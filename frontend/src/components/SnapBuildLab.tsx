@@ -483,13 +483,13 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
         const message = err instanceof ApiError ? err.message : 'Request failed.'
         const visionDown = code === 'PROVIDER_UNAVAILABLE' || code === 'MISSING_KEY'
         const nextStep = code === 'PROVIDER_TIMEOUT'
-          ? 'Vision timed out. Try again or use a verified sample.'
+          ? 'Vision timed out. Try again or use a sample.'
           : code === 'RATE_LIMITED'
-            ? 'Vision is rate limited. Try again shortly or use a verified sample.'
+            ? 'Vision is rate limited. Try again shortly or use a sample.'
             : code === 'INVALID_PROPOSAL'
-              ? 'The proposal was not usable. Review a verified sample or try another image.'
+              ? 'The proposal was not usable. Review a sample or try another image.'
               : visionDown
-                ? 'Meta vision is unavailable. Use a verified sample or return to the Guided Lab.'
+                ? 'Meta vision is unavailable. Use a sample or return to the Guided Lab.'
                 : message
         setState({
           phase: 'error',
@@ -642,7 +642,7 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
                 }
                 className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
               >
-                Use a verified sample
+                Use a sample
               </button>
             )}
             {state.reason === 'vision' && onReturnToLab !== undefined && (
@@ -667,9 +667,9 @@ export default function SnapBuildLab({ onReturnToLab }: { onReturnToLab?: () => 
         </div>
       )}
       <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-3">
-        <h3 className="text-base font-semibold">Verified samples</h3>
+        <h3 className="text-base font-semibold">Sample diagrams</h3>
         <p className="text-ink-muted text-sm">
-          Verified sample  -  use this when Meta vision is unavailable or when you want to rehearse
+          Prepared sample  -  use this when Meta vision is unavailable or when you want to rehearse
           the workflow.
         </p>
         <p className="text-ink-muted text-sm">

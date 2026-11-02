@@ -226,7 +226,7 @@ export default function RealityLens({
           onClick={onBack}
           className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
         >
-          ← Verified samples
+          ← Sample gallery
         </button>
         <h3 className="text-lg font-semibold">{sample.title}</h3>
       </div>
@@ -249,7 +249,7 @@ export default function RealityLens({
       </div>
       <DiagramOverlay sample={sample} result={result} culprit={culprit} />
       <p className="text-ink-muted text-xs">
-        Verified segmentation preview · deterministic physics.
+        Segmentation preview · deterministic physics.
       </p>
       <div className="flex flex-wrap gap-2">
         <button

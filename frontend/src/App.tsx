@@ -418,7 +418,7 @@ export default function App() {
           {
             chapter: 'transfer',
             title: 'Solo complete',
-            detail: 'The Solo circuit is verified. View your completed journey to finish the lab.',
+            detail: 'The Solo circuit has been tested. View your completed journey to finish the lab.',
             nextLabel: 'View completed journey',
             advance: () => {
               setTransferDone(true)

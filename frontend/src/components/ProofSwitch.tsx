@@ -1,7 +1,7 @@
 import { proofMode, setProofMode, subscribeProofMode } from '../proof/store'
 import { useEffect, useState } from 'react'
 
-/** Header switch: minimal lab by default, solver evidence plus AI trace on. */
+/** Header switch: minimal lab by default, solver readings and trace on demand. */
 export default function ProofSwitch() {
   const [on, setOn] = useState(proofMode())
   useEffect(() => subscribeProofMode(() => setOn(proofMode())), [])
@@ -10,8 +10,8 @@ export default function ProofSwitch() {
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label="Proof mode"
-      title="Proof off: clean lab. Proof on: readings, evidence trace, and AI checks."
+      aria-label="Trace details"
+      title="Trace off: clean lab. Trace on: solver readings, evidence, and AI checks."
       onClick={() => setProofMode(!on)}
       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-3 text-sm font-medium transition ${
         on
@@ -27,7 +27,7 @@ export default function ProofSwitch() {
       >
         <span className="h-4 w-4 rounded-full bg-ink" />
       </span>
-      Proof
+      Trace
     </button>
   )
 }

@@ -162,7 +162,7 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
             }`}
           >
             {data.review === 'verified'
-              ? 'Verified'
+              ? 'Confirmed'
               : data.review === 'learner-corrected'
                 ? 'Learner corrected'
                 : 'Needs review'}

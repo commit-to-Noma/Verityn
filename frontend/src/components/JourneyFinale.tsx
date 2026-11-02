@@ -417,7 +417,7 @@ export default function JourneyFinale({
               ) : proof ? (
                 <EvidenceTrace input={chapter.input} />
               ) : (
-                <p className="text-ink-muted text-sm">Enable Proof to see the solver trace.</p>
+                <p className="text-ink-muted text-sm">Turn on trace details to see the solver record.</p>
               )}
             </article>
           ))}
