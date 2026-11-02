@@ -8,4 +8,10 @@ describe('HealthStatus', () => {
 
     expect(markup).toContain('Checking backend…')
   })
+
+  it('stays silent while checking or ready when hideWhenReady is set', () => {
+    const markup = renderToStaticMarkup(<HealthStatus hideWhenReady />)
+
+    expect(markup).toBe('')
+  })
 })

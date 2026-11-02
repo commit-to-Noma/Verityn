@@ -9,7 +9,14 @@ const REQUEST_TIMEOUT_MS = 3_000
 const RETRY_DELAY_MS = 1_000
 
 /** Calls GET /api/health, retries during startup, then offers an explicit retry. */
-export default function HealthStatus({ compact = false }: { compact?: boolean }) {
+export default function HealthStatus({
+  compact = false,
+  hideWhenReady = false,
+}: {
+  compact?: boolean
+  /** Hub: only slow or failed states take space; ready stays silent. */
+  hideWhenReady?: boolean
+}) {
   const [status, setStatus] = useState<Status>('checking')
   const [detail, setDetail] = useState('')
   const [progress, setProgress] = useState(0)
@@ -133,6 +140,10 @@ export default function HealthStatus({ compact = false }: { compact?: boolean })
       <div className="h-full rounded-full bg-flow transition-[width]" style={{ width: `${progress}%` }} />
     </div>
   )
+
+  if (hideWhenReady && (status === 'checking' || status === 'connected')) {
+    return null
+  }
 
   if (compact) {
     return (

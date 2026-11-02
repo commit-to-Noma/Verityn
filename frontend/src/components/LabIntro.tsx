@@ -6,6 +6,7 @@ import UnderTheHoodTryIts from './UnderTheHoodTryIts'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
   HOMEPAGE_ENTRIES,
+  HOMEPAGE_GUIDED_LINE,
   HOMEPAGE_HEADLINE,
   HOMEPAGE_SUBHEAD,
   LAB_LOOP,
@@ -438,8 +439,9 @@ export default function LabIntro({
             {HOMEPAGE_HEADLINE}
           </h2>
           <p className="max-w-md text-base text-ink-muted">{HOMEPAGE_SUBHEAD}</p>
+          <p className="max-w-md text-base font-medium">{HOMEPAGE_GUIDED_LINE}</p>
           <div className="w-full max-w-md">
-            <HealthStatus />
+            <HealthStatus hideWhenReady />
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <button

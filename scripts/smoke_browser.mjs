@@ -589,7 +589,12 @@ async function drive() {
     healthAttempts >= 2 && await ev(`!!document.querySelector('[role="progressbar"][aria-label="Simulator startup"]')`),
     `attempts=${healthAttempts}`,
   )
-  await waitFor(() => hasText('Simulator ready'), 'hub health check')
+  await waitFor(
+    async () => (await hasText('Start your own lab')) && !(await hasText('Waking the simulator')),
+    'hub health resolved',
+  )
+  check('ready pill hidden on hub', !(await hasText('Simulator ready')))
+  check('guided lab purpose line', await hasText('Guided Lab: predict what a circuit will do'))
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
   check('trace details on via param', await ev(`document.querySelector('[aria-label="Trace details"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)

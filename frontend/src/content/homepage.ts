@@ -5,6 +5,9 @@ export const HOMEPAGE_HEADLINE = 'Imagine it. Test it. Understand it.'
 export const HOMEPAGE_SUBHEAD =
   'Explore four STEM disciplines through interactive labs. Circuits are our first live Engineering module.'
 
+export const HOMEPAGE_GUIDED_LINE =
+  'Guided Lab: predict what a circuit will do, build it, then test your idea against the simulator.'
+
 export const HOMEPAGE_ENTRIES = {
   demo: 'Watch a walkthrough',
   startLab: 'Start your own lab',
@@ -41,7 +44,7 @@ export const LABORATORY_STATIONS: LaboratoryStation[] = [
     id: 'lab',
     title: 'Guided Lab',
     description:
-      'Predict, build, and test a circuit against measured results.',
+      'Predict what a circuit will do, build it, then test your idea against the simulator.',
     evidence: 'Predict → Build → Reality Check → Solo',
     details: ['Engineering · Module 1', 'Measured by the solver'],
     actionLabel: 'Open Guided Lab',
