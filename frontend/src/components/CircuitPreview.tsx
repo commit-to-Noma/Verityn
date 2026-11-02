@@ -77,7 +77,15 @@ export default function CircuitPreview({
       `${edge.target}:${edge.targetTerminal}`,
     ]),
   )
+  const measurementFor = (node: (typeof seed.nodes)[number]) => {
+    const measurement = result?.components[node.id]
+    if (measurement === undefined || node.kind !== 'battery') {
+      return measurement
     }
+    return {
+      ...measurement,
+      current: Math.abs(measurement.current),
+      power: Math.abs(measurement.power),
     }
   }
   const nodes: CircuitNodeType[] = seed.nodes
@@ -102,7 +110,7 @@ export default function CircuitPreview({
         invalid: false,
         closed: node.kind === 'switch' ? (node.closed ?? true) : true,
         readOnly: true,
-        measurement: result?.components[node.id],
+        measurement: measurementFor(node),
       },
     }))
   const edges: Edge[] = seed.edges.map((edge) => ({
@@ -127,11 +135,16 @@ export default function CircuitPreview({
           zoomOnScroll={false}
           panOnDrag={false}
           fitView
-          fitViewOptions={{ padding: 0.35, maxZoom: 1 }}
+          minZoom={isMobileViewport() ? 0.25 : 0.5}
+          fitViewOptions={{
+            padding: 0.35,
+            minZoom: isMobileViewport() ? 0.25 : 0.5,
+            maxZoom: 1,
+          }}
           colorMode="dark"
           aria-label={label}
         >
-          <FitPreviewOnResize />
+          <FitPreviewOnResize containerRef={containerRef} />
         </ReactFlow>
       </ReactFlowProvider>
     </div>
