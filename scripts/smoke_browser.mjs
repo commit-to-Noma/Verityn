@@ -1218,6 +1218,10 @@ async function drive() {
   await clickButton('Hub')
   await waitFor(() => hasText('Start your own lab'), 'hub final')
   await captureScreenshot('hub')
+  await ensureSummaryOpen('Smart details')
+  await waitFor(() => hasText('Saved Reality Lens segments are tappable'), 'smart details updated', 10000)
+  check('smart details mirror tap segments', await hasText('with SAM provenance'))
+  await captureScreenshot('under-the-hood-smart-details', 1440, '#under-the-hood li:last-child')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)
 

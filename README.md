@@ -53,8 +53,9 @@ evidence verification before it reaches the learner.
   connections, polarity, and provenance; the learner reviews
   the original beside the editable replica in Compare mode and must confirm
   before the solver runs. `needs_review` and `unsupported`
-  diagrams are refused honestly  -  nothing is guessed. A confirmed circuit
-  can move to the Experiment Bay for free-form testing.
+  diagrams are refused honestly  -  nothing is guessed. Sample diagrams expose
+  tappable battery/bulb regions with saved SAM provenance; taps select, never
+  infer. A confirmed circuit can move to the Experiment Bay for free-form testing.
 - Experiment bench: free-form canvas with five starter presets,
   explicit runs, session-local history with current-vs-previous
   comparison, and an optional solver-first explanation.
@@ -123,6 +124,11 @@ evidence verification before it reaches the learner.
 | Lens diagrams upload by drop, paste, picker, or camera | Reality Lens drop zone | [Upload tests](./frontend/src/vision/upload.test.ts) |
 | Traced wires overlay the uploaded photo | Lens review original | [Review tests](./frontend/src/vision/review.test.ts) |
 | Confirmed Lens circuit opens in Experiment Bay | Lens review handoff action | [Experiment Bay seed tests](./frontend/src/experiment/ExperimentPage.test.tsx) |
+| Guided verdicts compare predictions with solver readings, kindly | Reality Check, Solo, and Journey | [Verdict line tests](./frontend/src/components/PredictionVerdictLine.test.tsx) |
+| Batteries report supplied current and power, never negative labels | Guided canvases and Journey snapshots | [Canvas node tests](./frontend/src/components/canvas/CircuitNode.test.tsx) |
+| Voice transcripts are cleaned for display; raw text stays in Trace | Why boxes, Journey, and Trace drawer | [Transcript tests](./frontend/src/voice/displayTranscript.test.ts) |
+| Journey progress highlights Recap on the recap page | Guided Lab header | [Stage tests](./frontend/src/journey/stages.test.ts) |
+| Saved Reality Lens segments are tappable with SAM provenance | Sample diagrams | [Sample segment tests](./frontend/src/lens/sampleSegments.test.ts) |
 
 ## Deliberately out of scope
 
@@ -214,7 +220,7 @@ BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journ
 |---|---|---|
 | Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Trace and validation notes](./docs/INTELLIGENCE_LOG.md) |
 | Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, Solo, and the Finale reflection | [Voice API notes](./docs/ARCHITECTURE.md) |
-| SAM | Sample only; no live inference | [Sample probe results](./docs/sam-spike-results.json) |
+| SAM | Sample only; taps select saved segments, no live inference | [Sample probe results](./docs/sam-spike-results.json) |
 
 Pointer and Demonstration are deterministic by design, not model calls. SAM is
 sample-only; no live SAM inference is used.

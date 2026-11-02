@@ -23,3 +23,8 @@ the Under the hood Smart details section, and the README.
 - Traced wires overlay the uploaded photo — [review tests](../frontend/src/vision/review.test.ts) and [vision path tests](../backend/tests/test_vision.py).
 - Traced wires snap onto the photo's stroke centerlines in code (polarity-blind, text-rejecting, fail-soft to the model path) — [refinement tests](../backend/tests/test_wire_refine.py).
 - Confirmed Lens circuit opens in Experiment Bay — [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx), also exercised by the browser smoke.
+- Guided verdicts compare predictions with solver readings, kindly — [verdict line tests](../frontend/src/components/PredictionVerdictLine.test.tsx).
+- Batteries report supplied current and power, never negative labels — [canvas node tests](../frontend/src/components/canvas/CircuitNode.test.tsx).
+- Voice transcripts are cleaned for display; raw text stays in Trace — [transcript tests](../frontend/src/voice/displayTranscript.test.ts).
+- Journey progress highlights Recap on the recap page — [stage tests](../frontend/src/journey/stages.test.ts).
+- Saved Reality Lens segments are tappable with SAM provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).

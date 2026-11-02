@@ -102,4 +102,29 @@ export const SMART_DETAILS = [
     where: 'Lens review handoff action',
     evidence: 'frontend/src/experiment/ExperimentPage.test.tsx',
   },
+  {
+    behavior: 'Guided verdicts compare predictions with solver readings, kindly',
+    where: 'Reality Check, Solo, and Journey',
+    evidence: 'frontend/src/components/PredictionVerdictLine.test.tsx',
+  },
+  {
+    behavior: 'Batteries report supplied current and power, never negative labels',
+    where: 'Guided canvases and Journey snapshots',
+    evidence: 'frontend/src/components/canvas/CircuitNode.test.tsx',
+  },
+  {
+    behavior: 'Voice transcripts are cleaned for display; raw text stays in Trace',
+    where: 'Why boxes, Journey, and Trace drawer',
+    evidence: 'frontend/src/voice/displayTranscript.test.ts',
+  },
+  {
+    behavior: 'Journey progress highlights Recap on the recap page',
+    where: 'Guided Lab header',
+    evidence: 'frontend/src/journey/stages.test.ts',
+  },
+  {
+    behavior: 'Saved Reality Lens segments are tappable with SAM provenance',
+    where: 'Sample diagrams',
+    evidence: 'frontend/src/lens/sampleSegments.test.ts',
+  },
 ] as const

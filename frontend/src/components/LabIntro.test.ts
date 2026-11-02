@@ -74,7 +74,7 @@ describe('homepage copy', () => {
   })
 
   it('documents each smart behavior with a place to see it and evidence', () => {
-    expect(SMART_DETAILS).toHaveLength(20)
+    expect(SMART_DETAILS).toHaveLength(25)
     for (const detail of SMART_DETAILS) {
       expect(detail.where).not.toBe('')
       expect(detail.evidence).toMatch(/(test|trace)[^/]*\.(tsx?|py)$/)
