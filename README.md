@@ -158,10 +158,9 @@ Coaching defaults to fixed fake templates (no network, no key needed).
 To use Meta Spark with template fallback, export `MODEL_API_KEY` in the
 backend's shell (e.g. `export MODEL_API_KEY=...`), then start the
 backend normally; recorded predictions and Why text are sent to the
-Meta Model API only in that mode. The backend does not auto-load
-`.env` files  -  if you keep the key in an untracked root `.env`, source
-it into the environment first, and never commit it. The same key also
-enables Meta vision proposals. `VERITYN_COACH_FAIL=1` forces the
+Meta Model API only in that mode. The backend auto-loads an untracked
+root `.env` (never commit it); an exported `MODEL_API_KEY` wins over
+the file. The same key also enables Meta vision proposals. `VERITYN_COACH_FAIL=1` forces the
 provider-failure path for local testing. The automated suites mock all
 model HTTP and never spend credits.
 
