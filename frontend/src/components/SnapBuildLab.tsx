@@ -55,32 +55,61 @@ function reducedMotion(): boolean {
 
 const REVEAL_BEAT_MS = 350
 
-/** Each pipeline stage drawn as what it is: drop, detect, measure. */
+/** Each pipeline stage drawn literally: drop zone, photo with detections, loop with readout. */
 function StageArt({ index }: { index: number }) {
   if (index === 0) {
     return (
-      <div className="flex h-16 items-center justify-center rounded-xl border-2 border-dashed border-glass-border">
+      <div className="border-glass-border flex h-16 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed">
         <ImagePlus className="text-ink-muted h-6 w-6" aria-hidden="true" />
+        <span className="text-ink-muted font-mono text-[10px]">photo or sketch</span>
       </div>
     )
   }
   if (index === 1) {
     return (
       <div className="relative h-16 overflow-hidden rounded-xl bg-black/40" aria-hidden="true">
-        <div className="border-flow absolute left-3 top-3 h-6 w-10 rounded-[3px] border-2" />
-        <div className="border-flow absolute bottom-3 right-3 h-6 w-10 rounded-[3px] border-2" />
-        <div className="bg-flow absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+        <div className="absolute inset-2 rounded-lg bg-gradient-to-br from-white/10 to-transparent" />
+        <div className="border-flow absolute left-3 top-2.5 rounded-[3px] border-2 border-dashed px-1 font-mono text-[9px] leading-4">
+          battery?
+        </div>
+        <div className="border-flow absolute bottom-2.5 right-3 rounded-[3px] border-2 border-dashed px-1 font-mono text-[9px] leading-4">
+          bulb?
+        </div>
+        <svg viewBox="0 0 100 64" className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+          <polyline
+            points="8,50 35,50 35,14 92,14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeDasharray="4 3"
+            className="text-flow"
+          />
+        </svg>
       </div>
     )
   }
   return (
-    <div className="flex h-16 items-center justify-center gap-1.5 rounded-xl bg-black/40" aria-hidden="true">
-      <span className="bg-flow h-2 w-2 rounded-full" />
-      <span className="bg-flow/60 h-px w-4" />
-      <span className="bg-flow h-2 w-2 rounded-full" />
-      <span className="bg-flow/60 h-px w-4" />
-      <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-glow-light)]" />
-      <span className="text-flow ml-2 font-mono text-xs">0.6 A</span>
+    <div className="flex h-16 items-center justify-center gap-2 rounded-xl bg-black/40" aria-hidden="true">
+      <svg viewBox="0 0 64 40" className="h-10 w-16">
+        <rect x="4" y="6" width="14" height="28" rx="2" fill="none" stroke="currentColor" strokeWidth="2" className="text-ink-muted" />
+        <line x1="4" y1="20" x2="18" y2="20" stroke="currentColor" strokeWidth="2" className="text-ink-muted" />
+        <polyline
+          points="18,34 46,34 46,20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-flow"
+        />
+        <polyline
+          points="18,6 46,6 46,14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-flow"
+        />
+        <circle cx="46" cy="17" r="6" fill="var(--color-glow-light)" opacity="0.9" />
+      </svg>
+      <span className="text-flow font-mono text-xs">0.6 A</span>
     </div>
   )
 }
@@ -741,6 +770,14 @@ export default function SnapBuildLab({
       }}
     >
       <div>
+        <p className="text-ink-muted mb-2 text-sm">
+          From a photo to a measured circuit in three steps —{' '}
+          <strong className="text-ink font-semibold">
+            {steps.every((step) => step === 'done')
+              ? 'all done.'
+              : `you're on step ${(steps.findIndex((step) => step === 'current') + 1) || 1}.`}
+          </strong>
+        </p>
         <ol aria-label="Reality Lens progress" className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
           {LENS_STEP_LABELS.map((label, index) => {
             const stepState = steps[index] ?? 'todo'
@@ -755,16 +792,18 @@ export default function SnapBuildLab({
                   aria-current={stepState === 'current' ? 'step' : undefined}
                   className={`min-w-0 flex-1 rounded-2xl border p-3 ${
                     stepState === 'done'
-                      ? 'border-ok/50'
+                      ? 'border-ok/50 opacity-80'
                       : stepState === 'current'
-                        ? 'border-flow/70'
-                        : 'border-glass-border opacity-80'
+                        ? 'border-flow bg-flow/5 shadow-[0_0_24px_-6px_var(--color-flow)] ring-2 ring-flow/60'
+                        : 'border-glass-border opacity-60'
                   }`}
                 >
                   <StageArt index={index} />
-                  <p className="mt-2 flex items-center gap-2 text-xs font-medium">
+                  <p className={`mt-2 flex items-center gap-2 text-xs ${stepState === 'current' ? 'font-semibold' : 'font-medium'}`}>
                     {stepState === 'current' && (
-                      <span className="bg-flow h-1.5 w-1.5 shrink-0 rounded-full motion-safe:animate-pulse" aria-hidden="true" />
+                      <span className="bg-flow rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black">
+                        Now
+                      </span>
                     )}
                     <span aria-hidden="true" className="text-ink-muted">
                       {stepState === 'done' ? '✓' : `${index + 1}`}
