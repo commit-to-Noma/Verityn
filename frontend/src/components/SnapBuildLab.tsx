@@ -215,8 +215,9 @@ function ReviewPanels({
       id: `V${index + 1}`,
       region: connection.evidence.region_id,
       path: connection.evidence.path,
+      ambiguous: connection.uncertain,
     }))
-    .filter((wire): wire is { id: string; region: string; path: [number, number][] } => wire.path !== null)
+    .filter((wire): wire is { id: string; region: string; path: [number, number][]; ambiguous: boolean } => wire.path !== null)
 
   const editModel = () => {
     setView('compare')
@@ -379,7 +380,7 @@ function ReviewPanels({
                             strokeWidth={active ? 3.5 : 2}
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            strokeDasharray="5 3"
+                            strokeDasharray={wire.ambiguous ? '5 3' : undefined}
                             vectorEffect="non-scaling-stroke"
                             opacity={active ? 1 : 0.75}
                           />

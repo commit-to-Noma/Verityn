@@ -980,6 +980,36 @@ async function drive() {
   check('invalid shows solver label', await hasText("Computed by Verityn's solver."))
   await clickButton('Try another image')
   await waitFor(() => hasText('Choose an image'), 'lens reset invalid')
+  visionStubs.push(JSON.stringify({
+    proposal: {
+      status: 'needs_review',
+      components: [
+        { id: 'B1', type: 'battery', closed: null, polarity: { positive: 'a', negative: 'b' }, evidence: { region_id: 'r-b', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'S1', type: 'switch', closed: true, polarity: null, evidence: { region_id: 'r-s', bounds: { x: 0.4, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+        { id: 'L1', type: 'bulb', closed: null, polarity: null, evidence: { region_id: 'r-l', bounds: { x: 0.7, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
+      ],
+      connections: [
+        { from: { node: 'B1', terminal: 'a' }, to: { node: 'S1', terminal: 'a' }, uncertain: false, evidence: { region_id: 'r-w1', path: [[0.2, 0.3], [0.5, 0.3], [0.8, 0.3]] } },
+        { from: { node: 'S1', terminal: 'b' }, to: { node: 'L1', terminal: 'a' }, uncertain: false, evidence: { region_id: 'r-w2', path: [[0.2, 0.7], [0.5, 0.7], [0.8, 0.7]] } },
+        { from: { node: 'L1', terminal: 'b' }, to: { node: 'B1', terminal: 'b' }, uncertain: true, evidence: { region_id: 'r-w3', path: [[0.5, 0.3], [0.5, 0.7]] } },
+      ],
+    },
+    assumptions: [],
+    provider: 'fixture-stub',
+  }))
+  await uploadLensFile(switchImage)
+  await waitFor(() => hasText('Original diagram'), 'lens traced review', 20000)
+  await waitFor(() => hasText('Confirm the model below before testing'), 'lens traced lock', 20000)
+  check('traced overlay renders', await ev(`document.querySelectorAll('svg[aria-label="Traced wires"] polyline').length === 3`))
+  check('certain wires solid', await ev(`(() => {
+    const q = (r) => document.querySelector('svg[aria-label="Traced wires"] polyline[data-region="' + r + '"]')?.getAttribute('stroke-dasharray');
+    return q('r-w1') === null && q('r-w2') === null;
+  })()`))
+  check('ambiguous wire dashed', await ev(`document.querySelector('svg[aria-label="Traced wires"] polyline[data-region="r-w3"]')?.getAttribute('stroke-dasharray') === '5 3'`))
+  check('traced summary', await hasText('Wire routes are traced on your photo'))
+  await captureScreenshot('lens-traced-wires', 1440, 'svg[aria-label="Traced wires"]')
+  await clickButton('Try another image')
+  await waitFor(() => hasText('Choose an image'), 'lens reset traced')
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
   await clickButton('Guided Lab')
   await waitFor(() => hasText('Your journey'), 'back to finale')
