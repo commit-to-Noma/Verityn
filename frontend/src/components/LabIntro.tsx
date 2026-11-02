@@ -40,6 +40,12 @@ const IMPACT_CASES = [
     response:
       'Compare predictions with results and learn what changed.',
   },
+  {
+    title: 'Curiosity needs room to play',
+    problem: 'Worksheets reward one right answer, so creative tinkering gets squeezed out.',
+    response:
+      'The Experiment Bay brings back messing about on purpose: wire anything, blow bulbs safely, then ask why.',
+  },
 ] as const
 
 const FIELD_ANGLES: Record<STEMFieldId, number> = {

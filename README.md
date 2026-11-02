@@ -19,6 +19,16 @@ outputs are proposals and pass grounded evidence verification before reaching
 the learner. See `docs/` for the architecture, UI spec, product plan, and test
 plan.
 
+## Why Verityn
+
+Answers are everywhere; understanding is not. Verityn brings back
+creativity and curiosity to science class: the Guided Lab makes
+learners think first and test against evidence, and the Experiment Bay
+gives them a bench for joyful messing about — wire anything, blow
+bulbs safely, watch what the simulator measures, then ask why. Wrong
+answers are data, not verdicts, and every model claim passes grounded
+evidence verification before it reaches the learner.
+
 ## Features
 
 - Guided lab: Predict → Build → Reality Check → Solo → Finale.

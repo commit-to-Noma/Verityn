@@ -17,6 +17,11 @@ evidence shows.
 > Meta AI guides the question. The learner makes the meaning. The deterministic
 > simulator supplies the evidence.
 
+Why Verityn exists: answers are cheap, understanding is not. The Guided
+Lab protects think-first learning, and the Experiment Bay brings back
+creativity and curiosity — a safe bench for wiring anything, blowing
+bulbs, and asking why. Wrong answers are data, never verdicts.
+
 Engineering circuits are the first live module and the current complete
 subject-specific lab. They demonstrate the learning method; they are not the
 boundary of the Verityn platform. Science, Technology, and Mathematics are
