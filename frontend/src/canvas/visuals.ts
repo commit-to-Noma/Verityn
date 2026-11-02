@@ -5,10 +5,44 @@
  * from a completed `/api/simulate` response. Pure and fully tested.
  */
 
+import type { ComponentCondition } from '../api/client'
 import { LIT_POWER_W } from '../lessons/lesson'
 
 /** Reference bulb power: the L1 pack nominal (6 V across 10 Ω). */
 export const NOMINAL_BULB_W = 3.6
+
+export type BulbVisualState = 'dark' | 'intact' | 'overworked' | 'exploded'
+
+/**
+ * Bulb stage visual from the solver's own verdict: damaged reads
+ * exploded, overloaded reads overworked, anything lit reads intact.
+ * No physics here  -  condition and power both come from the result.
+ */
+export function bulbVisualState(
+  condition: ComponentCondition | undefined,
+  powerW: number,
+): BulbVisualState {
+  if (condition === 'damaged') {
+    return 'exploded'
+  }
+  if (condition === 'overloaded') {
+    return 'overworked'
+  }
+  return glowIntensity(powerW) > 0 ? 'intact' : 'dark'
+}
+
+export type BatteryChargeBand = 'low' | 'normal' | 'high'
+
+/** Charge-bar band from the voltage SETTING (6 V nominal); display only. */
+export function batteryChargeBand(volts: number): BatteryChargeBand {
+  if (!Number.isFinite(volts) || volts < 6) {
+    return 'low'
+  }
+  if (volts <= 12) {
+    return 'normal'
+  }
+  return 'high'
+}
 
 /** Branch currents at or below this read as still (noise floor). */
 export const CURRENT_FLOOR_A = 1e-9

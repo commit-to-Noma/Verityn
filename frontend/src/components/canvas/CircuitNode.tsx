@@ -1,6 +1,8 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
 import type { ComponentCondition } from '../../api/client'
+import { batteryChargeBand, bulbVisualState, NOMINAL_BULB_W } from '../../canvas/visuals'
+import { useBatteryFlip } from './batteryFlip'
 import { useSwitchToggle } from './switchToggle'
 
 export type CircuitNodeData = {
@@ -35,6 +37,10 @@ export type CircuitNodeData = {
   review?: 'verified' | 'needs-review' | 'learner-corrected'
   /** Terminals with no wire; guided canvases and previews pulse these dots. */
   loose?: ('a' | 'b')[]
+  /** Mirrored battery: the asset flips and the netlist terminals swap. */
+  flipped?: boolean
+  /** One-shot switch arc-flash key; cleared shortly after the toggle. */
+  arcFlash?: number
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
@@ -54,23 +60,56 @@ function SwitchState({ closed }: { closed: boolean }) {
   )
 }
 
+const CHARGE_COLOR: Record<'low' | 'normal' | 'high', string> = {
+  low: '#e5484d',
+  normal: '#30a46c',
+  high: '#ff6b35',
+}
+
 /** CircuitNode: clear schematic-like battery, bulb, and switch variants with terminals. */
 export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
   const onToggleClosed = useSwitchToggle()
+  const onFlipBattery = useBatteryFlip()
+  const bulbState =
+    data.kind === 'bulb'
+      ? bulbVisualState(
+          data.condition,
+          data.measurement?.power ?? (data.glow > 0 ? NOMINAL_BULB_W : 0),
+        )
+      : null
+  const volts = data.volts ?? 6
+  const chargeBand = batteryChargeBand(volts)
+  const chargeWidth = Math.max(2, Math.min(47, (Math.max(0, volts) / 24) * 47))
   return (
     <div
       aria-label={`${KIND_NAME[data.kind]} ${data.label}`}
+      onDoubleClick={
+        data.kind === 'battery'
+          ? (event) => {
+              event.stopPropagation()
+              onFlipBattery(id)
+            }
+          : undefined
+      }
+      title={data.kind === 'battery' ? 'Double-click to flip polarity' : undefined}
       className={`relative flex min-w-32 flex-col items-center ${
         data.invalid ? 'component-invalid' : ''
       } ${data.kind === 'switch' && !data.closed ? 'component-open' : ''} ${
         data.demonstrated === true ? 'component-demo' : ''
+      } ${bulbState === 'overworked' ? 'bulb-overworked' : ''} ${
+        bulbState === 'exploded' ? 'bulb-damaged' : ''
       }`}
     >
       <Handle id="a" type="source" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Left connection dot" />
       <Handle id="a" type="target" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Connect to the left dot" />
       <div className="flex flex-col items-center gap-1">
         {data.kind === 'battery' ? (
-          <svg className="component-illustration battery-illustration" viewBox="0 0 92 64" aria-hidden="true">
+          <svg
+            className="component-illustration battery-illustration"
+            viewBox="0 0 92 64"
+            aria-hidden="true"
+            style={data.flipped === true ? { transform: 'scaleX(-1)' } : undefined}
+          >
             <defs>
               <linearGradient id={`battery-body-${data.label}`} x1="0" x2="1" y1="0" y2="0">
                 <stop offset="0" stopColor="#0b0d14" />
@@ -86,6 +125,16 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
             <path d="M2 32H10M82 32H90" className="component-lead" />
             <path d="M12 18C7 18 5 23 5 32s2 14 7 14" className="battery-negative-end" />
             <path d="M12 18H65C69 18 72 24 72 32s-3 14-7 14H12" className="battery-body" fill={`url(#battery-body-${data.label})`} />
+            <rect
+              x="15"
+              y="21"
+              width={chargeWidth}
+              height="22"
+              rx="3"
+              fill={CHARGE_COLOR[chargeBand]}
+              opacity="0.55"
+              className={chargeBand === 'high' ? 'battery-vent' : undefined}
+            />
             <path d="M64 18H73C77 18 79 24 79 32s-2 14-6 14H64" className="battery-wrap" fill={`url(#battery-cap-${data.label})`} />
             <path d="M79 24h4v16h-4" className="battery-terminal" />
             <path d="M18 32h9" className="battery-negative" />
@@ -100,23 +149,44 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
                 style={{ opacity: data.glow }}
               />
             )}
-            <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
-            <path d="M35 5c-10 0-17 7-17 16 0 7 4 11 8 15v4h18v-4c4-4 8-8 8-15 0-9-7-16-17-16Z" />
-            <path d="M27 40h16M28 45h14M31 49h8" className="bulb-base" />
-            <path d="M28 20l7 7 7-7" className="bulb-filament" />
-            </svg>
+            <span className="relative inline-flex">
+              <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
+              <path d="M35 5c-10 0-17 7-17 16 0 7 4 11 8 15v4h18v-4c4-4 8-8 8-15 0-9-7-16-17-16Z" />
+              <path d="M27 40h16M28 45h14M31 49h8" className="bulb-base" />
+              <path d="M28 20l7 7 7-7" className="bulb-filament" />
+              </svg>
+              {bulbState === 'exploded' && (
+                <svg className="component-illustration bulb-crack" viewBox="0 0 70 54" aria-hidden="true">
+                  <path d="M24 10l12 14m-2-14l-8 10M42 30l8 12" className="bulb-crack-lines" />
+                </svg>
+              )}
+            </span>
+            {bulbState === 'overworked' && (
+              <div aria-hidden="true" className="bulb-overwork-glow" />
+            )}
           </>
         ) : (
-          <svg className="component-illustration switch-illustration" viewBox="0 0 70 54" aria-hidden="true">
-            <path d="M2 40H14M56 40H68" className="component-lead" />
-            {data.closed ? (
-              <path d="M18 40H52" className="switch-blade" />
-            ) : (
-              <path d="M18 40L48 16" className="switch-blade" />
+          <span className="relative inline-flex">
+            <svg className="component-illustration switch-illustration" viewBox="0 0 70 54" aria-hidden="true">
+              <path d="M2 40H14M56 40H68" className="component-lead" />
+              <line
+                x1="18"
+                y1="40"
+                x2="52"
+                y2="40"
+                className="switch-lever"
+                style={{
+                  transform: data.closed ? undefined : 'rotate(-38deg)',
+                  transformOrigin: '18px 40px',
+                }}
+              />
+              <circle cx="18" cy="40" r="3" className="switch-contact" />
+              <circle cx="52" cy="40" r="3" className="switch-contact" />
+            </svg>
+            {data.arcFlash !== undefined && (
+              <span key={data.arcFlash} aria-hidden="true" className="arc-flash" />
             )}
-            <circle cx="18" cy="40" r="3" className="switch-contact" />
-            <circle cx="52" cy="40" r="3" className="switch-contact" />
-          </svg>
+          </span>
         )}
         <span className="text-xs font-semibold text-ink">
           {data.kind === 'battery'
@@ -148,7 +218,8 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         )}
         {data.kind === 'battery' && data.polarity !== undefined && (
           <span className="font-mono text-[10px] text-ink-muted" title="Detected polarity">
-            +{data.polarity.positive} −{data.polarity.negative}
+            +{data.flipped === true ? data.polarity.negative : data.polarity.positive} −
+            {data.flipped === true ? data.polarity.positive : data.polarity.negative}
           </span>
         )}
         {data.review !== undefined && (

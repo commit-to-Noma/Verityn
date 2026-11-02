@@ -58,10 +58,12 @@ import GuidedResultCard from './GuidedResultCard'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
+import { BatteryFlipContext } from './canvas/batteryFlip'
 import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
-const BAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-bad)' }
+const STRESS_EDGE_STYLE: CSSProperties = { strokeWidth: 2.5, stroke: '#ff6b35' }
+const DEAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: '#52525b' }
 const UNCERTAIN_EDGE_STYLE: CSSProperties = {
   strokeWidth: 2,
   stroke: 'var(--color-unknown)',
@@ -1188,10 +1190,50 @@ function CanvasInner({
 
   const toggleSwitch = (id: string) => {
     noteManualEdit()
+    const wasOpen = nodes.some((node) => node.id === id && node.data.kind === 'switch' && !node.data.closed)
+    const sourceVolts = nodes.reduce(
+      (total, node) => total + (node.data.kind === 'battery' ? (node.data.volts ?? 6) : 0),
+      0,
+    )
+    const flashKey = wasOpen ? Date.now() : null
     setNodes((current) =>
       current.map((node) =>
         node.id === id && node.data.kind === 'switch'
-          ? { ...node, data: { ...node.data, closed: !node.data.closed } }
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                closed: !node.data.closed,
+                ...(flashKey !== null ? { arcFlash: flashKey } : {}),
+              },
+            }
+          : node,
+      ),
+    )
+    if (flashKey !== null) {
+      const highVoltage = sourceVolts > 12
+      window.setTimeout(
+        () => {
+          setNodes((current) =>
+            current.map((node) =>
+              node.id === id && node.data.arcFlash === flashKey
+                ? { ...node, data: { ...node.data, arcFlash: undefined } }
+                : node,
+            ),
+          )
+        },
+        highVoltage ? 700 : 350,
+      )
+    }
+    invalidate()
+  }
+
+  const flipBattery = (id: string) => {
+    noteManualEdit()
+    setNodes((current) =>
+      current.map((node) =>
+        node.id === id && node.data.kind === 'battery'
+          ? { ...node, data: { ...node.data, flipped: node.data.flipped !== true } }
           : node,
       ),
     )
@@ -1322,6 +1364,15 @@ function CanvasInner({
     requestId.current += 1
     const id = requestId.current
     setRunState({ phase: 'loading' })
+    const flippedBatteries = new Set(
+      nodes.filter((node) => node.data.kind === 'battery' && node.data.flipped === true).map((node) => node.id),
+    )
+    const flipTerminal = (nodeId: string, terminal: string): string => {
+      if (!flippedBatteries.has(nodeId)) {
+        return terminal
+      }
+      return terminal === 'a' ? 'b' : terminal === 'b' ? 'a' : terminal
+    }
     const netlist = toNetlist({
       nodes: nodes.map((node) => ({
         id: node.id,
@@ -1334,9 +1385,9 @@ function CanvasInner({
       edges: edges.map((edge) => ({
         id: edge.id,
         source: edge.source,
-        sourceTerminal: edge.sourceHandle ?? '',
+        sourceTerminal: flipTerminal(edge.source, edge.sourceHandle ?? ''),
         target: edge.target,
-        targetTerminal: edge.targetHandle ?? '',
+        targetTerminal: flipTerminal(edge.target, edge.targetHandle ?? ''),
       })),
     })
     if (mode === 'experiment') {
@@ -1354,6 +1405,11 @@ function CanvasInner({
           return
         }
         const offenders = new Set(result.component_ids)
+        const stressedBulbs = new Set(
+          Object.entries(result.conditions ?? {})
+            .filter(([, condition]) => condition === 'overloaded')
+            .map(([id]) => id),
+        )
         setNodes((current) =>
           current.map((node) => ({
             ...node,
@@ -1373,21 +1429,30 @@ function CanvasInner({
         )
         setEdges((current) =>
           current.map((edge) => {
-            const bad = offenders.has(edge.id)
-            const branchA = result.components[edge.id]?.current ?? 0
-            const flow = bad ? 'still' : flowForCurrent(branchA)
+            const dead = !result.ok
+            const stressed =
+              result.ok &&
+              (stressedBulbs.has(edge.source) || stressedBulbs.has(edge.target))
+            const branchA = result.ok ? (result.components[edge.id]?.current ?? 0) : 0
+            const flow = dead ? 'still' : flowForCurrent(branchA)
             const duration = flow === 'still' ? null : flowDurationForCurrent(branchA)
+            const base = stressed ? STRESS_EDGE_STYLE : FLOW_EDGE_STYLE
+            const classes = [
+              flow === 'reverse' ? 'flow-reverse' : null,
+              stressed ? 'wire-stress' : null,
+              dead ? 'wire-dead' : null,
+            ].filter((entry): entry is string => entry !== null)
             return {
               ...edge,
-              style: bad
-                ? BAD_EDGE_STYLE
+              style: dead
+                ? DEAD_EDGE_STYLE
                 : uncertainRef.current.includes(edge.id)
                   ? UNCERTAIN_EDGE_STYLE
                   : duration === null
-                    ? FLOW_EDGE_STYLE
-                    : { ...FLOW_EDGE_STYLE, animationDuration: `${duration}s` },
+                    ? base
+                    : { ...base, animationDuration: `${duration}s` },
               animated: flow !== 'still',
-              className: flow === 'reverse' ? 'flow-reverse' : undefined,
+              className: classes.length > 0 ? classes.join(' ') : undefined,
             }
           }),
         )
@@ -1964,6 +2029,7 @@ function CanvasInner({
   const canvasPane = (
     <>
       <div ref={canvasContainerRef} className={`border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : 'lg:h-[min(58vh,620px)]'}`}>
+        <BatteryFlipContext.Provider value={flipBattery}>
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
             nodes={canvasNodes}
@@ -2021,6 +2087,7 @@ function CanvasInner({
             <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#334155" />
           </ReactFlow>
         </SwitchToggleContext.Provider>
+        </BatteryFlipContext.Provider>
         {nodes.length === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <p className="text-ink-muted text-sm">Place a battery to begin</p>

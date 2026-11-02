@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  batteryChargeBand,
+  bulbVisualState,
   flowDurationForCurrent,
   flowForCurrent,
   glowIntensity,
@@ -40,6 +42,36 @@ describe('flowForCurrent', () => {
     [Number.NaN, 'still'],
   ] as const)('maps %s A to %s', (current, expected) => {
     expect(flowForCurrent(current)).toBe(expected)
+  })
+})
+
+describe('bulbVisualState', () => {
+  it.each([
+    ['damaged', 3.6, 'exploded'],
+    ['damaged', 0, 'exploded'],
+    ['overloaded', 14.4, 'overworked'],
+    ['overloaded', 0, 'overworked'],
+    ['intact', 3.6, 'intact'],
+    ['intact', 0, 'dark'],
+    [undefined, 3.6, 'intact'],
+    [undefined, 0, 'dark'],
+    [undefined, Number.NaN, 'dark'],
+  ] as const)('maps %s + %s W to %s', (condition, power, expected) => {
+    expect(bulbVisualState(condition, power)).toBe(expected)
+  })
+})
+
+describe('batteryChargeBand', () => {
+  it.each([
+    [0.1, 'low'],
+    [5.9, 'low'],
+    [6, 'normal'],
+    [12, 'normal'],
+    [12.1, 'high'],
+    [24, 'high'],
+    [Number.NaN, 'low'],
+  ])('maps %s V to %s', (volts, expected) => {
+    expect(batteryChargeBand(volts)).toBe(expected)
   })
 })
 
