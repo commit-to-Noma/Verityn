@@ -44,7 +44,6 @@ const RealityLens = lazy(() => import('./RealityLens'))
 
 type LabState =
   | { phase: 'idle' }
-  | { phase: 'selected'; image: string; name: string; size: ImageGeometry }
   | { phase: 'working'; image: string; size: ImageGeometry }
   | { phase: 'proposed'; image: string; size: ImageGeometry; result: VisionProposeResult; nonce: number }
   | { phase: 'error'; message: string; image: string | null; size: ImageGeometry | null; reason: 'file' | 'vision' }
@@ -112,6 +111,20 @@ function StageArt({ index }: { index: number }) {
       <span className="text-flow font-mono text-xs">0.6 A</span>
     </div>
   )
+}
+
+const SCAN_BEATS = ['Finding parts…', 'Tracing wires…', 'Reading polarity…'] as const
+
+/** Cycling interpreter status; honest theater while Spark reads the image. */
+function ScanStatus() {
+  const [beat, setBeat] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBeat((value) => (value + 1) % SCAN_BEATS.length)
+    }, 1600)
+    return () => window.clearInterval(timer)
+  }, [])
+  return <p className="text-ink-muted text-sm">{SCAN_BEATS[beat]}</p>
 }
 
 /** Two-panel review: source diagram beside the editable replica. */
@@ -669,12 +682,7 @@ export default function SnapBuildLab({
       const dataUrl = reader.result
       const probe = new Image()
       probe.onload = () => {
-        setState({
-          phase: 'selected',
-          image: dataUrl,
-          name: file.name,
-          size: { width: probe.naturalWidth, height: probe.naturalHeight },
-        })
+        interpret(dataUrl, { width: probe.naturalWidth, height: probe.naturalHeight })
       }
       probe.onerror = () =>
         setState({ phase: 'error', message: 'Could not read that file.', image: null, size: null, reason: 'file' })
@@ -706,23 +714,23 @@ export default function SnapBuildLab({
           return
         }
         const code = err instanceof ApiError ? err.code : null
-        const message = err instanceof ApiError ? err.message : 'Request failed.'
-        const visionDown = code === 'PROVIDER_UNAVAILABLE' || code === 'MISSING_KEY'
+        const kind = err instanceof ApiError ? err.kind : null
+        const visionDown = code === 'PROVIDER_UNAVAILABLE' || code === 'MISSING_KEY' || code === 'INTERNAL_ERROR'
         const nextStep = code === 'PROVIDER_TIMEOUT'
-          ? 'Vision timed out. Try again or use a sample.'
+          ? 'Spark took too long to answer. Try again or use a sample.'
           : code === 'RATE_LIMITED'
             ? 'Vision is rate limited. Try again shortly or use a sample.'
-            : code === 'INVALID_PROPOSAL'
-              ? 'The proposal was not usable. Review a sample or try another image.'
+            : code === 'INVALID_PROPOSAL' || kind === 'payload'
+              ? "Spark's reading was not usable. Try again or use a sample."
               : visionDown
                 ? 'Meta vision is unavailable. Use a sample or return to the Guided Lab.'
-                : message
+                : 'Could not reach the backend. Is it running?'
         setState({
           phase: 'error',
           message: nextStep,
           image,
           size,
-          reason: visionDown ? 'vision' : 'file',
+          reason: 'vision',
         })
       }
     })()
@@ -833,7 +841,7 @@ export default function SnapBuildLab({
           <SketchPad
             onExport={(image, size) => {
               setSketching(false)
-              setState({ phase: 'selected', image, name: 'sketch.png', size })
+              interpret(image, size)
             }}
             onCancel={() => setSketching(false)}
           />
@@ -934,51 +942,47 @@ export default function SnapBuildLab({
         </div>
         )}
       </div>
-      {(state.phase === 'selected' || state.phase === 'working') && (
+      {state.phase === 'working' && (
         <div className="glass-panel grid items-center gap-5 p-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:p-5">
-          <img
-            src={state.image}
-            alt="Uploaded schematic"
-            className="max-h-80 w-full rounded-[10px] bg-black/30 object-contain"
-          />
+          <div className="relative overflow-hidden rounded-[10px] bg-black/30">
+            <img
+              src={state.image}
+              alt="Uploaded schematic"
+              className="max-h-80 w-full object-contain"
+            />
+            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+              <div className="border-flow/80 absolute left-3 top-3 h-6 w-6 rounded-tl-md border-l-2 border-t-2" />
+              <div className="border-flow/80 absolute right-3 top-3 h-6 w-6 rounded-tr-md border-r-2 border-t-2" />
+              <div className="border-flow/80 absolute bottom-3 left-3 h-6 w-6 rounded-bl-md border-b-2 border-l-2" />
+              <div className="border-flow/80 absolute bottom-3 right-3 h-6 w-6 rounded-br-md border-b-2 border-r-2" />
+              <div className="lens-scanline bg-flow/70 absolute left-0 h-0.5 w-full shadow-[0_0_16px_2px_var(--color-flow)]" />
+            </div>
+          </div>
           <div className="flex min-w-0 flex-col gap-4">
-          {state.phase === 'selected' && (
+            <div className="flex items-center gap-3" aria-live="polite">
+              <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold">Interpreting with Meta Spark</p>
+                <ScanStatus />
+              </div>
+            </div>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => interpret(state.image, state.size)}
-                className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-              >
-                Interpret with Meta Spark
-              </button>
               <button
                 type="button"
                 onClick={reset}
                 className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
               >
-                Remove
+                Cancel
               </button>
               <div className="ml-auto">
                 <HealthStatus compact />
               </div>
             </div>
-          )}
-          {state.phase === 'working' && (
-            <div className="flex items-center gap-3" aria-live="polite">
-              <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
-              <p className="text-ink-muted text-sm">Reading the schematic…</p>
-            </div>
-          )}
           </div>
         </div>
       )}
       {state.phase === 'error' && (
         <div className="glass-panel flex flex-col gap-3 p-4" role="alert">
-          {state.reason === 'vision' && (
-            <span className="border-glass-border text-ink-muted w-fit rounded-full border px-3 py-1 text-xs font-medium">
-              Meta vision unavailable
-            </span>
-          )}
           <p className="text-sm">{state.message}</p>
           <div className="flex flex-wrap items-center gap-3">
             {state.image !== null && state.size !== null && (

@@ -844,13 +844,12 @@ async function drive() {
   // Stub the proposal at the network layer: no live Meta call in smoke.
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await uploadLensFile(switchImage)
-  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens selected')
+  check('auto-interpret, no button', !(await hasText('Interpret with Meta Spark')))
+  await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
   check('preview visible', await ev(`!!document.querySelector('img[alt="Uploaded schematic"]')`))
   check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
   check('drop zone offered', await ev(`!!document.querySelector('[aria-label="Diagram drop zone"]')`))
   check('no upload prediction gate', !(await hasText('Before we interpret: will it light?')))
-  await clickButton('Interpret with Meta Spark')
-  await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
   check('gallery collapses during review', !(await hasText('Textbook loop')))
   check('review defaults to Compare', await ev(`(() => {
     const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Compare');
@@ -888,8 +887,6 @@ async function drive() {
     provider: 'fixture-stub',
   }))
   await uploadLensFile(switchImage)
-  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens reselect')
-  await clickButton('Interpret with Meta Spark')
   await waitFor(() => hasText('does not look like a supported circuit'), 'lens unsupported', 20000)
   check('unsupported guidance', await hasText('Try a schematic or photo'))
   check('no fake replica', !(await hasText('Interactive circuit replica')))
@@ -908,8 +905,6 @@ async function drive() {
     provider: 'fixture-stub',
   }))
   await uploadLensFile(switchImage)
-  await waitFor(() => hasText('Interpret with Meta Spark'), 'lens reselect invalid')
-  await clickButton('Interpret with Meta Spark')
   await waitFor(() => hasText('Original diagram'), 'lens invalid review', 20000)
   await waitFor(() => hasText('Confirm the model below before testing'), 'lens invalid lock', 20000)
   await clickButton('Confirm model')

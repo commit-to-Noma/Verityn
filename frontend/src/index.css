@@ -461,6 +461,34 @@ body {
   font-weight: 600;
 }
 
+/* Lens interpreting: a scan sweep over the uploaded diagram. */
+@keyframes lens-scan {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.lens-scanline {
+  animation: lens-scan 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lens-scanline {
+    animation: none;
+  }
+}
+
 @keyframes stem-orbit-flow {
   to {
     stroke-dashoffset: -88;

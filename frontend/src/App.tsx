@@ -905,8 +905,10 @@ export default function App() {
                   Reality Lens
                 </h1>
                 <p className="max-w-2xl text-base text-ink-muted">
-                  Turn a diagram into an experiment: Meta Muse Spark proposes what it sees,
-                  you review and confirm, then Verityn Solver measures.
+                  Drop in a circuit sketch — a textbook loop, a whiteboard photo, a
+                  napkin drawing. Spark reads the parts and traces the wires, you
+                  check its work, then the solver measures what the circuit would
+                  really do.
                 </p>
               </div>
               <LensShowcase />
