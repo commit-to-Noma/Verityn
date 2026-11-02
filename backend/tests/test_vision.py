@@ -682,3 +682,14 @@ def test_load_dotenv_missing_file_is_silent(tmp_path):
     from app import _load_dotenv
 
     _load_dotenv(tmp_path / ".env")
+
+
+def test_resolve_port_default_and_override(monkeypatch):
+    from app import _resolve_port
+
+    monkeypatch.delenv("VERITYN_PORT", raising=False)
+    assert _resolve_port() == 5000
+    monkeypatch.setenv("VERITYN_PORT", "5001")
+    assert _resolve_port() == 5001
+    monkeypatch.setenv("VERITYN_PORT", "not-a-port")
+    assert _resolve_port() == 5000

@@ -458,6 +458,14 @@ def _load_dotenv(path=None):
             os.environ[key] = value
 
 
+def _resolve_port() -> int:
+    """Local port for `python backend/app.py`; VERITYN_PORT overrides 5000."""
+    try:
+        return int(os.environ.get("VERITYN_PORT", "5000"))
+    except ValueError:
+        return 5000
+
+
 if __name__ == "__main__":
     _load_dotenv()
     # Test-only switch for the provider-failure path; never set it live.
@@ -474,4 +482,4 @@ if __name__ == "__main__":
                 api_key=os.environ["MODEL_API_KEY"]),
         )
     # Debug mode stays off: the interactive debugger must never run.
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=_resolve_port(), debug=False)
