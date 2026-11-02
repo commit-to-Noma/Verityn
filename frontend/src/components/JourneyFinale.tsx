@@ -125,9 +125,8 @@ function saidByLearner(input: TraceInput | null): string {
     return 'No prediction was recorded.'
   }
   const why = cleanTranscriptForDisplay(prediction.why)
-  return why === ''
-    ? `You predicted ${CHOICE_LABELS[prediction.choice]}.`
-    : `You said: “${why}”`
+  // The "You said" heading labels this line; no repeated prefix.
+  return why === '' ? `You predicted ${CHOICE_LABELS[prediction.choice]}.` : `“${why}”`
 }
 
 /** Finale: three saved circuits, their predictions, and solver measurements. */
@@ -310,7 +309,9 @@ export default function JourneyFinale({
                       <p className="mt-1 text-sm text-ink-muted">No solver measurements were saved.</p>
                     )}
                   </div>
-                  <div className="rounded-xl border border-flow/30 bg-flow/5 p-3">
+                </div>
+
+                <div className="rounded-xl border border-flow/30 bg-flow/5 p-3 lg:col-span-2">
                     <h4 className="text-sm font-semibold">Concept</h4>
                     <p className="mt-1 text-sm">{concept ?? MISSING_CHAPTER}</p>
                     {input?.netlist !== null &&
@@ -354,7 +355,6 @@ export default function JourneyFinale({
                           )}
                         </div>
                       )}
-                  </div>
                 </div>
               </article>
             </li>

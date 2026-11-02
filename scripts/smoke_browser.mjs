@@ -870,6 +870,12 @@ async function drive() {
     return !!reality && reality.innerText.includes('Complete loop lights')
       && !/\\bum\\b/i.test(reality.innerText);
   })()`))
+  check('journey you-said label appears once', await ev(`(() => {
+    const items = [...document.querySelectorAll('[aria-label="Your circuit journey"] li')];
+    return items.length > 0 && items.every(
+      (item) => (item.innerText.match(/You said/g) ?? []).length <= 1,
+    );
+  })()`))
   check('share disclosure starts collapsed', await ev(`(() => {
     const summary = [...document.querySelectorAll('details summary')]
       .find((e) => e.textContent.trim() === 'Share your result');

@@ -67,4 +67,21 @@ describe('JourneyFinale', () => {
     expect(markup).toContain('<summary class="min-h-[44px] cursor-pointer content-center text-sm font-medium">Share your result</summary>')
     expect(markup).toContain('A shareable record of this session.')
   })
+
+  it('labels the learner quote once and spans the concept full width', () => {
+    const markup = renderToStaticMarkup(
+      <JourneyFinale
+        chapters={[chapter]}
+        onReturnHub={vi.fn()}
+        onExploreLens={vi.fn()}
+        onTryExperiment={vi.fn()}
+        onRestart={vi.fn()}
+      />,
+    )
+
+    expect(markup).toContain('>You said</h4>')
+    expect(markup).toContain('“The open switch stops the current.”')
+    expect(markup).not.toContain('You said: “')
+    expect(markup).toContain('lg:col-span-2')
+  })
 })
