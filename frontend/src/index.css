@@ -275,8 +275,10 @@ body {
     transition: none;
   }
 
+  .bulb-glow,
   .bulb-glow-burst,
   .bulb-overwork-glow,
+  .bulb-overworked .bulb-illustration,
   .battery-vent,
   .arc-flash,
   .react-flow__edge.wire-connect-pulse path,
@@ -366,6 +368,42 @@ body {
 
 .bulb-overworked .bulb-illustration {
   filter: drop-shadow(0 0 6px rgb(255 107 53 / 0.8));
+  animation: bulb-shake 0.45s linear infinite;
+}
+
+/* Overworked shake: the filament rattles under too much power. */
+@keyframes bulb-shake {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(0.8px, -0.6px) rotate(0.6deg);
+  }
+  50% {
+    transform: translate(-0.7px, 0.5px) rotate(-0.5deg);
+  }
+  75% {
+    transform: translate(0.6px, 0.6px) rotate(0.4deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+/* A lit bulb breathes instead of sitting flat. Opacity stays inline so
+   brightness still tracks measured watts; only the halo size pulses. */
+@keyframes bulb-breathe {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.07);
+  }
+}
+
+.bulb-glow {
+  animation: bulb-breathe 2.4s ease-in-out infinite;
 }
 
 /* Exploded bulb: grayed asset, hidden glow, crack overlay. */

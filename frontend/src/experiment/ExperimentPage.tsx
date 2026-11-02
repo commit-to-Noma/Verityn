@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Sparkles } from 'lucide-react'
+import { ClipboardList, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import {
   ApiError,
   explainResult,
@@ -12,6 +12,7 @@ import type { LessonSeed } from '../lessons/lesson'
 import { latchedDamage, validateBatteryVolts } from './bench'
 import { batteriesOppose, compareRuns, describeRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
+import { isSoundEnabled, setSoundEnabled } from './sound'
 
 const CircuitCanvas = lazy(() => import('../components/CircuitCanvas'))
 
@@ -188,6 +189,27 @@ function LatestResult({
 
 /** Free bench: build anything, run the solver, keep a session history.
  * No prediction gate, no ladder, no shared state with the guided lab. */
+function SoundToggle() {
+  const [on, setOn] = useState(isSoundEnabled)
+  const Icon = on ? Volume2 : VolumeX
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={on ? 'Mute bench sounds' : 'Unmute bench sounds'}
+      onClick={() => {
+        const next = !on
+        setOn(next)
+        setSoundEnabled(next)
+      }}
+      className="border-glass-border flex min-h-[44px] shrink-0 items-center gap-2 rounded-[10px] border px-3 text-sm font-medium"
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {on ? 'Sound on' : 'Muted'}
+    </button>
+  )
+}
+
 export default function ExperimentPage({
   initialSeed,
   initialLabel,
@@ -308,10 +330,15 @@ export default function ExperimentPage({
   return (
     <div className="flex flex-col gap-6">
       <section aria-labelledby="experiment-heading" className="flex flex-col gap-2">
-        <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Experiment</p>
-        <h2 id="experiment-heading" className="text-xl font-semibold">
-          Build something. Test what happens.
-        </h2>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Experiment</p>
+            <h2 id="experiment-heading" className="text-xl font-semibold">
+              Build something. Test what happens.
+            </h2>
+          </div>
+          <SoundToggle />
+        </div>
         <p className="text-ink-muted text-sm">
           Experiment freely with batteries, switches, bulbs, and wires. The simulator calculates
           the result after every test.

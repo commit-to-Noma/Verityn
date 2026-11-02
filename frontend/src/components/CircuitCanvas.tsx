@@ -59,6 +59,7 @@ import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
 import { BatteryFlipContext } from './canvas/batteryFlip'
+import { playClack, playPop, startHum, stopHum } from '../experiment/sound'
 import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
@@ -1122,7 +1123,13 @@ function CanvasInner({
     }
   }
 
-  useEffect(() => () => controller.current?.abort(), [])
+  useEffect(
+    () => () => {
+      controller.current?.abort()
+      stopHum()
+    },
+    [],
+  )
 
   useEffect(() => {
     if (
@@ -1147,6 +1154,7 @@ function CanvasInner({
   const invalidate = () => {
     controller.current?.abort()
     requestId.current += 1
+    stopHum()
     setRunState({ phase: 'idle' })
     setNodes((current) =>
       current.map((node) => {
@@ -1190,6 +1198,9 @@ function CanvasInner({
 
   const toggleSwitch = (id: string) => {
     noteManualEdit()
+    if (mode === 'experiment') {
+      playClack()
+    }
     const wasOpen = nodes.some((node) => node.id === id && node.data.kind === 'switch' && !node.data.closed)
     const sourceVolts = nodes.reduce(
       (total, node) => total + (node.data.kind === 'battery' ? (node.data.volts ?? 6) : 0),
@@ -1363,6 +1374,7 @@ function CanvasInner({
     controller.current = next
     requestId.current += 1
     const id = requestId.current
+    stopHum()
     setRunState({ phase: 'loading' })
     const flippedBatteries = new Set(
       nodes.filter((node) => node.data.kind === 'battery' && node.data.flipped === true).map((node) => node.id),
@@ -1456,6 +1468,29 @@ function CanvasInner({
             }
           }),
         )
+        if (mode === 'experiment' && result.ok) {
+          const blown = Object.entries(result.conditions ?? {}).some(
+            ([partId, condition]) =>
+              condition === 'damaged' &&
+              nodes.some(
+                (node) => node.id === partId && node.data.condition !== 'damaged',
+              ),
+          )
+          if (blown) {
+            playPop()
+          } else if (
+            Object.values(result.components).some(
+              (part) => Number.isFinite(part.current) && Math.abs(part.current) > 1e-9,
+            )
+          ) {
+            const netVolts = nodes.reduce(
+              (total, node) =>
+                total + (node.data.kind === 'battery' ? (node.data.volts ?? 6) : 0),
+              0,
+            )
+            startHum(netVolts)
+          }
+        }
         setRunState({ phase: 'done', result, netlist })
         ranOnceRef.current = true
         // Lessons only report solved runs; the free bench also reports

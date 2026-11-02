@@ -1098,6 +1098,7 @@ async function drive() {
   await waitFor(() => hasText('is damaged and no longer completes the circuit'), 'damaged explain', 20000)
   await clickButton('Reset to blank')
   await waitFor(() => hasText('Drag a battery into the workspace to begin.'), 'blank bench')
+  check('sound toggle offered', await hasText('Sound on'))
   check('history survives reset', await hasText('Run 1 - Light a bulb'))
   await clickPresetButton('Overload the bulb', 'Test')
   await waitFor(() => hasText('Run 7 - Overload the bulb'), 'overload after reset', 25000)
