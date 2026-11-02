@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { ClipboardList, Sparkles } from 'lucide-react'
 import {
   ApiError,
   explainResult,
@@ -188,11 +189,9 @@ function LatestResult({
 /** Free bench: build anything, run the solver, keep a session history.
  * No prediction gate, no ladder, no shared state with the guided lab. */
 export default function ExperimentPage({
-  onReturnToLab,
   initialSeed,
   initialLabel,
 }: {
-  onReturnToLab?: () => void
   initialSeed?: LessonSeed
   initialLabel?: string
 }) {
@@ -308,17 +307,6 @@ export default function ExperimentPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        {onReturnToLab !== undefined && (
-          <button
-            type="button"
-            onClick={onReturnToLab}
-            className="border-glass-border min-h-[44px] w-fit rounded-[10px] border px-4 text-sm font-medium"
-          >
-            ← Back to guided journey
-          </button>
-        )}
-      </div>
       <section aria-labelledby="experiment-heading" className="flex flex-col gap-2">
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Experiment</p>
         <h2 id="experiment-heading" className="text-xl font-semibold">
@@ -335,9 +323,17 @@ export default function ExperimentPage({
 
       <section aria-label="Starter experiments" className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Start from a working bench</h3>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {EXPERIMENT_PRESETS.map((preset) => (
-            <div key={preset.id} className="glass-panel flex flex-col gap-2 p-4">
+            <div
+              key={preset.id}
+              className={`glass-panel relative flex flex-col gap-2 overflow-hidden p-4 ${
+                activePreset === preset.id ? 'border-flow/60' : ''
+              }`}
+            >
+              {activePreset === preset.id && (
+                <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
+              )}
               <p className="text-base font-medium">{preset.title}</p>
               <p className="text-ink-muted text-sm">{preset.tagline}</p>
               <div className="mt-auto flex flex-wrap gap-2 pt-2">
@@ -400,7 +396,11 @@ export default function ExperimentPage({
       )}
 
       {batteries.length > 0 && (
-        <section aria-label="Bench batteries" className="glass-panel flex flex-col gap-3 p-4">
+        <section
+          aria-label="Bench batteries"
+          className="glass-panel relative flex flex-col gap-3 overflow-hidden p-4"
+        >
+          <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
           <h3 className="text-base font-semibold">Batteries</h3>
           <p className="text-ink-muted text-sm">
             Set a battery voltage, then run the experiment to measure what changes.
@@ -425,9 +425,12 @@ export default function ExperimentPage({
         <section aria-label="Run history" className="glass-panel flex flex-col gap-2 p-4">
           <h3 className="text-base font-semibold">Run history</h3>
           {runs.length === 0 ? (
-            <p className="text-ink-muted text-sm">
-              No runs yet. Run the experiment to record what the simulator measured.
-            </p>
+            <div className="flex flex-col items-center gap-2 py-4 text-center">
+              <ClipboardList className="text-ink-muted h-10 w-10 opacity-40" aria-hidden="true" />
+              <p className="text-ink-muted text-sm">
+                Your data will appear here. Build a circuit to start logging!
+              </p>
+            </div>
           ) : (
             <ol className="flex flex-col gap-1">
               {runs.map((run) => (
@@ -443,9 +446,12 @@ export default function ExperimentPage({
         <section aria-label="Ask about this result" className="glass-panel flex flex-col gap-3 p-4">
           <h3 className="text-base font-semibold">Ask Muse Spark about this result</h3>
           {fresh === null ? (
-            <p className="text-ink-muted text-sm">
-              Run the experiment first  -  explanations cover fresh solver results only.
-            </p>
+            <div className="flex flex-col items-center gap-2 py-4 text-center">
+              <Sparkles className="text-ink-muted h-10 w-10 opacity-40" aria-hidden="true" />
+              <p className="text-ink-muted text-sm">
+                Run the experiment first  -  explanations cover fresh solver results only.
+              </p>
+            </div>
           ) : (
             <p className="text-ink-muted text-sm">
               Optional: the coach explains the measurements above. It cannot change your circuit.

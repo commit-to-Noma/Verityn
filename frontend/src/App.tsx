@@ -945,7 +945,6 @@ export default function App() {
               <ExperimentPage
                 initialSeed={journeyExperiment?.seed}
                 initialLabel={journeyExperiment?.label}
-                onReturnToLab={() => handleNavigate('lab')}
               />
             </Suspense>
           </section>
