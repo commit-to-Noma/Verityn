@@ -895,13 +895,6 @@ export default function App() {
     return (
       <JourneyShell stage="intro" auto={auto} tools={developerTools} location="lens" onNavigate={handleNavigate} wide>
         <div className="flex flex-col gap-6">
-          <button
-            type="button"
-            onClick={() => setLensPage(false)}
-            className="border-glass-border min-h-[44px] w-fit rounded-[10px] border px-4 text-sm font-medium"
-          >
-            ← Back to guided journey
-          </button>
           <section aria-labelledby="lens-page-heading" className="flex flex-col gap-5">
             <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
               <div className="flex min-w-0 flex-col gap-2">

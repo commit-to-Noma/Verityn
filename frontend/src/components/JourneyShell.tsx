@@ -94,18 +94,23 @@ export default function JourneyShell({
         style={{ marginInline: 'calc(50% - 50vw)' }}
       >
         <div className="mx-auto flex min-h-16 w-full max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onNavigate('hub')}
+            aria-label="Verityn home"
+            className="flex min-w-0 items-center gap-3 rounded-[10px]"
+          >
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[10px] border border-flow/30 bg-flow/10 shadow-[0_0_18px_rgb(56_214_233/0.16)]">
               <img
                 src="/brand/verityn-logo-transparent.png"
-                alt="Verityn logo"
+                alt=""
                 width={36}
                 height={36}
                 className="h-9 w-9 object-contain"
               />
             </span>
-            <p className="text-xl font-semibold tracking-tight">Verityn Laboratory</p>
-          </div>
+            <span className="text-xl font-semibold tracking-tight">Verityn Laboratory</span>
+          </button>
           <details ref={mobileMenu} className="relative ml-auto xl:hidden">
             <summary className="flex min-h-[44px] cursor-pointer list-none items-center rounded-[10px] border border-glass-border px-4 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
               Pages

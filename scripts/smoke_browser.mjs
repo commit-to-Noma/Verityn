@@ -560,7 +560,7 @@ async function drive() {
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
   check('trace details on via param', await ev(`document.querySelector('[aria-label="Trace details"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
-  check('brand icon linked', iconHref === '/brand/verityn-logo.png', iconHref)
+  check('brand icon linked', iconHref === '/brand/verityn-logo-transparent.png', iconHref)
   const iconRes = await fetch(BASE + iconHref)
   const iconBytes = Number(iconRes.headers.get('content-length') ?? '0')
   check('brand icon served and bounded', iconRes.ok && iconBytes > 0 && iconBytes < 100 * 1024, `${iconRes.status} ${iconBytes}B`)
@@ -829,7 +829,8 @@ async function drive() {
   // innerText reflects the CSS uppercase transform on the eyebrow.
   await waitFor(() => hasText('META VISION WORKSPACE'), 'lens page')
   check('lens page heading', await hasText('Reality Lens'))
-  check('lens back button', await hasText('← Back to guided journey'))
+  check('lens back button removed', !(await hasText('← Back to guided journey')))
+  check('logo links home', await ev(`!!document.querySelector('button[aria-label="Verityn home"]')`))
   await waitFor(() => hasText('Your diagram'), 'lens lab', 20000)
   check('upload panel first', await hasText('Choose an image'))
   check('lens hero focuses the upload', await hasText('Drop a circuit diagram to see it'))
@@ -841,8 +842,8 @@ async function drive() {
   check('preview visible', await ev(`!!document.querySelector('img[alt="Uploaded schematic"]')`))
   check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
   check('drop zone offered', await ev(`!!document.querySelector('[aria-label="Diagram drop zone"]')`))
-  check('lens prediction offered', await hasText('Before we interpret: will it light?'))
-  await clickButton('No')
+  check('no upload prediction gate', !(await hasText('Before we interpret: will it light?')))
+  await clickButton('Interpret with Meta Spark')
   await clickButton('Interpret with Meta Spark')
   await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
   check('gallery collapses during review', !(await hasText('Textbook loop')))
@@ -912,7 +913,7 @@ async function drive() {
   await clickButton('Try another image')
   await waitFor(() => hasText('Choose an image'), 'lens reset invalid')
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
-  await clickButton('← Back to guided journey')
+  await clickButton('Guided Lab')
   await waitFor(() => hasText('Your journey'), 'back to finale')
   await ev(`(() => {
     const s = document.querySelector('#lab-tools > summary');
