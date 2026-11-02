@@ -364,9 +364,6 @@ export default function RealityLens({
                 Comparing against:{' '}
                 {run.open ? 'circuit with the switch open' : 'diagram as drawn'}.
               </p>
-              <p className="text-ink-muted pl-9 text-xs">
-                This tests your prediction against the model, not you.
-              </p>
             </>
           ) : (
             <p className="text-ink-muted text-sm">

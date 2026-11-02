@@ -195,9 +195,6 @@ export default function JourneyShell({
               </a>
             </li>
           </ul>
-          <p className="mt-3 text-xs text-ink-muted">
-            Pointer and Demonstration are deterministic by design. SAM is sample-only, not a live inference.
-          </p>
         </section>
         )}
         {proof && <TracePanel />}

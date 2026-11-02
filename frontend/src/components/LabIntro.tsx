@@ -6,7 +6,6 @@ import UnderTheHoodTryIts from './UnderTheHoodTryIts'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
   HOMEPAGE_ENTRIES,
-  HOMEPAGE_GUIDED_LINE,
   HOMEPAGE_HEADLINE,
   HOMEPAGE_SUBHEAD,
   LAB_LOOP,
@@ -445,7 +444,6 @@ export default function LabIntro({
             {HOMEPAGE_HEADLINE}
           </h2>
           <p className="max-w-md text-base text-ink-muted">{HOMEPAGE_SUBHEAD}</p>
-          <p className="max-w-md text-base font-medium">{HOMEPAGE_GUIDED_LINE}</p>
           <div className="w-full max-w-md">
             <HealthStatus hideWhenReady />
           </div>
@@ -518,27 +516,43 @@ export default function LabIntro({
       <section id="under-the-hood" aria-labelledby="under-the-hood-heading" className="w-full">
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Under the hood</p>
         <h3 id="under-the-hood-heading" className="mt-1 text-xl font-semibold">Try the real building blocks</h3>
+        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+          Four tools do everything on this page. The coach asks, your voice answers, the solver measures, and the
+          samples show their work.
+        </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <article className="glass-panel flex flex-col gap-2 p-4">
-            <h4 className="font-semibold">Muse Spark</h4>
-            <p className="text-sm text-ink-muted">Used for R1 coach questions, solver-grounded explanations, and Reality Lens image proposals. A deterministic fallback is labelled when served.</p>
+          <article className="glass-panel flex flex-col gap-2 border-flow/30 p-5 sm:col-span-2 sm:flex-row sm:items-center sm:gap-5">
+            <div className="sm:max-w-xs">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">The coach</p>
+              <h4 className="mt-1 text-lg font-semibold">Muse Spark</h4>
+            </div>
+            <p className="text-sm text-ink-muted">Asks the R1 question, drafts solver-grounded explanations, and proposes what Reality Lens sees. A labelled fallback stands in when the model is unreachable.</p>
           </article>
           <article className="glass-panel flex flex-col gap-2 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Your voice in</p>
             <h4 className="font-semibold">Muse Voice Transcribe</h4>
-            <p className="text-sm text-ink-muted">Turns learner speech into editable Why text in Predict, Reality Check, and Solo.</p>
+            <p className="text-sm text-ink-muted">Turns speech into editable Why text in Predict, Reality Check, and Solo.</p>
           </article>
           <article className="glass-panel flex flex-col gap-2 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">The ground truth</p>
             <h4 className="font-semibold">Verityn Solver</h4>
             <p className="text-sm text-ink-muted">Measures each circuit locally for current, voltage, power, and validity.</p>
           </article>
-          <article className="glass-panel flex flex-col gap-2 p-4">
-            <h4 className="font-semibold">SAM: sample only</h4>
-            <p className="text-sm text-ink-muted">Segmentation examples are samples; no live SAM inference is used.</p>
+          <article className="glass-panel flex flex-col gap-1 p-4 sm:col-span-2 sm:flex-row sm:items-baseline sm:gap-3">
+            <h4 className="shrink-0 font-semibold">SAM: sample only</h4>
+            <p className="text-sm text-ink-muted">
+              Segmentation examples are tappable samples with saved provenance; no live SAM inference is used.{' '}
+              <a
+                className="text-flow underline underline-offset-2"
+                href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Sample probe results
+              </a>
+            </p>
           </article>
         </div>
-        <p className="mt-3 text-sm text-ink-muted">
-          Pointer and Demonstration are deterministic by design. Browser speech playback is not a Meta voice tool.
-        </p>
         <details className="glass-panel mt-4 p-4">
           <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
             Smart details

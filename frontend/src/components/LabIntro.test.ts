@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   HOMEPAGE_ENTRIES,
-  HOMEPAGE_GUIDED_LINE,
   HOMEPAGE_HEADLINE,
   HOMEPAGE_SUBHEAD,
   LAB_LOOP,
@@ -56,10 +55,7 @@ describe('homepage copy', () => {
     expect(HOMEPAGE_ENTRIES.startLab).toBe('Start your own lab')
   })
 
-  it('states the Guided Lab purpose under the headline and on slide one', () => {
-    expect(HOMEPAGE_GUIDED_LINE).toBe(
-      'Guided Lab: predict what a circuit will do, build it, then test your idea against the simulator.',
-    )
+  it('states the Guided Lab purpose on slide one', () => {
     expect(LABORATORY_STATIONS[0]?.title).toBe('Guided Lab')
     expect((LABORATORY_STATIONS[0]?.description ?? '').toLowerCase()).toContain(
       'predict what a circuit will do, build it, then test your idea against the simulator',

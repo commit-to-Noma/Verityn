@@ -41,6 +41,7 @@ import { REALITY_FOLLOWUP_QUESTION, realityReplyFor } from './journey/realityRep
 import { setTraceStage } from './trace/session'
 import {
   JOURNEY_PROGRESS_VERSION,
+  checkpointHasProgress,
   clearJourneyCheckpoint,
   readJourneyCheckpoint,
   saveJourneyCheckpoint,
@@ -170,11 +171,15 @@ export default function App() {
       checkpointSaveFailed.current = !clearBrowserCheckpoint()
       return
     }
+    // Save only real progress: a fresh Start must not create a checkpoint,
+    // so Resume only appears when there is somewhere to resume to.
     const hasJourney =
-      entered ||
       l1Prediction !== null ||
+      realityStarted ||
       realityPrediction !== null ||
+      transferStarted ||
       transferPrediction !== null ||
+      transferDone ||
       Object.keys(snapshots).length > 0
     if (!hasJourney) {
       return
@@ -735,7 +740,11 @@ export default function App() {
         setLensPage(false)
         setExperimentPage(true)
       } else if (target === 'lab') {
-        if (!entered && checkpointRead.checkpoint !== null) {
+        if (
+          !entered &&
+          checkpointRead.checkpoint !== null &&
+          checkpointHasProgress(checkpointRead.checkpoint)
+        ) {
           handleResumeJourney()
           return
         }
@@ -1059,7 +1068,10 @@ export default function App() {
           onExperiment={() => handleNavigate('experiment')}
           onExploreLens={handleExploreLens}
           onDemo={startDemo}
-          resumeAvailable={checkpointRead.checkpoint !== null}
+          resumeAvailable={
+            checkpointRead.checkpoint !== null &&
+            checkpointHasProgress(checkpointRead.checkpoint)
+          }
           onResume={handleResumeJourney}
           storageNotice={
             checkpointRead.status === 'invalid'

@@ -5,9 +5,6 @@ export const HOMEPAGE_HEADLINE = 'Imagine it. Test it. Understand it.'
 export const HOMEPAGE_SUBHEAD =
   'Explore four STEM disciplines through interactive labs. Circuits are our first live Engineering module.'
 
-export const HOMEPAGE_GUIDED_LINE =
-  'Guided Lab: predict what a circuit will do, build it, then test your idea against the simulator.'
-
 export const HOMEPAGE_ENTRIES = {
   demo: 'Watch a walkthrough',
   startLab: 'Start your own lab',

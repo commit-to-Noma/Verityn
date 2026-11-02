@@ -171,6 +171,19 @@ function decodeCheckpoint(value: unknown, now: number): JourneyCheckpoint | null
   return isCheckpoint(value, now) ? value : null
 }
 
+/** True when a checkpoint holds real progress worth resuming. */
+export function checkpointHasProgress(checkpoint: JourneyCheckpoint): boolean {
+  return (
+    checkpoint.l1Prediction !== null ||
+    checkpoint.realityStarted ||
+    checkpoint.realityPrediction !== null ||
+    checkpoint.transferStarted ||
+    checkpoint.transferPrediction !== null ||
+    checkpoint.transferDone ||
+    Object.keys(checkpoint.snapshots).length > 0
+  )
+}
+
 export function readJourneyCheckpoint(storage: Storage, now = Date.now()): CheckpointRead {
   let stored: string | null
   try {

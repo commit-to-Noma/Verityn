@@ -88,7 +88,7 @@ Layout: left = replayed circuit (read-only, with current labels); right = verdic
 - **Prediction card:** shows what the student said, verbatim.
 - **Verdict list:** one row per claim: icon, label, claim text. Consistent (check icon), Contradicted (x icon), Can't assess (question icon). Below each: the numbers that decided it (mono, e.g. `Bulb A 0.10 A, Bulb B 0.10 A`).
 - **Measurements table:** per component voltage, current, power. Mono, right-aligned.
-- **Explanation (violet):** short, written only from the solver numbers; tagged "Coach explanation". Footnote: "This tests your prediction against the model, not you."
+- **Explanation (violet):** short, written only from the solver numbers; tagged "Coach explanation". Verdict lines use the personal recap form ("You predicted X. You tested … That agreed/disagreed with your prediction: …").
 - **Transfer card:** a new circuit question with the coach visibly off ("Coach off" badge). Student predicts again; result appears in the same verdict format.
 - Buttons: "Try another circuit" (secondary), "Back to Learn" (ghost).
 

@@ -110,6 +110,42 @@ describe('coach voice playback', () => {
     ])
   })
 
+  it('reads the whole line even when the browser drops sentence-end events', () => {
+    vi.useFakeTimers()
+    const utterances: { text: string }[] = []
+    const finished = vi.fn()
+    const unsubscribe = subscribeCoachSpeechFinished(finished)
+    vi.stubGlobal('speechSynthesis', {
+      speak: vi.fn(),
+      cancel: vi.fn(),
+      resume: vi.fn(),
+      getVoices: () => [],
+    })
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        onend: (() => void) | null = null
+        onerror: (() => void) | null = null
+        text: string
+        constructor(text: string) {
+          this.text = text
+          utterances.push(this)
+        }
+      },
+    )
+
+    // Neither onend nor onerror ever fires: the watchdog must advance anyway.
+    speakCoach('With the switch open, no current flows. The bulb stays off.')
+    expect(utterances).toHaveLength(1)
+    vi.advanceTimersByTime(60_000)
+    expect(utterances.map((utterance) => utterance.text)).toEqual([
+      'With the switch open, no current flows.',
+      'The bulb stays off.',
+    ])
+    expect(finished).toHaveBeenCalledTimes(1)
+    unsubscribe()
+  })
+
   it('does not lose provider metadata when the current line is replayed', () => {
     vi.stubGlobal('speechSynthesis', {
       speak: vi.fn(),

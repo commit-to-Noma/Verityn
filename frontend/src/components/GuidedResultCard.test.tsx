@@ -84,7 +84,7 @@ describe('GuidedResultCard', () => {
 
     expect(markup).toContain('You predicted Yes.')
     expect(markup).toContain('it stayed dark.')
-    expect(markup).toContain('This tests your prediction against the model, not you.')
+    expect(markup).toContain('That disagreed with your prediction')
     // The line renders before the collapsed details block.
     expect(markup.indexOf('You predicted')).toBeLessThan(markup.indexOf('<summary'))
   })

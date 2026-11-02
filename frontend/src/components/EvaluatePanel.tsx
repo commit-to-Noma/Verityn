@@ -162,7 +162,6 @@ export default function EvaluatePanel({ preset }: { preset: Preset }) {
           </button>
         </div>
       )}
-      <p className="text-ink-muted text-xs">This tests your prediction against the model, not you.</p>
       {state.phase === 'done' && (
         <details className="text-xs">
           <summary className="text-ink-muted cursor-pointer">Raw JSON</summary>

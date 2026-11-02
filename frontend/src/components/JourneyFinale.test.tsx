@@ -68,7 +68,7 @@ describe('JourneyFinale', () => {
     expect(markup).toContain('A shareable record of this session.')
   })
 
-  it('labels the learner quote once and spans the concept full width', () => {
+  it('labels the learner quote once and keeps the concept beside the snapshot', () => {
     const markup = renderToStaticMarkup(
       <JourneyFinale
         chapters={[chapter]}
@@ -82,6 +82,9 @@ describe('JourneyFinale', () => {
     expect(markup).toContain('>You said</h4>')
     expect(markup).toContain('“The open switch stops the current.”')
     expect(markup).not.toContain('You said: “')
+    // Concept sits in the right column with the readings; only the action
+    // row spans full width beneath the snapshot.
+    expect(markup.indexOf('>Concept</h4>')).toBeLessThan(markup.indexOf('lg:col-span-2'))
     expect(markup).toContain('lg:col-span-2')
   })
 })

@@ -135,27 +135,43 @@ export function speakCoach(
     if (generation !== speechGeneration) {
       return
     }
-    const utterance = new Utterance(parts[index] ?? text)
+    const partText = parts[index] ?? text
+    const utterance = new Utterance(partText)
     utterance.rate = 0.95
     utterance.pitch = 1.04
     utterance.voice = voice
-    const ended = () => {
-      if (generation !== speechGeneration) {
+    let settled = false
+    const advance = () => {
+      if (settled || generation !== speechGeneration) {
         return
       }
+      settled = true
+      globalThis.clearTimeout(watchdog)
       if (index + 1 < parts.length) {
         globalThis.setTimeout(() => speakPart(index + 1), SENTENCE_PAUSE_MS)
       } else {
         notifySpeechFinished()
       }
     }
-    const failed = () => {
-      if (generation === speechGeneration) {
-        notifySpeechFinished()
-      }
-    }
-    utterance.onend = ended
-    utterance.onerror = failed
+    // Browsers sometimes drop onend/onerror (or pause long speech), which
+    // used to strand playback after the first sentence. The watchdog keeps
+    // the chain moving so the whole coach line is always read.
+    const watchdog = globalThis.setTimeout(
+      () => {
+        if (generation !== speechGeneration || settled) {
+          return
+        }
+        try {
+          synthesis.resume?.()
+        } catch {
+          /* resume is best-effort; the advance below still runs */
+        }
+        advance()
+      },
+      Math.max(5000, partText.length * 120),
+    )
+    utterance.onend = advance
+    utterance.onerror = advance
     synthesis.speak(utterance)
   }
   speakPart(0)

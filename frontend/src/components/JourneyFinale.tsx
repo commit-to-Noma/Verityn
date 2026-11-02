@@ -309,16 +309,18 @@ export default function JourneyFinale({
                       <p className="mt-1 text-sm text-ink-muted">No solver measurements were saved.</p>
                     )}
                   </div>
-                </div>
-
-                <div className="rounded-xl border border-flow/30 bg-flow/5 p-3 lg:col-span-2">
+                  <div className="rounded-xl border border-flow/30 bg-flow/5 p-3">
                     <h4 className="text-sm font-semibold">Concept</h4>
                     <p className="mt-1 text-sm">{concept ?? MISSING_CHAPTER}</p>
-                    {input?.netlist !== null &&
-                      input?.netlist !== undefined &&
-                      input.result?.ok === true && (
-                        <div className="mt-3 flex flex-col items-start gap-2">
-                          <div className="flex flex-row flex-wrap gap-2">
+                  </div>
+                </div>
+
+                {input?.netlist !== null &&
+                  input?.netlist !== undefined &&
+                  input.result?.ok === true && (
+                    <div className="lg:col-span-2">
+                      <div className="flex flex-col items-start gap-2">
+                        <div className="flex flex-row flex-wrap gap-2">
                             <button
                               type="button"
                               onClick={() => void explainConcept(chapter)}
@@ -354,8 +356,8 @@ export default function JourneyFinale({
                             <p className="text-sm text-ink-muted" role="status">{explanationState.message}</p>
                           )}
                         </div>
-                      )}
-                </div>
+                      </div>
+                  )}
               </article>
             </li>
           )

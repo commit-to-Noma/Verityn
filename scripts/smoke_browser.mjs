@@ -594,7 +594,7 @@ async function drive() {
     'hub health resolved',
   )
   check('ready pill hidden on hub', !(await hasText('Simulator ready')))
-  check('guided lab purpose line', await hasText('Guided Lab: predict what a circuit will do'))
+  check('guided lab purpose line removed from hero', !(await hasText('Guided Lab: predict what a circuit will do')))
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
   check('trace details on via param', await ev(`document.querySelector('[aria-label="Trace details"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
@@ -731,7 +731,7 @@ async function drive() {
   })()`))
   await captureScreenshot('reality-check-after-test')
   check('reality verdict line visible', await hasText('You predicted Yes'))
-  check('reality verdict neutral', await hasText('This tests your prediction against the model, not you'))
+  check('reality verdict personal', await hasText('That disagreed with your prediction'))
   check('reality battery supplies wording', await ev(`(document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '').includes('supplies 0.0 A (0.0 W)')`))
   await assertOneVoice('reality-after')
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
@@ -820,7 +820,7 @@ async function drive() {
   await assertGuidedCanvasFits('Solo after test')
   await captureScreenshot('solo-after-test')
   check('solo verdict line visible', await hasText('You predicted Yes'))
-  check('solo verdict neutral', await hasText('This tests your prediction against the model, not you'))
+  check('solo verdict personal', await hasText('That agreed with your prediction'))
   check('solo battery supplies wording', await ev(`(document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '').includes('supplies 1.2 A (7.2 W)')`))
   check('solo canvas never negative', await ev(`(() => {
     const text = document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '';

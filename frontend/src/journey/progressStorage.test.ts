@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   JOURNEY_PROGRESS_KEY,
   JOURNEY_PROGRESS_VERSION,
+  checkpointHasProgress,
   clearJourneyCheckpoint,
   readJourneyCheckpoint,
   saveJourneyCheckpoint,
@@ -128,5 +129,17 @@ describe('journey progress storage', () => {
     saveJourneyCheckpoint(storage, checkpoint)
     expect(clearJourneyCheckpoint(storage)).toBe(true)
     expect(readJourneyCheckpoint(storage).status).toBe('empty')
+  })
+
+  it('treats a fresh start as resumable only once real progress exists', () => {
+    const fresh: JourneyCheckpoint = {
+      ...checkpoint,
+      l1Prediction: null,
+    }
+    expect(checkpointHasProgress(fresh)).toBe(false)
+    expect(checkpointHasProgress(checkpoint)).toBe(true)
+    expect(
+      checkpointHasProgress({ ...fresh, transferStarted: true }),
+    ).toBe(true)
   })
 })

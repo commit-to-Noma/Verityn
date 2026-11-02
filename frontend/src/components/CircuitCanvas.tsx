@@ -732,9 +732,6 @@ function StartVerdict({
       <p className="text-ink-muted pl-9 text-xs">
         The starting circuit was measured by the solver.
       </p>
-      <p className="text-ink-muted pl-9 text-xs">
-        This tests your prediction against the model, not you.
-      </p>
     </div>
   )
 }
