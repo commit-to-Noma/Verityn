@@ -284,7 +284,7 @@ function ReviewPanels({
       )}
       {view === 'compare' && showOriginal && showModel && (
         <label className="text-ink-muted hidden items-center gap-3 text-xs xl:flex">
-          Drag to compare
+          Adjust panel widths
           <input
             type="range"
             min={25}
@@ -603,11 +603,14 @@ function ReviewPanels({
       {showTriptych(confirmed, testedResult) &&
         testedResult?.ok === true &&
         onTryExperiment !== undefined && (
-          <div>
+          <div className="flex flex-col gap-2">
+            <p className="text-ink-muted text-sm">
+              These numbers are a starting point — change one part at a time to see what moves them.
+            </p>
             <button
               type="button"
               onClick={() => onTryExperiment(seed, 'Reality Lens import')}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              className="border-glass-border min-h-[44px] self-start rounded-[10px] border px-4 text-sm font-medium"
             >
               Test this in the Experiment Bay
             </button>
