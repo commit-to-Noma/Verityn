@@ -74,8 +74,8 @@ export const SMART_DETAILS = [
   },
   {
     behavior: 'Voice capture stops after silence and records stage timings',
-    where: 'Coach Dock voice timing details',
-    evidence: 'frontend/src/voice/voiceTimings.test.ts',
+    where: 'Trace drawer voice captures',
+    evidence: 'frontend/src/components/TracePanel.test.tsx',
   },
   {
     behavior: 'Finale handoff reuses the saved circuit in Experiment Bay',

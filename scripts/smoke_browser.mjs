@@ -720,11 +720,15 @@ async function drive() {
   await waitFor(() => hasText('REALITY CHECK · THE OPEN SWITCH'), 'reality predict')
   await assertGuidedCanvasFits('Reality Check')
   await clickButton('Yes')
-  await fillInput('predict-why', 'complete loop lights')
+  await fillInput('predict-why', 'um complete loop loop lights, um')
   await clickButtonStarts('Continue')
   await clickButton('Test again')
   await waitFor(() => hasText('MEASURED BY THE SOLVER'), 'Reality Check measurement', 25000)
   await assertGuidedCanvasFits('Reality Check after test')
+  check('prediction chip is cleaned of fillers and repeats', await ev(`(() => {
+    const chip = document.querySelector('[aria-label="Prediction recap"]')?.innerText ?? '';
+    return chip.includes('Complete loop lights') && !/\\bum\\b/i.test(chip);
+  })()`))
   await captureScreenshot('reality-check-after-test')
   check('reality verdict line visible', await hasText('You predicted Yes'))
   check('reality verdict neutral', await hasText('This tests your prediction against the model, not you'))
@@ -860,6 +864,12 @@ async function drive() {
     await hasText('Your journey') && await hasText('Light the bulb') && await hasText('Open switch')
       && await hasText('Solo') && await hasText('You said') && await hasText('The solver measured'),
   )
+  check('journey you-said is cleaned of fillers and repeats', await ev(`(() => {
+    const reality = [...document.querySelectorAll('[aria-label="Your circuit journey"] li')]
+      .find((item) => item.querySelector('h3')?.innerText.includes('Open switch'));
+    return !!reality && reality.innerText.includes('Complete loop lights')
+      && !/\\bum\\b/i.test(reality.innerText);
+  })()`))
   check('share disclosure starts collapsed', await ev(`(() => {
     const summary = [...document.querySelectorAll('details summary')]
       .find((e) => e.textContent.trim() === 'Share your result');

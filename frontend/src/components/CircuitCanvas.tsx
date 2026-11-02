@@ -2402,6 +2402,7 @@ function CanvasInner({
                   hint={challenge.fix.hint}
                   hideHint={solo}
                   compact={completed}
+                  question={challenge.question}
                 />
               </div>
             )}
@@ -2470,7 +2471,7 @@ function CanvasInner({
           {coachDock}
           {experimentPane}
           {prediction && challenge && (
-            <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} />
+            <PredictionSummary prediction={prediction} hint={challenge.fix.hint} hideHint={solo} question={challenge.question} />
           )}
           {completed && runState.phase === 'done' && (
             <GuidedResultCard

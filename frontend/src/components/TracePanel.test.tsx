@@ -1,10 +1,12 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it } from 'vitest'
 import { clearTraceEvents, recordTraceEvent } from '../trace/session'
+import { clearVoiceTimings, recordVoiceTiming } from '../voice/voiceTimings'
 import TracePanel from './TracePanel'
 
 afterEach(() => {
   clearTraceEvents()
+  clearVoiceTimings()
 })
 
 describe('TracePanel', () => {
@@ -22,5 +24,20 @@ describe('TracePanel', () => {
 
     const markup = renderToStaticMarkup(<TracePanel />)
     expect(markup).toContain('2 attempts')
+  })
+
+  it('keeps voice stage labels, timings, and raw transcripts in Trace', () => {
+    recordVoiceTiming({
+      stage: 'reality-build',
+      speechToTranscriptMs: 412,
+      transcriptToCoachReplyMs: 286,
+      transcript: 'Um, close the switch.',
+    })
+
+    const markup = renderToStaticMarkup(<TracePanel />)
+    expect(markup).toContain('Voice captures')
+    expect(markup).toContain('reality-build: speech end → transcript 412 ms')
+    expect(markup).toContain('transcript → coach reply 286 ms')
+    expect(markup).toContain('raw: “Um, close the switch.”')
   })
 })

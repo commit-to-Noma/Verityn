@@ -41,7 +41,7 @@ describe('transcriptFill', () => {
 
   it('fills why but leaves an ambiguous transcript unselected', () => {
     const fill = transcriptFill('cupcake poop')
-    expect(fill.why).toBe('cupcake poop')
+    expect(fill.why).toBe('Cupcake poop')
     expect(fill.choice).toBeNull()
     expect(PREDICTION_CLARIFICATION_PROMPT).toBe(
       'Do you think the bulb will light: yes, no or not sure?',
@@ -49,8 +49,24 @@ describe('transcriptFill', () => {
   })
 
   it('truncates long transcripts to the field limit', () => {
-    const fill = transcriptFill(`${'word '.repeat(40)}yes`)
+    const words = Array.from({ length: 40 }, (_, index) => `word${index}`).join(' ')
+    const fill = transcriptFill(`${words} yes`)
     expect(fill.why.length).toBe(140)
+  })
+
+  it('cleans fillers and repeats before filling the box', () => {
+    const fill = transcriptFill('Um, yes, the the bulb will light.')
+    expect(fill.why).toBe('Yes, the bulb will light.')
+    expect(fill.choice).toBe('yes')
+  })
+
+  it('strips an echoed prompt so it cannot vote by itself', () => {
+    const fill = transcriptFill(
+      'Will the bulb light? The bulb is dark.',
+      'Will the bulb light?',
+    )
+    expect(fill.why).toBe('The bulb is dark.')
+    expect(fill.choice).toBeNull()
   })
 })
 

@@ -1,6 +1,7 @@
 import { Lock } from 'lucide-react'
 import type { Prediction } from '../lessons/lesson'
 import { CHOICE_LABELS } from '../lessons/lesson'
+import { cleanTranscriptForDisplay } from '../voice/displayTranscript'
 
 /** Restates the recorded prediction plus the stage hint above the work. */
 export default function PredictionSummary({
@@ -8,6 +9,7 @@ export default function PredictionSummary({
   hint,
   hideHint = false,
   compact = false,
+  question,
 }: {
   prediction: Prediction
   hint: string
@@ -15,7 +17,10 @@ export default function PredictionSummary({
   hideHint?: boolean
   /** Completed screens keep the recap to a single learner-facing chip. */
   compact?: boolean
+  /** Prompt text for echo-stripping; display shows cleaned words. */
+  question?: string
 }) {
+  const why = cleanTranscriptForDisplay(prediction.why, question)
   if (compact) {
     return (
       <p
@@ -24,9 +29,9 @@ export default function PredictionSummary({
       >
         <span className="text-ink-muted">Your prediction</span>
         <span className="font-semibold">{CHOICE_LABELS[prediction.choice]}</span>
-        {prediction.why.trim() !== '' && (
+        {why !== '' && (
           <span className="min-w-0 break-words text-ink-muted">
-            “{prediction.why.trim()}”
+            “{why}”
           </span>
         )}
       </p>
@@ -38,7 +43,7 @@ export default function PredictionSummary({
       <p className="text-sm">
         <span className="text-ink-muted">Your prediction: </span>
         {CHOICE_LABELS[prediction.choice]}
-        {prediction.why.trim() === '' ? '' : `  -  “${prediction.why.trim()}”`}
+        {why === '' ? '' : `  -  “${why}”`}
       </p>
       <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-glass-border px-2.5 py-1 text-xs font-medium text-ink-muted">
         <Lock className="h-3.5 w-3.5" aria-hidden="true" />

@@ -12,13 +12,14 @@ describe('coach dock', () => {
       stage: 'reality-build',
       speechToTranscriptMs: 412,
       transcriptToCoachReplyMs: 286,
+      transcript: 'Um, no, the open switch keeps it dark.',
     })
 
     const markup = renderToStaticMarkup(
       <CoachConversation
         enabled={false}
         onEnabledChange={() => undefined}
-        learnerText="No, the open switch keeps it dark."
+        learnerText="Um, no, the open switch keeps it dark."
         onLearnerTextChange={() => undefined}
       />,
     )
@@ -35,9 +36,11 @@ describe('coach dock', () => {
     expect(markup).toContain('Reply by voice')
     expect(markup).toContain('Browser voice, not Meta')
     expect(markup).toContain('Heard:</span> No, the open switch keeps it dark.')
-    expect(markup).toContain('Voice timings')
-    expect(markup).toContain('reality-build: speech end → transcript 412 ms')
-    expect(markup).toContain('transcript → coach reply 286 ms')
+    expect(markup.match(/Heard:/g)).toHaveLength(1)
+    // Timings, stage labels, and raw words live in Trace, not the dock.
+    expect(markup).not.toContain('Voice timings')
+    expect(markup).not.toContain('reality-build')
+    expect(markup).not.toContain('412 ms')
     expect(markup).toContain('aria-pressed="false"')
     expect(markup).not.toContain('Coach conversation')
   })

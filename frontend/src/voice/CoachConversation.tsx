@@ -15,13 +15,8 @@ import {
   VOICE_SILENCE_MS,
   VOICE_SPEECH_RMS_THRESHOLD,
 } from './audio'
-import {
-  elapsedMs,
-  readVoiceTimings,
-  recordVoiceTiming,
-  subscribeVoiceTimings,
-  type VoiceTiming,
-} from './voiceTimings'
+import { cleanTranscriptForDisplay } from './displayTranscript'
+import { elapsedMs, recordVoiceTiming } from './voiceTimings'
 
 type ConversationState =
   | 'ready'
@@ -76,7 +71,6 @@ export default function CoachConversation({
   const [status, setStatus] = useState('')
   const [coachMessage, setCoachMessage] = useState<CoachStatement | null>(latestCoachMessage)
   const [earlier, setEarlier] = useState(() => coachStatementHistory().slice(0, -1))
-  const [voiceTimings, setVoiceTimings] = useState<VoiceTiming[]>(readVoiceTimings)
   const lastCoachStatementRef = useRef(coachMessage?.text ?? '')
   const recordingRef = useRef<Recording | null>(null)
   const enabledRef = useRef(enabled)
@@ -100,11 +94,6 @@ export default function CoachConversation({
   useEffect(() => {
     onReplyRef.current = onReply
   }, [onReply])
-  useEffect(
-    () => subscribeVoiceTimings(setVoiceTimings),
-    [],
-  )
-
   useEffect(
     () =>
       subscribeCoachStatement((statement) => {
@@ -203,16 +192,18 @@ export default function CoachConversation({
 
       const transcriptAt = performance.now()
       const speechToTranscriptMs = elapsedMs(speechEndedAt, transcriptAt)
-      const heard = `Heard: ${transcript} · ${stage} transcript in ${speechToTranscriptMs} ms.`
+      // The Heard line below carries the transcript once; timings, stage
+      // labels, and the raw words live in Trace with this timing row.
       onLearnerTextChange(transcript)
       if (onPredictionRef.current?.(transcript) === true) {
         recordVoiceTiming({
           stage,
           speechToTranscriptMs,
           transcriptToCoachReplyMs: null,
+          transcript,
         })
         lastTranscriptRef.current = transcript
-        setStatus(heard)
+        setStatus('')
         return
       }
       if (transcript === lastTranscriptRef.current) {
@@ -223,17 +214,18 @@ export default function CoachConversation({
           stage,
           speechToTranscriptMs,
           transcriptToCoachReplyMs: null,
+          transcript,
         })
-        setStatus(`${heard} The same reply was heard twice; type instead if the mic is echoing.`)
+        setStatus('The same reply was heard twice; type instead if the mic is echoing.')
         return
       }
       lastTranscriptRef.current = transcript
       const localReply = onReplyRef.current?.(transcript) ?? null
       if (localReply !== null) {
         const transcriptToCoachReplyMs = elapsedMs(transcriptAt, performance.now())
-        recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs })
+        recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs, transcript })
         lastCoachStatementRef.current = localReply
-        setStatus(`${heard} Answered in code.`)
+        setStatus('Answered in code.')
         if (enabledRef.current) {
           speakCoach(localReply, { provider: null })
         } else {
@@ -242,16 +234,16 @@ export default function CoachConversation({
         return
       }
       setState('replying')
-      setStatus(`${heard} The coach is thinking…`)
+      setStatus('The coach is thinking…')
       const result = await converseWithCoach(
         transcript,
         lastCoachStatementRef.current,
         request.signal,
       )
       const transcriptToCoachReplyMs = elapsedMs(transcriptAt, performance.now())
-      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs })
+      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs, transcript })
       lastCoachStatementRef.current = result.reply
-      setStatus(`${heard} Coach reply in ${transcriptToCoachReplyMs} ms.`)
+      setStatus('Coach reply ready.')
       if (enabledRef.current) {
         speakCoach(result.reply, { provider: result.provider })
       } else {
@@ -391,6 +383,10 @@ export default function CoachConversation({
   })
 
   const displayState = state
+  // Display shows cleaned words; filler-only turns fall back to the raw
+  // transcript so the turn stays visible, and Trace keeps the raw text.
+  const cleanedLearnerText = cleanTranscriptForDisplay(learnerText)
+  const heardLearnerText = cleanedLearnerText === '' ? learnerText : cleanedLearnerText
   const visibleStatus =
     state === 'denied' || state === 'unavailable' || state === 'no-speech'
       ? status
@@ -474,9 +470,9 @@ export default function CoachConversation({
           {visibleStatus}
         </p>
       )}
-      {learnerText !== '' && (
+      {heardLearnerText !== '' && (
         <p className="break-words text-sm" aria-live="polite">
-          <span className="font-semibold">Heard:</span> {learnerText}
+          <span className="font-semibold">Heard:</span> {heardLearnerText}
         </p>
       )}
       {earlier.length > 0 && (
@@ -492,23 +488,6 @@ export default function CoachConversation({
                   <span className="ml-2 inline-flex rounded-full border border-flow/40 px-2 py-0.5 align-middle text-[10px] font-medium text-flow">
                     Meta Spark
                   </span>
-                )}
-                {voiceTimings.length > 0 && (
-                  <details className="border-t border-glass-border/70 pt-2">
-                    <summary className="text-ink-muted cursor-pointer text-xs font-medium">
-                      Voice timings
-                    </summary>
-                    <ol className="mt-2 flex flex-col gap-1">
-                      {voiceTimings.map((timing, index) => (
-                        <li key={`${timing.stage}-${index}`} className="text-xs text-ink-muted">
-                          {timing.stage}: speech end → transcript {timing.speechToTranscriptMs} ms
-                          {timing.transcriptToCoachReplyMs === null
-                            ? '; no coach reply'
-                            : `; transcript → coach reply ${timing.transcriptToCoachReplyMs} ms`}
-                        </li>
-                      ))}
-                    </ol>
-                  </details>
                 )}
               </li>
             ))}

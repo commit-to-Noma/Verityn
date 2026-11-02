@@ -99,7 +99,7 @@ describe('buildEvidenceCard', () => {
       true,
     )
 
-    expect(model?.chapterLines[0]).toContain('predicted Yes (“if the bulb lights.”)')
+    expect(model?.chapterLines[0]).toContain('predicted Yes (“If the bulb lights.”)')
     expect(input.prediction?.why).toBe(rawWhy)
   })
 

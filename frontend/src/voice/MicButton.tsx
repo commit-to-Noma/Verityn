@@ -7,6 +7,7 @@ import {
   VOICE_SILENCE_MS,
   VOICE_SPEECH_RMS_THRESHOLD,
 } from './audio'
+import { cleanTranscriptForDisplay } from './displayTranscript'
 import { elapsedMs, recordVoiceTiming } from './voiceTimings'
 
 type MicState =
@@ -43,10 +44,13 @@ export default function MicButton({
   onTranscript,
   onStatus,
   stage = 'Guided Lab',
+  question,
 }: {
   onTranscript: (text: string) => void
   onStatus: (message: string) => void
   stage?: string
+  /** Prompt text for echo-stripping; the raw transcript stays in Trace. */
+  question?: string
 }) {
   const [state, setState] = useState<MicState>('idle')
   const recordingRef = useRef<Recording | null>(null)
@@ -88,11 +92,19 @@ export default function MicButton({
       form.append('audio', wav, 'recording.wav')
       const { transcript, source } = await transcribeAudio(form)
       const speechToTranscriptMs = elapsedMs(speechEndedAt, performance.now())
-      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs: null })
+      recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs: null, transcript })
       onTranscript(transcript)
       setState('idle')
+      // The status shows cleaned words once; stage labels, timings, and the
+      // raw transcript live in Trace.
+      const cleaned = cleanTranscriptForDisplay(transcript, question)
+      if (cleaned === '') {
+        updateStatus('Only filler words were heard; type your reason instead.')
+        return
+      }
+      const sentence = /[.!?]$/.test(cleaned) ? cleaned : `${cleaned}.`
       updateStatus(
-        `Heard: ${transcript} · ${stage} transcript in ${speechToTranscriptMs} ms. ${
+        `Heard: ${sentence} ${
           source === 'meta-voice-transcribe'
             ? 'Transcribed by Meta Voice Transcribe. Edit it if needed.'
             : 'Transcript added by Browser speech. Edit it before continuing.'

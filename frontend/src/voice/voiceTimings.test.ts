@@ -14,12 +14,14 @@ describe('voice timings', () => {
       stage: 'reality-predict',
       speechToTranscriptMs: 480,
       transcriptToCoachReplyMs: null,
+      transcript: 'Um, yes it lights.',
     })
 
     expect(readVoiceTimings()).toEqual([{
       stage: 'reality-predict',
       speechToTranscriptMs: 480,
       transcriptToCoachReplyMs: null,
+      transcript: 'Um, yes it lights.',
     }])
     expect(listener).toHaveBeenCalledOnce()
     unsubscribe()

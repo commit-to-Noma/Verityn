@@ -116,6 +116,9 @@ function verdictReading(chapter: ChapterRecap, input: TraceInput | null) {
   }
 }
 
+const REFLECTION_QUESTION =
+  'In one sentence, explain to a friend why the bulb stayed off when the switch was open.'
+
 function saidByLearner(input: TraceInput | null): string {
   const prediction = input?.prediction
   if (prediction === null || prediction === undefined) {
@@ -360,7 +363,7 @@ export default function JourneyFinale({
       </ol>
 
       <section aria-label="Reflection" className="glass-panel flex flex-col gap-3 p-4">
-        <h3 className="font-semibold">In one sentence, explain to a friend why the bulb stayed off when the switch was open.</h3>
+        <h3 className="font-semibold">{REFLECTION_QUESTION}</h3>
         <div className="flex flex-row flex-wrap gap-2" aria-label="Sentence starters">
           {['An open switch ...', 'Current needs ...'].map((starter) => (
             <button
@@ -397,8 +400,12 @@ export default function JourneyFinale({
           />
           <MicButton
             stage="Finale reflection"
+            question={REFLECTION_QUESTION}
             onTranscript={(text) => {
-              setReflection(text.slice(0, 120))
+              const cleaned = cleanTranscriptForDisplay(text, REFLECTION_QUESTION)
+              if (cleaned !== '') {
+                setReflection(cleaned.slice(0, 120))
+              }
               setReflectionStatus('Transcript added. Edit it before saving.')
             }}
             onStatus={setReflectionStatus}

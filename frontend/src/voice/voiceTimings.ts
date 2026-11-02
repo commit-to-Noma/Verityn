@@ -2,6 +2,8 @@ export interface VoiceTiming {
   stage: string
   speechToTranscriptMs: number
   transcriptToCoachReplyMs: number | null
+  /** Raw transcript; display layers clean a copy, Trace keeps this. */
+  transcript: string
 }
 
 const MAX_TIMINGS = 20
@@ -26,4 +28,8 @@ export function readVoiceTimings(): VoiceTiming[] {
 export function subscribeVoiceTimings(listener: (timings: VoiceTiming[]) => void): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
+}
+
+export function clearVoiceTimings(): void {
+  timings = []
 }

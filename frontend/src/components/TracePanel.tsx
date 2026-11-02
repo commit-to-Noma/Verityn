@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { TraceEvent } from '../api/client'
 import { subscribeTraceEvents, traceEvents } from '../trace/session'
+import {
+  readVoiceTimings,
+  subscribeVoiceTimings,
+  type VoiceTiming,
+} from '../voice/voiceTimings'
 
 function guardLabel(guard: string): string {
   if (guard === 'accepted') {
@@ -54,7 +59,9 @@ function TraceRow({ event }: { event: TraceEvent }) {
 /** Session drawer: every AI call beside code's verdict on it. Real events only. */
 export default function TracePanel() {
   const [events, setEvents] = useState<TraceEvent[]>(traceEvents)
+  const [voiceTimings, setVoiceTimings] = useState<VoiceTiming[]>(readVoiceTimings)
   useEffect(() => subscribeTraceEvents(() => setEvents(traceEvents())), [])
+  useEffect(() => subscribeVoiceTimings(setVoiceTimings), [])
   return (
     <details className="glass-panel p-4">
       <summary className="min-h-[44px] cursor-pointer content-center text-sm font-semibold">
@@ -74,6 +81,28 @@ export default function TracePanel() {
             <TraceRow key={`${event.t}-${index}`} event={event} />
           ))}
         </ol>
+      )}
+      {voiceTimings.length > 0 && (
+        <div className="mt-3 border-t border-glass-border/70 pt-3">
+          <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">
+            Voice captures
+          </p>
+          <ol className="mt-2 flex flex-col gap-2">
+            {[...voiceTimings].reverse().map((timing, index) => (
+              <li key={`${timing.stage}-${index}`} className="text-xs text-ink-muted">
+                <span className="font-mono">
+                  {timing.stage}: speech end → transcript {timing.speechToTranscriptMs} ms
+                  {timing.transcriptToCoachReplyMs === null
+                    ? '; no coach reply'
+                    : `; transcript → coach reply ${timing.transcriptToCoachReplyMs} ms`}
+                </span>
+                <span className="mt-0.5 block break-words font-mono">
+                  raw: “{timing.transcript}”
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
     </details>
   )

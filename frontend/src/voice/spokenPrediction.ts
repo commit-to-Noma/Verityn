@@ -1,4 +1,5 @@
 import type { Choice } from '../lessons/lesson'
+import { cleanTranscriptForDisplay } from './displayTranscript'
 
 export const PREDICTION_CLARIFICATION_PROMPT =
   'Do you think the bulb will light: yes, no or not sure?'
@@ -17,9 +18,12 @@ export interface TranscriptFill {
 }
 
 /** Fill the Why field from a transcript and identify whether it can be locked in. */
-export function transcriptFill(transcript: string): TranscriptFill {
-  const why = transcript.slice(0, 140)
-  const choice = spokenPredictionChoice(transcript)
+export function transcriptFill(transcript: string, question?: string): TranscriptFill {
+  // The box shows cleaned text; choice matching runs on the same cleaned
+  // words so an echoed "will the bulb light" cannot vote yes by itself.
+  const cleaned = cleanTranscriptForDisplay(transcript, question)
+  const why = cleaned.slice(0, 140)
+  const choice = spokenPredictionChoice(cleaned)
   return { why, choice }
 }
 

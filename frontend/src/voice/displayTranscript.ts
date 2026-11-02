@@ -1,12 +1,36 @@
 const FILLER_WORDS = /\b(?:um+|uh+|erm+)\b[\s,]*/giu
 const MAX_REPEATED_PHRASE_WORDS = 8
+/** An echoed prompt must match at least this many leading words to strip. */
+const MIN_ECHO_WORDS = 3
 
 function comparableWord(word: string): string {
   return word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').toLowerCase()
 }
 
+/** Strip a leading run where the learner read the prompt aloud. */
+function stripEchoedQuestion(tokens: string[], question: string): string[] {
+  const prompt = question
+    .replace(FILLER_WORDS, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  let match = 0
+  while (
+    match < tokens.length &&
+    match < prompt.length &&
+    comparableWord(tokens[match] ?? '') !== '' &&
+    comparableWord(tokens[match] ?? '') === comparableWord(prompt[match] ?? '')
+  ) {
+    match += 1
+  }
+  if (match < MIN_ECHO_WORDS) {
+    return tokens
+  }
+  return tokens.slice(match)
+}
+
 /** Clean transcript artifacts for display without modifying the saved text. */
-export function cleanTranscriptForDisplay(text: string): string {
+export function cleanTranscriptForDisplay(text: string, question?: string): string {
   const tokens = text
     .replace(FILLER_WORDS, ' ')
     .replace(/\s+([,.!?;:])/g, '$1')
@@ -43,5 +67,22 @@ export function cleanTranscriptForDisplay(text: string): string {
     }
   }
 
-  return tokens.join(' ').replace(/\s+([,.!?;:])/g, '$1')
+  const echoed =
+    question === undefined || question.trim() === '' ? tokens : stripEchoedQuestion(tokens, question)
+
+  const joined = echoed
+    .join(' ')
+    .replace(/\s+([,.!?;:])/g, '$1')
+    // A stripped filler can strand its comma ("lights, um" → "lights,").
+    .replace(/[,;:]+$/, '')
+  // Fillers with stray punctuation ("Um, uh.") leave no words behind.
+  if (!/[\p{L}\p{N}]/u.test(joined)) {
+    return ''
+  }
+  const cleaned = joined
+  // Stripping a leading filler can expose a lowercase start ("Um, no" → "no").
+  return cleaned.replace(
+    /^([^A-Za-z]*)([a-z])/,
+    (_, prefix: string, first: string) => `${prefix}${first.toUpperCase()}`,
+  )
 }

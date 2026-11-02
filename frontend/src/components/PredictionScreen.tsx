@@ -146,8 +146,11 @@ export default function PredictionScreen({
   /** Spoken reason fills Why; a clear choice gets a three-second undo window. */
   const handleTranscript = (transcript: string) => {
     manual()
-    const fill = transcriptFill(transcript)
-    setWhy(fill.why)
+    const fill = transcriptFill(transcript, challenge.question)
+    // Filler-only transcripts clean to nothing: keep whatever the box holds.
+    if (fill.why !== '') {
+      setWhy(fill.why)
+    }
     if (fill.choice !== null) {
       const nextChoice = fill.choice
       previousVoiceChoice.current = choice
@@ -255,7 +258,7 @@ export default function PredictionScreen({
             autoComplete="off"
             className="border-glass-border min-h-[44px] w-full rounded-[10px] border px-3 pr-12 text-base"
           />
-          <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} stage={eyebrow} />
+          <MicButton onTranscript={handleTranscript} onStatus={setMicStatus} stage={eyebrow} question={challenge.question} />
         </div>
         <p className="text-ink-muted text-xs">
           Voice is optional. Audio is sent to Meta to be transcribed and is not saved.
