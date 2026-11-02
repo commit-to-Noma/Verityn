@@ -149,6 +149,35 @@ function check(name, cond, extra = '') {
   if (!cond) fails.push(name)
 }
 
+/** One voice: no sentence (4+ words) may appear in two visible blocks of a stage. */
+async function assertOneVoice(label) {
+  const dupes = await ev(`(() => {
+    const section = document.querySelector(
+      'section[aria-labelledby="predict-heading"], section[aria-labelledby="canvas-heading"]',
+    );
+    if (!section) return 'NO-STAGE';
+    const blocks = [...section.querySelectorAll('p')]
+      .map((p) => p.innerText.trim())
+      .filter((t) => t.length > 0);
+    const seen = new Set();
+    const dupes = new Set();
+    for (const block of blocks) {
+      const sentences = new Set(
+        block
+          .split(/(?<=[.!?])\\s+/)
+          .map((s) => s.trim().toLowerCase())
+          .filter((s) => s.split(/\\s+/).length >= 4),
+      );
+      for (const s of sentences) {
+        if (seen.has(s)) dupes.add(s);
+        else seen.add(s);
+      }
+    }
+    return JSON.stringify([...dupes].slice(0, 3));
+  })()`)
+  check(`one voice (${label})`, dupes === '[]', dupes === '[]' ? '' : dupes)
+}
+
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
     const id = ++msgId
@@ -638,6 +667,7 @@ async function drive() {
   )
   await assertGuidedCanvasFits('Predict')
   await captureScreenshot('predict')
+  await assertOneVoice('predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
   check('coach dock shows the current line', await ev(`!!document.querySelector('[aria-label="Coach dock"] p[aria-live="polite"]')`))
@@ -654,10 +684,12 @@ async function drive() {
   await waitFor(() => handleCenter('B1', 'b'), 'l1 canvas')
   await assertGuidedCanvasFits('Build before test')
   await captureScreenshot('build-before-test')
+  await assertOneVoice('build-before')
   await wire('B1', 'b', 'L1', 'b')
   await waitFor(() => hasText('Test with the switch open'), 'l1 gate', 25000)
   await assertGuidedCanvasFits('Build after test')
   await captureScreenshot('build-after-test')
+  await assertOneVoice('build-after')
 
   await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   check('original prediction details', await hasText('Your original prediction'))
@@ -680,7 +712,7 @@ async function drive() {
   check('evidence returns with the gate', await hasText('You completed the loop'))
   await clickButtonStarts('Test with the switch open')
 
-  await waitFor(() => hasText('switch is open'), 'reality predict')
+  await waitFor(() => hasText('REALITY CHECK · THE OPEN SWITCH'), 'reality predict')
   await assertGuidedCanvasFits('Reality Check')
   await clickButton('Yes')
   await fillInput('predict-why', 'complete loop lights')
@@ -689,6 +721,7 @@ async function drive() {
   await waitFor(() => hasText('MEASURED BY THE SOLVER'), 'Reality Check measurement', 25000)
   await assertGuidedCanvasFits('Reality Check after test')
   await captureScreenshot('reality-check-after-test')
+  await assertOneVoice('reality-after')
   await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
   check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
@@ -760,6 +793,7 @@ async function drive() {
   await waitFor(() => hasText('View completed journey'), 'solo gate', 25000)
   await assertGuidedCanvasFits('Solo after test')
   await captureScreenshot('solo-after-test')
+  await assertOneVoice('solo-after')
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
   check('solo coach-off lock', await hasText('Coach off.'))
@@ -1064,7 +1098,7 @@ async function drive() {
   await waitFor(() => hasText('Run 7 - Overload the bulb'), 'overload after reset', 25000)
   check('reset restores intact', await hasText('Intact') && !(await hasText('Damaged')))
   await clickButton('Guided Lab')
-  await waitFor(() => hasText('loose ends'), 'guided clean')
+  await waitFor(() => hasText('Continue to fix it'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
   await clickButton('Hub')
   await waitFor(() => hasText('Start your own lab'), 'hub final')

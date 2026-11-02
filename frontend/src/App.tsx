@@ -355,7 +355,7 @@ export default function App() {
           {
             chapter: 'l1',
             title: 'Circuit test complete',
-            detail: 'The loop is complete and the bulb is lit. The next test keeps the switch open.',
+            detail: 'The next test keeps the switch open.',
             nextLabel: 'Test with the switch open',
             advance: () => {
               announceCoach(

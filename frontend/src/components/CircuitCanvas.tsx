@@ -1940,7 +1940,16 @@ function CanvasInner({
             </p>
           </div>
         )}
-      {nextBuildStep !== null && runState.phase === 'idle' && (
+      {nextBuildStep !== null && runState.phase === 'idle' && coachDock != null && (
+        <details className="glass-panel border-flow/30 p-3 text-sm text-ink">
+          <summary className="cursor-pointer font-medium">Need a hint?</summary>
+          <p className="mt-2" role="status" aria-live="polite">
+            <span className="mr-2 font-semibold text-flow">Next step</span>
+            {nextBuildStep}
+          </p>
+        </details>
+      )}
+      {nextBuildStep !== null && runState.phase === 'idle' && coachDock == null && (
         <p
           className="glass-panel border-flow/30 p-3 text-sm text-ink"
           role="status"

@@ -203,13 +203,7 @@ export default function PredictionScreen({
       </div>
       <div className="flex min-w-0 flex-col gap-4">
       {coachDock}
-      {challenge.brief !== undefined && (
-        <div className="rounded-2xl border border-glass-border p-4" aria-label="Challenge brief">
-          <p className="text-sm">{challenge.brief.setup}</p>
-          <p className="mt-1 text-sm font-medium">{challenge.brief.task}</p>
-        </div>
-      )}
-      <p className="text-lg font-semibold">{challenge.question}</p>
+      {coachDock == null && <p className="text-lg font-semibold">{challenge.question}</p>}
       {demo !== undefined && (
         <p className="text-ink-muted text-sm" aria-live="polite">
           Demo prediction  -  touch anything to take over.
