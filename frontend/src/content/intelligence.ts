@@ -93,6 +93,11 @@ export const SMART_DETAILS = [
     evidence: 'frontend/src/vision/review.test.ts',
   },
   {
+    behavior: 'Traced wires snap onto the photo strokes in code',
+    where: 'Lens review original',
+    evidence: 'backend/tests/test_wire_refine.py',
+  },
+  {
     behavior: 'Confirmed Lens circuit opens in Experiment Bay',
     where: 'Lens review handoff action',
     evidence: 'frontend/src/experiment/ExperimentPage.test.tsx',

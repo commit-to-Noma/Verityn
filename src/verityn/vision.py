@@ -17,7 +17,7 @@ import base64
 import binascii
 import re
 
-from verityn import meta_coach
+from verityn import meta_coach, wire_refine
 from verityn.coach import CoachProviderError
 
 VISION_MAX_IMAGE_BYTES = 4 * 1024 * 1024
@@ -165,7 +165,10 @@ _SYSTEM_PROMPT = (
     "when unsure. Each connection traces its visible wire as "
     "evidence.path: a normalized 0..1 polyline of 2..32 [x, y] points "
     "following the wire from the from-terminal to the to-terminal, or "
-    "null when the wire is not clearly visible. Never invent a path. "
+    "null when the wire is not clearly visible. Place every point on "
+    "the wire centerline, the middle of the stroke, and add a point at "
+    "each corner, bend, and curve so no straight span leaves the "
+    "stroke. Never invent a path. "
     "Mark status ready only when every connection is "
     "certain, every switch state is explicitly true or false, and "
     "every battery polarity is determined. Otherwise mark the proposal "
@@ -424,5 +427,19 @@ class MetaVisionProvider:
         _, body = meta_coach._post_json(
             f"{self.base_url}/chat/completions", payload, headers,
             self.timeout_s)
-        return validate_proposal(
+        proposal = validate_proposal(
             meta_coach._parse_output(meta_coach._chat_content(body)))
+        return self._with_refined_paths(proposal, data_url)
+
+    @staticmethod
+    def _with_refined_paths(proposal, data_url):
+        """Snap wire paths onto image strokes; fail soft to proposal."""
+        try:
+            encoded = data_url.partition(",")[2]
+            image_bytes = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError):
+            return proposal
+        try:
+            return wire_refine.refine_proposal_paths(proposal, image_bytes)
+        except Exception:
+            return proposal

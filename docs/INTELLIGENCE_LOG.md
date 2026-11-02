@@ -21,4 +21,5 @@ the Under the hood Smart details section, and the README.
 - Finale handoff reuses the saved circuit in Experiment Bay — [Finale tests](../frontend/src/components/JourneyFinale.test.tsx) and [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx).
 - Lens diagrams upload by drop, paste, picker, or camera — [upload tests](../frontend/src/vision/upload.test.ts).
 - Traced wires overlay the uploaded photo — [review tests](../frontend/src/vision/review.test.ts) and [vision path tests](../backend/tests/test_vision.py).
+- Traced wires snap onto the photo's stroke centerlines in code (polarity-blind, text-rejecting, fail-soft to the model path) — [refinement tests](../backend/tests/test_wire_refine.py).
 - Confirmed Lens circuit opens in Experiment Bay — [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx), also exercised by the browser smoke.
