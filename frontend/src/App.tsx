@@ -1108,6 +1108,7 @@ export default function App() {
             proofStage="reality-build"
             seed={L1.twist.seed}
             eyebrow="Reality Check · The open switch"
+            title="Reality Check: same idea, new circuit"
             instructions="The loop is wired and the switch is open. Test it as is; don't change the switch."
             choice={realityPrediction.choice}
             claim={L1.twist.claim}
@@ -1165,6 +1166,7 @@ export default function App() {
             proofStage="transfer-build"
             seed={TRANSFER.seed}
             eyebrow="Solo · The second bulb"
+            title="Build the second-bulb circuit"
             instructions="Connect the loose end of the second bulb to the loop, then test your prediction."
             choice={transferPrediction.choice}
             claim={TRANSFER.claim}

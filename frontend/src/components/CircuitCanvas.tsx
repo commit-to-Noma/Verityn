@@ -1954,7 +1954,7 @@ function CanvasInner({
   )
   const canvasPane = (
     <>
-      <div ref={canvasContainerRef} className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
+      <div ref={canvasContainerRef} className={`border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : 'lg:h-[min(58vh,620px)]'}`}>
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
             nodes={canvasNodes}
@@ -2229,26 +2229,27 @@ function CanvasInner({
   return (
     <section aria-labelledby="canvas-heading" className="scroll-mt-44">
       {layout === 'split' ? (
-        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <div className="order-0 flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
+              <h2 id="canvas-heading" className="text-xl font-semibold">{completed ? 'Result' : title}</h2>
+            </div>
+            {!completed && (
+              <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-3 py-1 text-xs">
+                {nodes.length === 0
+                  ? 'Start with a battery'
+                  : loopClosed
+                    ? simulateLocked !== null ? 'Confirm to test' : 'Ready to test'
+                    : 'Keep building'}
+              </span>
+            )}
+          </div>
+        <div className="grid min-w-0 items-stretch gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+          <div className="order-0 flex h-full min-w-0 flex-col gap-4">
             {canvasPane}
           </div>
-          <div className="order-1 flex min-w-0 flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
-                <h2 id="canvas-heading" className="text-xl font-semibold">{title}</h2>
-              </div>
-              {!completed && (
-                <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-3 py-1 text-xs">
-                  {nodes.length === 0
-                    ? 'Start with a battery'
-                    : loopClosed
-                      ? simulateLocked !== null ? 'Confirm to test' : 'Ready to test'
-                      : 'Keep building'}
-                </span>
-              )}
-            </div>
+          <div className="order-1 flex h-full min-w-0 flex-col gap-4">
             {prediction && challenge && (
               <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
                 <PredictionSummary
@@ -2297,6 +2298,7 @@ function CanvasInner({
               </>
             )}
           </div>
+        </div>
         </div>
       ) : (
         <>

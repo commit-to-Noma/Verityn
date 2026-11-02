@@ -186,17 +186,15 @@ export default function PredictionScreen({
   }
 
   return (
-    <section
-      aria-labelledby="predict-heading"
-      className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
-    >
+    <section aria-labelledby="predict-heading" className="flex min-w-0 flex-col gap-4">
+      <div>
+        <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
+        <h2 id="predict-heading" className="text-xl font-semibold">
+          {challenge.title}
+        </h2>
+      </div>
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
       <div className="flex min-w-0 flex-col gap-3 lg:sticky lg:top-40">
-        <div>
-          <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
-          <h2 id="predict-heading" className="text-xl font-semibold">
-            {challenge.title}
-          </h2>
-        </div>
         <CircuitPreview
           seed={challenge.seed}
           label={`${challenge.title} starting circuit`}
@@ -309,6 +307,7 @@ export default function PredictionScreen({
         {!ready && <p className="text-ink-muted text-sm">Choose Yes, No, or Not sure to continue.</p>}
       </div>
       <ProofChips stages={proofStage === undefined ? [] : [proofStage]} />
+      </div>
       </div>
     </section>
   )
