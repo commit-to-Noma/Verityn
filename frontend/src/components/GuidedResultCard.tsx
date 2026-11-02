@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import type { SimulateResult } from '../api/client'
+import type { Netlist, SimulateResult } from '../api/client'
+import type { Choice } from '../lessons/lesson'
+import { soloBulbReadings } from '../solo/summary'
+import PredictionVerdictLine from './PredictionVerdictLine'
 import ReadoutValue from './ReadoutValue'
 
 /** Compact solver-grounded result with the rest of the workbench disclosed below. */
@@ -8,11 +11,17 @@ export default function GuidedResultCard({
   children,
   onDetailsOpen,
   coachOff = false,
+  choice,
+  claimComponent,
+  netlist,
 }: {
   result: SimulateResult
   children: ReactNode
   onDetailsOpen: () => void
   coachOff?: boolean
+  choice?: Choice
+  claimComponent?: string
+  netlist?: Netlist
 }) {
   if (!result.ok) {
     return (
@@ -24,6 +33,12 @@ export default function GuidedResultCard({
 
   const battery = Object.entries(result.components).find(([id]) => id.startsWith('B'))?.[1]
   const bulb = result.components.L1
+  // The neutral verdict line sits directly under the measurements, never
+  // behind See details. Same readings source as the Solo and Journey lines.
+  const claimReading =
+    choice !== undefined && claimComponent !== undefined && netlist !== undefined
+      ? soloBulbReadings(result, netlist).find((reading) => reading.id === claimComponent)
+      : undefined
 
   return (
     <section className="glass-panel flex min-w-0 flex-col gap-4 p-4" aria-label="Test result">
@@ -63,6 +78,21 @@ export default function GuidedResultCard({
           )}
         </div>
       </div>
+      {choice !== undefined && claimComponent !== undefined && netlist !== undefined && (
+        <div className="border-t border-glass-border/70 pt-3">
+          {claimReading !== undefined ? (
+            <PredictionVerdictLine
+              choice={choice}
+              current={claimReading.current}
+              power={claimReading.power}
+              lit={claimReading.lit}
+              component={`the ${claimReading.label}`}
+            />
+          ) : (
+            <p className="text-ink-muted text-sm">No solver measurement was saved for this bulb.</p>
+          )}
+        </div>
+      )}
       <details
         className="border-t border-glass-border/70 pt-3"
         onToggle={(event) => {

@@ -2411,6 +2411,9 @@ function CanvasInner({
                 <GuidedResultCard
                   result={runState.result}
                   coachOff={solo}
+                  choice={choice}
+                  claimComponent={claim?.component}
+                  netlist={runState.netlist}
                   onDetailsOpen={() => {
                     window.requestAnimationFrame(() => {
                       void fitView({
@@ -2473,6 +2476,9 @@ function CanvasInner({
             <GuidedResultCard
               result={runState.result}
               coachOff={solo}
+              choice={choice}
+              claimComponent={claim?.component}
+              netlist={runState.netlist}
               onDetailsOpen={() => {
                 window.requestAnimationFrame(() => {
                   void fitView({

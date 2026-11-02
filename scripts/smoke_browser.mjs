@@ -726,6 +726,8 @@ async function drive() {
   await waitFor(() => hasText('MEASURED BY THE SOLVER'), 'Reality Check measurement', 25000)
   await assertGuidedCanvasFits('Reality Check after test')
   await captureScreenshot('reality-check-after-test')
+  check('reality verdict line visible', await hasText('You predicted Yes'))
+  check('reality verdict neutral', await hasText('This tests your prediction against the model, not you'))
   await assertOneVoice('reality-after')
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
   check('retest button offered', await hasText('Close the switch and test again'))
@@ -812,6 +814,8 @@ async function drive() {
   await waitFor(() => hasText('View completed journey'), 'solo gate', 25000)
   await assertGuidedCanvasFits('Solo after test')
   await captureScreenshot('solo-after-test')
+  check('solo verdict line visible', await hasText('You predicted Yes'))
+  check('solo verdict neutral', await hasText('This tests your prediction against the model, not you'))
   await assertOneVoice('solo-after')
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
