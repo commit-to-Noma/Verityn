@@ -1063,7 +1063,7 @@ export default function SnapBuildLab({
             <p className="text-flow text-xs font-semibold tracking-[0.18em]">Practice gallery</p>
             <h3 className="mt-1 text-base font-semibold">Sample diagrams</h3>
             <p className="text-ink-muted mt-1 text-sm">
-              Rehearse the full loop on a curated circuit — predict, run, compare. No upload needed.
+              Rehearse the full loop on a curated circuit — review, confirm, measure. No upload needed.
             </p>
           </div>
           <div

@@ -178,7 +178,7 @@ async function ensureSummaryOpen(text, scope = 'details') {
   if (!found) throw new Error('summary not found: ' + text)
 }
 
-async function captureScreenshot(name, width = 1440) {
+async function captureScreenshot(name, width = 1440, scrollTo = null) {
   if (!SCREENSHOT_DIR) return
   const previous = await ev(`({ width: innerWidth, height: innerHeight, scrollY })`)
   await send('Emulation.setDeviceMetricsOverride', {
@@ -188,7 +188,11 @@ async function captureScreenshot(name, width = 1440) {
     mobile: false,
   })
   await ev('window.dispatchEvent(new Event("resize"))')
-  await ev('window.scrollTo(0, 0)')
+  if (scrollTo) {
+    await ev(`document.querySelector(${JSON.stringify(scrollTo)})?.scrollIntoView({ block: 'center' })`)
+  } else {
+    await ev('window.scrollTo(0, 0)')
+  }
   await sleep(400)
   const shot = await send('Page.captureScreenshot', { format: 'png' })
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
@@ -835,6 +839,8 @@ async function drive() {
   check('upload panel first', await hasText('Choose an image'))
   check('lens hero focuses the upload', await hasText('Drop a circuit diagram to see it'))
   check('samples below upload', await hasText('Sample diagrams'))
+  await captureScreenshot('lens-idle')
+  await captureScreenshot('lens-idle-390', 390)
   // Stub the proposal at the network layer: no live Meta call in smoke.
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await uploadLensFile(switchImage)
@@ -843,7 +849,6 @@ async function drive() {
   check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
   check('drop zone offered', await ev(`!!document.querySelector('[aria-label="Diagram drop zone"]')`))
   check('no upload prediction gate', !(await hasText('Before we interpret: will it light?')))
-  await clickButton('Interpret with Meta Spark')
   await clickButton('Interpret with Meta Spark')
   await waitFor(() => hasText('Original diagram'), 'lens review', 20000)
   check('gallery collapses during review', !(await hasText('Textbook loop')))
@@ -855,6 +860,7 @@ async function drive() {
   check('detected evidence list', await hasText('Detected evidence') && await hasText('switch_1'))
   check('proposal counts from data', await hasText('1 battery, 1 switch, 1 bulb'))
   check('needs-review copy', await hasText('Some connections need your review'))
+  await captureScreenshot('lens-review')
   // The replica (and its lock notice) mounts on the reveal beat after the panels.
   await waitFor(() => hasText('Confirm the model below before testing'), 'lens lock', 20000)
   check('confirm gate visible', await hasText('Confirm the model below before testing it against the simulator.'))
@@ -866,7 +872,8 @@ async function drive() {
   check('proof attribution', await hasText("Computed by Verityn's solver."))
   check('triptych photo panel', await hasText('Your photo or sketch'))
   check('triptych reading panel', await hasText('Confirmed circuit') && await hasText('Proposed by Meta, reviewed by you.'))
-  check('lens verdict uses the prediction', await hasText('You predicted No.') && await hasText('it stayed dark'))
+  check('post-test usefulness line', await hasText('These numbers are a starting point'))
+  await captureScreenshot('lens-tested', 1440, '[aria-label="Confirmed upload: photo, reading, and measurement"]')
   check('photo readings measured', await hasText('dark ·'))
   await clickButton('Test this in the Experiment Bay')
   await waitFor(() => hasText('FREE BENCH'), 'lens handoff')
@@ -894,7 +901,7 @@ async function drive() {
         { id: 'L1', type: 'bulb', closed: null, polarity: null, evidence: { region_id: 'r-l', bounds: { x: 0.1, y: 0.2, width: 0.1, height: 0.1 }, rotation: 0 } },
       ],
       connections: [
-        { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: false, evidence: { region_id: 'r-w' } },
+        { from: { node: 'B1', terminal: 'a' }, to: { node: 'L1', terminal: 'a' }, uncertain: false, evidence: { region_id: 'r-w', path: null } },
       ],
     },
     assumptions: [],
