@@ -67,6 +67,8 @@ const UNCERTAIN_EDGE_STYLE: CSSProperties = {
   stroke: 'var(--color-unknown)',
   strokeDasharray: '6 4',
 }
+const MOBILE_FIT_VIEW_PADDING = 0.35
+const MOBILE_MIN_ZOOM = 0.25
 
 type Tool = 'battery' | 'bulb' | 'switch' | 'delete' | null
 
@@ -1022,20 +1024,32 @@ function CanvasInner({
       style: initialUncertain.includes(edge.id) ? UNCERTAIN_EDGE_STYLE : FLOW_EDGE_STYLE,
     })),
   )
+  const canvasContainerRef = useRef<HTMLDivElement>(null)
   const { screenToFlowPosition, fitView } = useReactFlow()
   useEffect(() => {
     let frame = 0
     const refit = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
+        const mobile = window.innerWidth <= 640
         void fitView({
-          padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+          padding: mobile ? MOBILE_FIT_VIEW_PADDING : 0.2,
+          minZoom: mobile ? MOBILE_MIN_ZOOM : 0.5,
           maxZoom: 1.25,
         })
       })
     }
+    const container = canvasContainerRef.current
+    const observer =
+      container !== null && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(refit)
+        : null
+    if (container !== null) {
+      observer?.observe(container)
+    }
     window.addEventListener('resize', refit)
     return () => {
+      observer?.disconnect()
       window.removeEventListener('resize', refit)
       window.cancelAnimationFrame(frame)
     }
@@ -1925,7 +1939,7 @@ function CanvasInner({
   )
   const canvasPane = (
     <>
-      <div className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
+      <div ref={canvasContainerRef} className="border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:h-[min(58vh,620px)] lg:min-h-[500px]">
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
             nodes={canvasNodes}
@@ -1970,9 +1984,11 @@ function CanvasInner({
             defaultEdgeOptions={{ type: 'smoothstep', style: FLOW_EDGE_STYLE }}
             snapToGrid
             snapGrid={[20, 20]}
+            minZoom={window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5}
             fitView
             fitViewOptions={{
-              padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+              padding: window.innerWidth <= 640 ? MOBILE_FIT_VIEW_PADDING : 0.2,
+              minZoom: window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5,
               maxZoom: 1.25,
             }}
             colorMode="dark"
@@ -2231,7 +2247,8 @@ function CanvasInner({
                   onDetailsOpen={() => {
                     window.requestAnimationFrame(() => {
                       void fitView({
-                        padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+                        padding: window.innerWidth <= 640 ? MOBILE_FIT_VIEW_PADDING : 0.2,
+                        minZoom: window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5,
                         maxZoom: 1.25,
                       })
                     })
@@ -2284,7 +2301,8 @@ function CanvasInner({
               onDetailsOpen={() => {
                 window.requestAnimationFrame(() => {
                   void fitView({
-                    padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+                    padding: window.innerWidth <= 640 ? MOBILE_FIT_VIEW_PADDING : 0.2,
+                    minZoom: window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5,
                     maxZoom: 1.25,
                   })
                 })

@@ -1,6 +1,6 @@
 import { ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react'
 import type { Edge } from '@xyflow/react'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import '@xyflow/react/dist/style.css'
 import type { CSSProperties } from 'react'
 import type { SimulateResult } from '../api/client'
@@ -11,7 +11,15 @@ import { circuitNodeTypes } from './canvas/nodeTypes'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
 
-function FitPreviewOnResize() {
+function isMobileViewport(): boolean {
+  return typeof window !== 'undefined' && window.innerWidth <= 640
+}
+
+function FitPreviewOnResize({
+  containerRef,
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>
+}) {
   const { fitView } = useReactFlow()
 
   useEffect(() => {
@@ -19,18 +27,29 @@ function FitPreviewOnResize() {
     const refit = () => {
       window.cancelAnimationFrame(frame)
       frame = window.requestAnimationFrame(() => {
+        const mobile = window.innerWidth <= 640
         void fitView({
-          padding: window.innerWidth <= 640 ? 0.12 : 0.2,
+          padding: mobile ? 0.35 : 0.2,
+          minZoom: mobile ? 0.25 : 0.5,
           maxZoom: 1,
         })
       })
     }
+    const container = containerRef.current
+    const observer =
+      container !== null && typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(refit)
+        : null
+    if (container !== null) {
+      observer?.observe(container)
+    }
     window.addEventListener('resize', refit)
     return () => {
+      observer?.disconnect()
       window.removeEventListener('resize', refit)
       window.cancelAnimationFrame(frame)
     }
-  }, [fitView])
+  }, [containerRef, fitView])
 
   return null
 }
@@ -51,12 +70,16 @@ export default function CircuitPreview({
   result?: SimulateResult | null
   className?: string
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const wired = new Set(
     seed.edges.flatMap((edge) => [
       `${edge.source}:${edge.sourceTerminal}`,
       `${edge.target}:${edge.targetTerminal}`,
     ]),
   )
+    }
+    }
+  }
   const nodes: CircuitNodeType[] = seed.nodes
     .filter((node): node is typeof node & { kind: 'battery' | 'bulb' | 'switch' } =>
       isCircuitKind(node.kind),
@@ -91,9 +114,8 @@ export default function CircuitPreview({
     targetHandle: edge.targetTerminal,
     style: FLOW_EDGE_STYLE,
   }))
-
   return (
-    <div className={`canvas-grid border-glass-border overflow-hidden rounded-2xl border ${className}`}>
+    <div ref={containerRef} className={`canvas-grid border-glass-border overflow-hidden rounded-2xl border ${className}`}>
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodes}
