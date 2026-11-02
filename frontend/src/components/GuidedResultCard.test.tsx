@@ -53,4 +53,19 @@ describe('GuidedResultCard', () => {
     expect(markup).toContain('0 W')
     expect(markup).not.toContain('The bulb stayed off; the open switch breaks the loop.')
   })
+
+  it('keeps the Solo coach-off state visible beside the measured result', () => {
+    const markup = renderToStaticMarkup(
+      <GuidedResultCard
+        result={solved({ voltage: 12, current: 1.2, power: 14.4 })}
+        coachOff
+        onDetailsOpen={() => undefined}
+      >
+        <p>Detailed circuit</p>
+      </GuidedResultCard>,
+    )
+
+    expect(markup).toContain('Coach off.')
+    expect(markup.match(/Coach off\./g)).toHaveLength(1)
+  })
 })

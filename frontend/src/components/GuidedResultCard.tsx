@@ -7,10 +7,12 @@ export default function GuidedResultCard({
   result,
   children,
   onDetailsOpen,
+  coachOff = false,
 }: {
   result: SimulateResult
   children: ReactNode
   onDetailsOpen: () => void
+  coachOff?: boolean
 }) {
   if (!result.ok) {
     return (
@@ -29,6 +31,11 @@ export default function GuidedResultCard({
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.16em]">
           Measured by the solver
         </p>
+        {coachOff && (
+          <p className="mt-2 text-sm text-ink-muted">
+            <span className="font-semibold text-ink">Coach off.</span> You can reason and test this circuit on your own.
+          </p>
+        )}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {battery !== undefined && (
             <div className="rounded-xl border border-glass-border p-3">

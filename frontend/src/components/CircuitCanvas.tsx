@@ -15,7 +15,7 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { CircleX, Eraser, Lightbulb, LoaderCircle, Lock, ToggleLeft, Zap } from 'lucide-react'
+import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
@@ -858,14 +858,6 @@ function ClaimVerdict({
             Retry
           </button>
         </div>
-      )}
-      {!coachAvailable && (
-        <p className="inline-flex items-center gap-2 rounded-[10px] border border-glass-border px-3 py-2 text-sm text-ink-muted">
-          <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            <span className="font-semibold text-ink">Coach off.</span> {SOLO_COACH_MESSAGE}
-          </span>
-        </p>
       )}
       {coachAvailable && (
         <CoachAsk
@@ -2244,6 +2236,7 @@ function CanvasInner({
               <>
                 <GuidedResultCard
                   result={runState.result}
+                  coachOff={solo}
                   onDetailsOpen={() => {
                     window.requestAnimationFrame(() => {
                       void fitView({
@@ -2298,6 +2291,7 @@ function CanvasInner({
           {completed && runState.phase === 'done' && (
             <GuidedResultCard
               result={runState.result}
+              coachOff={solo}
               onDetailsOpen={() => {
                 window.requestAnimationFrame(() => {
                   void fitView({
