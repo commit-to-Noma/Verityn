@@ -143,7 +143,28 @@ export default function JourneyFinale({
 }) {
   const [explanations, setExplanations] = useState<Record<string, ExplanationState>>({})
   const [reflection, setReflection] = useState('')
-  const [includeReflection, setIncludeReflection] = useState(false)
+  const [includeReflection, setIncludeReflection] = useState(true)
+  const [reflectionDone, setReflectionDone] = useState(false)
+  const realityChapter = chapters.find((chapter) => chapter.id === 'L1T1') ?? null
+  const realityInput = realityChapter?.input ?? null
+  const realitySeed =
+    realityInput?.netlist === null || realityInput?.netlist === undefined
+      ? null
+      : netlistPreviewSeed(
+          realityInput.netlist,
+          hasSavedPositions(realityInput) ? realityInput.nodePositions : undefined,
+        )
+  const realityBulb = realityInput?.netlist?.components.find(
+    (component) => component.type === 'bulb',
+  )
+  const realityAmps =
+    realityBulb === undefined || realityInput?.result == null
+      ? null
+      : realityInput.result.components[realityBulb.id]?.current ?? null
+  const groundedLine =
+    typeof realityAmps === 'number' && Number.isFinite(realityAmps)
+      ? `Yes, the open switch is a gap, so the solver measured ${formatReading(realityAmps)} A.`
+      : 'Compare your words with the measurements above.'
   const [reflectionStatus, setReflectionStatus] = useState('')
   const controllers = useRef(new Map<string, AbortController>())
   const proof = useProofMode()
@@ -339,7 +360,28 @@ export default function JourneyFinale({
       </ol>
 
       <section aria-label="Reflection" className="glass-panel flex flex-col gap-3 p-4">
-        <h3 className="font-semibold">What connection changed the circuit, and what reading helped you notice?</h3>
+        <h3 className="font-semibold">In one sentence, explain to a friend why the bulb stayed off when the switch was open.</h3>
+        <div className="flex flex-row flex-wrap gap-2" aria-label="Sentence starters">
+          {['An open switch ...', 'Current needs ...'].map((starter) => (
+            <button
+              key={starter}
+              type="button"
+              onClick={() => {
+                const words = starter.replace(/ \.\.\.$/, ' ')
+                setReflection((current) => {
+                  if (current.trim() === '') {
+                    return words
+                  }
+                  return current.endsWith(' ') ? current + words : `${current} ${words}`
+                })
+                setReflectionStatus('')
+              }}
+              className="border-glass-border min-h-[36px] rounded-full border px-3 text-xs"
+            >
+              {starter}
+            </button>
+          ))}
+        </div>
         <div className="relative">
           <textarea
             value={reflection}
@@ -365,6 +407,26 @@ export default function JourneyFinale({
         {reflectionStatus !== '' && (
           <p className="text-ink-muted text-xs" role="status">{reflectionStatus}</p>
         )}
+        <div className="flex flex-row flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={reflection.trim() === ''}
+            onClick={() => setReflectionDone(true)}
+            className="bg-flow text-on-accent min-h-[40px] rounded-[10px] px-3 text-xs font-medium disabled:opacity-50"
+          >
+            Save my reflection
+          </button>
+          {reflectionDone && realitySeed !== null && (
+            <button
+              type="button"
+              onClick={() => onTryExperiment(realitySeed, 'Open switch from your reflection')}
+              className="border-glass-border min-h-[40px] rounded-[10px] border px-3 text-xs font-medium"
+            >
+              Try it in the Experiment Bay
+            </button>
+          )}
+        </div>
+        {reflectionDone && <p className="text-sm">{groundedLine}</p>}
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"

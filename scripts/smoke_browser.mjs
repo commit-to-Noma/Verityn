@@ -889,6 +889,12 @@ async function drive() {
     const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Explain with Muse Spark');
     return btn?.parentElement?.classList.contains('flex-row') === true;
   })()`))
+  await clickButton('An open switch ...')
+  check('reflection chip fills starter', await ev(`document.querySelector('textarea[aria-label="Your reflection"]')?.value.includes('An open switch') === true`))
+  await clickButton('Save my reflection')
+  await waitFor(() => hasText('the open switch is a gap'), 'reflection grounded', 10000)
+  check('reflection grounded in amps', await hasText('measured 0 A'))
+  await captureScreenshot('finale-reflection', 1440, '[aria-label="Reflection"]')
   await clickButton('Open Reality Lens')
   // innerText reflects the CSS uppercase transform on the eyebrow.
   await waitFor(() => hasText('META VISION WORKSPACE'), 'lens page')
