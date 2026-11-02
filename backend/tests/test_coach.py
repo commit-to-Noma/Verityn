@@ -138,6 +138,13 @@ def test_conversation_endpoint_uses_fallback_when_provider_fails():
     assert "Thanks for sharing" in response.get_json()["reply"]
 
 
+def test_conversation_fallback_never_asks_predict_question():
+    reply = fake_coach.FakeCoachProvider().conversation_reply(
+        "add another battery",
+        "With the switch open, no current flows and the bulb stays off.")
+    assert "What do you expect" not in reply
+
+
 def test_predict_continues_session_and_binds_twist(client):
     first = record(client, LESSON, "no", "It is broken.")
     second = record(client, TWIST, "yes", "Now it is fixed.", first["session_id"])

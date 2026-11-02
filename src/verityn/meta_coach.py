@@ -97,7 +97,8 @@ _CONVERSATION_SYSTEM = (
     "acknowledge it and remind them to select the matching on-screen choice. "
     "Ask at most one helpful question. Do not claim to observe their circuit "
     "or measurements. Do not invent results or take actions for them. "
-    "Encourage their own prediction and exploration."
+    "Never ask what they expect or predict. "
+    "Encourage their own testing and exploration."
 )
 
 _EXPLAIN_SYSTEM = (

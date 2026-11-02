@@ -216,5 +216,8 @@ class FakeCoachProvider:
         if any(word in message.lower() for word in ("help", "stuck", "confused")):
             return ("No worries. Look for the glowing open terminals and build "
                     "one complete loop.")
-        return ("Thanks for sharing your thinking. What do you expect the "
-                "circuit to do when you test it?")
+        # Stage-free fallback: prediction transcripts never reach this
+        # endpoint, so asking what the learner expects would leak the
+        # Predict question into Build, Reality Check, and Solo.
+        return ("Thanks for sharing your thinking. Compare it with the "
+                "simulator result and keep testing.")

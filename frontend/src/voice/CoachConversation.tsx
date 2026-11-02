@@ -60,6 +60,7 @@ export default function CoachConversation({
   learnerText,
   onLearnerTextChange,
   onPrediction,
+  onReply,
 }: {
   enabled: boolean
   onEnabledChange: (enabled: boolean) => void
@@ -68,6 +69,8 @@ export default function CoachConversation({
   learnerText: string
   onLearnerTextChange: (transcript: string) => void
   onPrediction?: (transcript: string) => boolean
+  /** Code-written stage reply. A non-null return skips the coach API. */
+  onReply?: (transcript: string) => string | null
 }) {
   const [state, setState] = useState<ConversationState>('ready')
   const [status, setStatus] = useState('')
@@ -82,6 +85,7 @@ export default function CoachConversation({
   const requestRef = useRef<AbortController | null>(null)
   const stopRef = useRef<(transcribe: boolean) => void>(() => undefined)
   const onPredictionRef = useRef(onPrediction)
+  const onReplyRef = useRef(onReply)
   const lastTranscriptRef = useRef('')
   const pendingStartRef = useRef<number | null>(null)
   const silenceTimerRef = useRef<number | null>(null)
@@ -93,6 +97,9 @@ export default function CoachConversation({
   useEffect(() => {
     onPredictionRef.current = onPrediction
   }, [onPrediction])
+  useEffect(() => {
+    onReplyRef.current = onReply
+  }, [onReply])
   useEffect(
     () => subscribeVoiceTimings(setVoiceTimings),
     [],
@@ -221,6 +228,19 @@ export default function CoachConversation({
         return
       }
       lastTranscriptRef.current = transcript
+      const localReply = onReplyRef.current?.(transcript) ?? null
+      if (localReply !== null) {
+        const transcriptToCoachReplyMs = elapsedMs(transcriptAt, performance.now())
+        recordVoiceTiming({ stage, speechToTranscriptMs, transcriptToCoachReplyMs })
+        lastCoachStatementRef.current = localReply
+        setStatus(`${heard} Answered in code.`)
+        if (enabledRef.current) {
+          speakCoach(localReply, { provider: null })
+        } else {
+          showCoachText(localReply, null)
+        }
+        return
+      }
       setState('replying')
       setStatus(`${heard} The coach is thinking…`)
       const result = await converseWithCoach(

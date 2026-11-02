@@ -1085,6 +1085,8 @@ function CanvasInner({
   const [serverActions, setServerActions] = useState<CoachServerAction[]>([])
   const [demoEvents, setDemoEvents] = useState<DemoTraceEvent[]>([])
   const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
+  /** Coach-sanctioned Reality Check close: suppresses the stuck notice. */
+  const [closeRetest, setCloseRetest] = useState(false)
   const demoObserve = useRef<{ demo: Demonstration; show: boolean } | null>(null)
   const uncertainRef = useRef<string[]>(initialUncertain)
   const requestId = useRef(0)
@@ -1198,6 +1200,7 @@ function CanvasInner({
 
   const toggleSwitch = (id: string) => {
     noteManualEdit()
+    setCloseRetest(false)
     if (mode === 'experiment') {
       playClack()
     }
@@ -2213,7 +2216,7 @@ function CanvasInner({
             .map((node) => ({ id: node.id, closed: node.data.closed ?? true })),
           expectSwitchOpen,
           runState.phase === 'done',
-          demoUndo !== null,
+          demoUndo !== null || closeRetest,
         )
         return notice === null ? null : (
           <p className="rounded-[10px] border border-unsure/50 px-3 py-2 text-sm" role="note">
@@ -2223,6 +2226,37 @@ function CanvasInner({
       })()}
     </>
   )
+  /** Reality Check close/open retest. Lives with the result (both guided
+   * branches): the action pane unmounts once the result card takes over. */
+  const retestButton = (() => {
+    const retestSwitch = nodes.find((node) => node.data.kind === 'switch')
+    if (
+      proofStage !== 'reality-build' ||
+      runState.phase !== 'done' ||
+      retestSwitch === undefined
+    ) {
+      return null
+    }
+    const switchOpen = retestSwitch.data.closed !== true
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          // Coach-sanctioned excursion, like a demonstration: the served
+          // rungs stay recorded even though the toggle invalidates around them.
+          const keptCoach = coachOutcome
+          toggleSwitch(retestSwitch.id)
+          setCoachOutcome(keptCoach)
+          if (switchOpen) {
+            setCloseRetest(true)
+          }
+        }}
+        className="border-flow/50 min-h-[44px] rounded-[10px] border px-4 text-sm font-medium text-flow"
+      >
+        {switchOpen ? 'Close the switch and test again' : 'Open the switch and test again'}
+      </button>
+    )
+  })()
   // The guided canvas remains independent from the right-hand stage content.
   // Keep the original full workbench composition for non-guided canvases.
   const experimentPane = (
@@ -2389,6 +2423,7 @@ function CanvasInner({
                 >
                   {insightPane}
                 </GuidedResultCard>
+                {retestButton}
                 {gate}
               </>
             ) : (
@@ -2406,6 +2441,7 @@ function CanvasInner({
                   </>
                 )}
                 {feedbackPane}
+                {retestButton}
               </>
             )}
           </div>

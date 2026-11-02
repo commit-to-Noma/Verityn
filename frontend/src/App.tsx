@@ -22,7 +22,7 @@ const SimulatePanel = lazy(() => import('./components/SimulatePanel'))
 const EvaluatePanel = lazy(() => import('./components/EvaluatePanel'))
 const SnapBuildLab = lazy(() => import('./components/SnapBuildLab'))
 const ExperimentPage = lazy(() => import('./experiment/ExperimentPage'))
-import type { SimulateResult, VerdictStatus } from './api/client'
+import type { Netlist, SimulateResult, VerdictStatus } from './api/client'
 import { recordPrediction } from './api/client'
 import { PRESETS } from './data/presets'
 import { L1 } from './lessons/l1'
@@ -37,6 +37,7 @@ import {
   subscribeCoachSpeechFinished,
 } from './voice/coachVoice'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
+import { REALITY_FOLLOWUP_QUESTION, realityReplyFor } from './journey/realityReply'
 import { setTraceStage } from './trace/session'
 import {
   JOURNEY_PROGRESS_VERSION,
@@ -156,6 +157,8 @@ export default function App() {
   /** The demo gate waits for R4; the presenter fallback keeps its old beat. */
   const realityR4 = useRef(false)
   const realityBulbLit = useRef<boolean | null>(null)
+  const realityQuestionAsked = useRef(false)
+  const introAnnounced = useRef(false)
   useEffect(() => {
     autoRef.current = auto
     demoRef.current = demo
@@ -380,13 +383,17 @@ export default function App() {
   )
 
   const handleRealitySolved = useCallback(
-    (result: SimulateResult) => {
+    (result: SimulateResult, netlist: Netlist) => {
       const bulb = result.components.L1
       realityBulbLit.current = bulb !== undefined && bulb.power > LIT_POWER_W
       if (matchesExpected(result, L1.twist.expectedFixed)) {
-        const spoken = announceCoach(
-          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Next, you will try a new circuit on your own in Solo.',
-        )
+        let text =
+          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Next, you will try a new circuit on your own in Solo.'
+        if (!realityQuestionAsked.current) {
+          realityQuestionAsked.current = true
+          text += ` ${REALITY_FOLLOWUP_QUESTION}`
+        }
+        const spoken = announceCoach(text)
         showGate(
           {
             chapter: 'reality',
@@ -400,6 +407,12 @@ export default function App() {
           },
           ADVANCE_BEAT_MS,
           spoken,
+        )
+      } else if (
+        netlist.components.some((part) => part.type === 'switch' && part.closed === true)
+      ) {
+        announceCoach(
+          'Yes. Closing the switch completed the loop, so current flows and the bulb lights. The gap was the open switch.',
         )
       } else {
         announceCoach(
@@ -571,6 +584,8 @@ export default function App() {
     setSnapshots({})
     setComplete(null)
     realityR4.current = false
+    realityQuestionAsked.current = false
+    introAnnounced.current = false
   }, [cancelAdvance])
 
   const handleStartJourney = useCallback(() => {
@@ -578,6 +593,7 @@ export default function App() {
     setLensPage(false)
     setExperimentPage(false)
     setEntered(true)
+    introAnnounced.current = true
     announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
   }, [resetJourney, announceCoach])
 
@@ -598,6 +614,7 @@ export default function App() {
     setExperimentPage(false)
     setEntered(true)
     setDemo((current) => demoTransition(current, { type: 'start' }))
+    introAnnounced.current = true
     announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
   }, [resetJourney, announceCoach])
 
@@ -722,7 +739,8 @@ export default function App() {
           handleResumeJourney()
           return
         }
-        if (!entered) {
+        if (!entered && !introAnnounced.current) {
+          introAnnounced.current = true
           announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
         }
         setLensPage(false)
@@ -813,6 +831,17 @@ export default function App() {
     }
     return false
   }
+
+  /** Reality Check replies are answered in code, never by a coach provider. */
+  const handleRealityReply = useCallback(
+    (transcript: string): string | null => {
+      if (stage !== 'reality-build' || !realityQuestionAsked.current) {
+        return null
+      }
+      return realityReplyFor(transcript)
+    },
+    [stage],
+  )
 
   // All three slots, always: skipped chapters render an honest placeholder.
   const finaleChapters: ChapterRecap[] = [
@@ -986,6 +1015,7 @@ export default function App() {
           learnerText={learnerReply}
           onLearnerTextChange={setLearnerReply}
           onPrediction={handleSpokenPrediction}
+          onReply={handleRealityReply}
         />
       </Suspense>
     )
@@ -1108,7 +1138,7 @@ export default function App() {
             seed={L1.twist.seed}
             eyebrow="Reality Check · The open switch"
             title="Reality Check: same idea, new circuit"
-            instructions="The loop is wired and the switch is open. Test it as is; don't change the switch."
+            instructions="The loop is wired and the switch is open. Test it as is before changing anything."
             choice={realityPrediction.choice}
             claim={L1.twist.claim}
             coachSession={realitySession}

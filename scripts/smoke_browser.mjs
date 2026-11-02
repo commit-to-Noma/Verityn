@@ -727,6 +727,10 @@ async function drive() {
   await assertGuidedCanvasFits('Reality Check after test')
   await captureScreenshot('reality-check-after-test')
   await assertOneVoice('reality-after')
+  check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
+  check('retest button offered', await hasText('Close the switch and test again'))
+  await ev(`[...document.querySelectorAll('[aria-label="Coach dock"] summary')].find((e) => e.textContent.includes('Earlier'))?.click()`)
+  await captureScreenshot('reality-followup')
   await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
   check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
@@ -782,6 +786,16 @@ async function drive() {
   check('R2 cites 0.0 A discrepancy', typeof r2?.text === 'string' && r2.text.includes('0.0 A') && r2.text.includes('S1'))
   console.log('R2 text:', JSON.stringify(r2?.text))
   check('R2 carries validated actions', Array.isArray(r2?.actions) && r2.actions.some((a) => a.type === 'set_switch_state' && a.componentId === 'S1' && a.closed === true), JSON.stringify(r2?.actions))
+
+  await clickButton('Close the switch and test again')
+  await waitFor(() => hasText('Open the switch and test again'), 'retest ran', 25000)
+  await waitFor(() => hasText('Closing the switch completed the loop'), 'retest confirmation', 25000)
+  check('retest shows lit reading', await hasText('3.6 W'))
+  check('retest skips stuck notice', !(await hasText('The switch is closed, but this challenge uses it open.')))
+  await clickButton('Open the switch and test again')
+  await waitFor(() => hasText('Prediction did not match'), 'retest reopened', 25000)
+  check('follow-up asked once', await ev(`document.body.textContent.split('What would you change to make the bulb light?').length - 1 === 1`))
+  await captureScreenshot('reality-retest-button', 1440, '[aria-label="Chapter complete"]')
 
   const coachCallsBeforeSolo = askRequestIds.length
   await clickButtonStarts('Start the Solo challenge')
