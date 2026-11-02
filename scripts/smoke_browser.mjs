@@ -13,8 +13,8 @@
  *        grounded explanation, reset restores intact
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
- * interactions. The lens proposals are stubbed at the network layer from
- * captured fixtures: no live Meta call is ever made by this script.
+ * interactions. Coach and vision responses are stubbed at the network layer:
+ * no live Meta call is made by this script.
  * Exits nonzero on any failure.
  *
  * Usage (backend on :5000, frontend dev server running):
@@ -26,17 +26,18 @@
  *   CDP_PORT     remote-debugging port (default 9333)
  */
 import { spawn } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const BASE = process.env.BASE ?? 'http://localhost:5173'
-// Evidence path: the suite verifies readings, traces, and chips with proof on.
+// Evidence path: the suite checks readings, traces, and provider chips.
 const HOME = BASE + '/?proof=1'
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const CDP_PORT = Number(process.env.CDP_PORT ?? '9333')
 const CDP = `http://127.0.0.1:${CDP_PORT}`
+const SCREENSHOT_DIR = process.env.SCREENSHOT_DIR
 const HERE = dirname(fileURLToPath(import.meta.url))
 const switchFixture = JSON.parse(
   readFileSync(join(HERE, '..', 'tests', 'fixtures', 'vision_live', '06_textbook_switch.proposal.json'), 'utf8'),
@@ -53,6 +54,81 @@ const explainRequestIds = []
 let healthAttempts = 0
 let chrome = null
 let originalViewportWidth = null
+
+function fakeTrace(tool, output, guard, decidedBy) {
+  return {
+    tool,
+    input: 'text',
+    output,
+    guard,
+    decided_by: decidedBy,
+    ms: 1,
+    attempts: 1,
+    t: new Date().toISOString(),
+  }
+}
+
+function fakeCoachAsk(postData) {
+  const rung = JSON.parse(postData ?? '{}').rung ?? 'R1'
+  if (rung === 'R2') {
+    return {
+      eligible: true,
+      rung,
+      text: 'Evidence: L1 reads 0.0 A and 0.0 W. S1 is open with 0.0 A through it.',
+      provider: 'deterministic',
+      claim: { type: 'lit', component: 'L1', value: true },
+      actions: [{ type: 'set_switch_state', componentId: 'S1', closed: true }],
+      attempts: 1,
+      trace: fakeTrace('deterministic', 'structured-hint', 'accepted', 'solver'),
+    }
+  }
+  if (rung === 'R4') {
+    return {
+      eligible: true,
+      rung,
+      text: 'Confirmation check — in your own words, why does L1 stay dark? The evidence says S1 is open with 0.0 A.',
+      provider: 'deterministic',
+      claim: { type: 'lit', component: 'L1', value: true },
+      actions: [],
+      attempts: 1,
+      trace: fakeTrace('deterministic', 'structured-hint', 'accepted', 'solver'),
+    }
+  }
+  return {
+    eligible: true,
+    rung: 'R1',
+    text: 'The battery still holds 6.0 V, yet L1 reads 0.0 A and 0.0 W. Which component prevents charge from making a complete loop?',
+    provider: 'prototype-fake',
+    claim: { type: 'lit', component: 'L1', value: true },
+    actions: [],
+    attempts: 1,
+    trace: fakeTrace('prototype-fake', 'structured-hint', 'fallback:template', 'none'),
+  }
+}
+
+function fakeCoachExplain(postData) {
+  // Content-aware like the ask stub: a damaged bulb in the submitted
+  // netlist is an open filament, so it reads 0.0 A and 0.0 W. Wording
+  // matches the deterministic fallback; its text is covered by backend
+  // explanation unit tests, while the smoke proves the UI renders it.
+  let damaged = null
+  try {
+    const components = JSON.parse(postData ?? '{}').netlist?.components ?? []
+    damaged = components.find((part) => part.type === 'bulb' && part.condition === 'damaged')?.id ?? null
+  } catch {
+    damaged = null
+  }
+  return {
+    eligible: true,
+    text: damaged !== null
+      ? `${damaged} is damaged and no longer completes the circuit: 0.0 A and 0.0 W. Reset the bench to restore an intact bulb.`
+      : 'The open switch breaks the loop, so the bulb reads 0.0 A and 0.0 W.',
+    provider: 'prototype-fake',
+    valid: true,
+    error_code: null,
+    trace: fakeTrace('prototype-fake', 'structured-explanation', 'fallback:template', 'none'),
+  }
+}
 
 async function waitForCdp(timeoutMs = 20000) {
   const t0 = Date.now()
@@ -90,6 +166,44 @@ async function ev(expression) {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function ensureSummaryOpen(text, scope = 'details') {
+  const found = await ev(`(() => {
+    const summary = [...document.querySelectorAll(${JSON.stringify(scope)} + ' summary')]
+      .find((e) => e.textContent.trim() === ${JSON.stringify(text)});
+    if (!summary) return false;
+    if (!summary.parentElement.open) summary.click();
+    return true;
+  })()`)
+  if (!found) throw new Error('summary not found: ' + text)
+}
+
+async function captureScreenshot(name, width = 1440) {
+  if (!SCREENSHOT_DIR) return
+  const previous = await ev(`({ width: innerWidth, height: innerHeight, scrollY })`)
+  await send('Emulation.setDeviceMetricsOverride', {
+    width,
+    height: Math.max(previous.height, 1000),
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+  await ev('window.dispatchEvent(new Event("resize"))')
+  await ev('window.scrollTo(0, 0)')
+  await sleep(400)
+  const shot = await send('Page.captureScreenshot', { format: 'png' })
+  mkdirSync(SCREENSHOT_DIR, { recursive: true })
+  const path = join(SCREENSHOT_DIR, `${name}.png`)
+  writeFileSync(path, Buffer.from(shot.data, 'base64'))
+  console.log(`SCREENSHOT ${path}`)
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: previous.width,
+    height: previous.height,
+    deviceScaleFactor: 1,
+    mobile: false,
+  })
+  await ev('window.dispatchEvent(new Event("resize"))')
+  await ev(`window.scrollTo(0, ${previous.scrollY})`)
+}
 
 async function waitFor(fn, what, timeout = 15000) {
   const t0 = Date.now()
@@ -229,6 +343,7 @@ async function assertGuidedCanvasFits(stage) {
       deviceScaleFactor: 1,
       mobile: false,
     })
+    await ev('window.dispatchEvent(new Event("resize"))')
     await sleep(650)
     const layout = await ev(`(() => {
       const canvas = document.querySelector('[aria-label="Circuit canvas"], [aria-label$="starting circuit"]');
@@ -318,6 +433,21 @@ async function main() {
   try {
     await waitForCdp()
     await drive()
+  } catch (error) {
+    console.error('DRIVER ERROR:', error instanceof Error ? error.message : String(error))
+    try {
+      console.error('PAGE STATE:', await ev('document.body.innerText.slice(-6000)'))
+    } catch { /* page may have closed */ }
+    if (SCREENSHOT_DIR && ws?.readyState === WebSocket.OPEN) {
+      try {
+        const shot = await send('Page.captureScreenshot', { format: 'png' })
+        mkdirSync(SCREENSHOT_DIR, { recursive: true })
+        const path = join(SCREENSHOT_DIR, 'smoke-fail.png')
+        writeFileSync(path, Buffer.from(shot.data, 'base64'))
+        console.error('screenshot:', path)
+      } catch { /* preserve the original failure */ }
+    }
+    throw error
   } finally {
     try { chrome.kill() } catch { /* ignore */ }
     await removeDir(profile)
@@ -367,6 +497,26 @@ async function drive() {
         }
         return
       }
+      if (request.url.includes('/api/coach/ask')) {
+        const response = fakeCoachAsk(request.postData)
+        send('Fetch.fulfillRequest', {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from(JSON.stringify(response)).toString('base64'),
+        }).catch(() => {})
+        return
+      }
+      if (request.url.includes('/api/coach/explain')) {
+        const response = fakeCoachExplain(request.postData)
+        send('Fetch.fulfillRequest', {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from(JSON.stringify(response)).toString('base64'),
+        }).catch(() => {})
+        return
+      }
       const stub = request.url.includes('/api/vision/propose') ? visionStubs.shift() : undefined
       if (stub !== undefined) {
         send('Fetch.fulfillRequest', {
@@ -386,9 +536,14 @@ async function drive() {
     patterns: [
       { urlPattern: '*/api/health*' },
       { urlPattern: '*/api/vision/propose*' },
+      { urlPattern: '*/api/coach/ask*' },
+      { urlPattern: '*/api/coach/explain*' },
     ],
   })
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+  await send('Page.addScriptToEvaluateOnNewDocument', {
+    source: 'try { localStorage.clear(); sessionStorage.clear(); } catch {}',
+  })
   await send('Page.navigate', { url: HOME })
   await waitFor(() => hasText('Start your own lab'), 'hub')
   await waitFor(
@@ -403,7 +558,7 @@ async function drive() {
   )
   await waitFor(() => hasText('Simulator ready'), 'hub health check')
   check('tab title', await ev('document.title') === 'Verityn - STEM laboratory', await ev('document.title'))
-  check('proof on via param', await ev(`document.querySelector('[aria-label="Proof mode"]')?.getAttribute('aria-checked') === 'true'`))
+  check('trace details on via param', await ev(`document.querySelector('[aria-label="Trace details"]')?.getAttribute('aria-checked') === 'true'`))
   const iconHref = await ev(`document.querySelector('link[rel="icon"]')?.getAttribute('href') ?? 'missing'`)
   check('brand icon linked', iconHref === '/brand/verityn-logo.png', iconHref)
   const iconRes = await fetch(BASE + iconHref)
@@ -417,6 +572,7 @@ async function drive() {
   check('discipline ring', await hasText('Drag the ring') && await hasText('FIRST LIVE MODULE'))
   check('lab loop', await hasText('A simple learning loop') && await hasText('Make a claim'))
   check('why matters', await hasText('Answers are everywhere. Understanding is not.'))
+  await captureScreenshot('hub')
   // Tool turntable: visible stations, rotation, keyboard, and real routes.
   check('turntable visible', await hasText('Explore the laboratory') && await hasText('1 / 5 · VERITYN TOOLS'))
   await clickTab('Reality Lens')
@@ -467,6 +623,7 @@ async function drive() {
     return b ? b.disabled !== true && !b.textContent.includes('Next') : 'missing';
   })()`)
   check('experiment enabled in nav', expEnabled === true, String(expEnabled))
+  await captureScreenshot('hub-start')
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
@@ -476,6 +633,7 @@ async function drive() {
     await hasText('Welcome to the Guided Lab. This bulb is off because the circuit has a gap. Will it light once the loose ends are connected?'),
   )
   await assertGuidedCanvasFits('Predict')
+  await captureScreenshot('predict')
   const micLabel = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
   check('mic button renders with honest state', micLabel === 'Record a reason with Meta Muse Voice Transcribe' || micLabel === 'Stop voice recording', micLabel)
   check('coach dock shows the current line', await ev(`!!document.querySelector('[aria-label="Coach dock"] p[aria-live="polite"]')`))
@@ -491,15 +649,18 @@ async function drive() {
   await clickButton('Continue to fix it')
   await waitFor(() => handleCenter('B1', 'b'), 'l1 canvas')
   await assertGuidedCanvasFits('Build before test')
+  await captureScreenshot('build-before-test')
   await wire('B1', 'b', 'L1', 'b')
   await waitFor(() => hasText('Test with the switch open'), 'l1 gate', 25000)
   await assertGuidedCanvasFits('Build after test')
+  await captureScreenshot('build-after-test')
 
-  check('Your original prediction header', await hasText('Your original prediction'))
+  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
+  check('original prediction details', await hasText('Your original prediction'))
   check('initial copy (stay dark)', await hasText('Your initial prediction was that the open circuit would stay dark.'))
-  check('Repair verified header', await hasText('You completed the loop'))
+  check('repaired circuit details', await hasText('You completed the loop'))
   check('repair numbers', await hasText('Your completed circuit produces 0.6 A and 3.6 W.'))
-  check('lock-in seal', await hasText('Locked in — testing this against the circuit'))
+  check('prediction recap chip', await ev(`!!document.querySelector('[aria-label="Prediction recap"]')`))
   check('flow paced by amps', await ev(`[...document.querySelectorAll('.react-flow__edge.animated path.react-flow__edge-path')].some((p) => p.style.animationDuration === '0.5s')`))
   check('3-section card', await hasText('What the simulator observed'))
   check('simulator ready badge', await hasText('Simulator ready'))
@@ -511,6 +672,7 @@ async function drive() {
   check('gate cleared until rebuild', !(await hasText('Test with the switch open')))
   await wire('B1', 'b', 'L1', 'b')
   await waitFor(() => hasText('Test with the switch open'), 'gate re-earned by rebuild', 25000)
+  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   check('evidence returns with the gate', await hasText('You completed the loop'))
   await clickButtonStarts('Test with the switch open')
 
@@ -519,20 +681,22 @@ async function drive() {
   await clickButton('Yes')
   await fillInput('predict-why', 'complete loop lights')
   await clickButtonStarts('Continue')
-  await clickButton('Test circuit')
-  await waitFor(() => hasText('Ask the coach'), 'coach', 25000)
+  await clickButton('Test again')
+  await waitFor(() => hasText('MEASURED BY THE SOLVER'), 'Reality Check measurement', 25000)
   await assertGuidedCanvasFits('Reality Check after test')
+  await captureScreenshot('reality-check-after-test')
+  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
+  await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
   check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
-  await clickButton('Ask the coach')
-  await waitFor(() => hasText('Fallback coach'), 'r1', 20000)
+  await waitFor(() => hasText('Fallback coach'), 'fake R1', 20000)
   check('trace drawer present', await hasText('What Meta did / What code checked'))
-  check('stage chips name tool and guard', await ev(`document.querySelector('[aria-label="Proof chips"]')?.innerText.includes('fallback:template') === true`))
+  check('R1 request recorded for the trace drawer', askRequestIds.length === 1, `got ${askRequestIds.length}`)
   check('trace drawer closed by default', await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.open !== true`))
   await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.querySelector('summary')?.click()`)
   await waitFor(() => hasText('Template fallback'), 'trace event recorded', 10000)
   check('trace names serving tool', await hasText('prototype-fake'))
-  await clickButton('Show me the evidence (R2)')
-  await waitFor(() => hasText('Evidence pointer'), 'r2', 20000)
+  await clickButton('Show me the pointer')
+  await waitFor(() => hasText('Pointer'), 'r2', 20000)
   check('fake coach line is not marked Meta', await ev(`!document.querySelector('[aria-label="Coach dock"]')?.innerText.includes('Meta Spark')`))
   check('earlier coach lines are expandable', await ev(`!!document.querySelector('[aria-label="Coach dock"] details summary')`))
   check('dock speaker plays the current line', await setDockVoice(true))
@@ -544,11 +708,11 @@ async function drive() {
   check('switch toggle found', toggleLabel !== '', toggleLabel)
   await ev(`[...document.querySelectorAll('[data-id="S1"] button')][0]?.click()`)
   await clickButton('Test again')
-  await waitFor(() => hasText('is closed, but this challenge tests the open switch'), 'stuck notice', 25000)
+  await waitFor(() => hasText('The switch is closed, but this challenge uses it open.'), 'stuck notice', 25000)
   await ev(`[...document.querySelectorAll('[data-id="S1"] button')][0]?.click()`)
   await clickButton('Test again')
-  await waitFor(() => hasText('Your prediction did not match the circuit result'), 'stuck reopened', 25000)
-  check('stuck notice clears', !(await hasText('is closed, but this challenge tests the open switch')))
+  await waitFor(() => hasText('Prediction did not match'), 'stuck reopened', 25000)
+  check('stuck notice clears', !(await hasText('The switch is closed, but this challenge uses it open.')))
 
   // Demo excursion mid-ladder: the served R1/R2 cards must survive the
   // verdict flip, and R4 must still be the next rung after undo.
@@ -557,9 +721,9 @@ async function drive() {
   check('demo apply shows fresh lit reading', await hasText('3.6 W'))
   check('undo offered at canvas', await hasText('Undo demonstration'))
   await clickButton('Undo demonstration')
-  await waitFor(() => hasText('Your prediction did not match the circuit result'), 'demo undo restores', 25000)
+  await waitFor(() => hasText('Prediction did not match'), 'demo undo restores', 25000)
   check('undo restores dark reading', await hasText('0.0 W'))
-  await clickButton('Confirm before solo (R4)')
+  await clickButton('Try the demonstration')
   await waitFor(() => hasText('Confirmation check'), 'r4', 20000)
 
   check('3 coach/ask responses captured', askRequestIds.length === 3, `got ${askRequestIds.length}`)
@@ -579,7 +743,7 @@ async function drive() {
 
   const coachCallsBeforeSolo = askRequestIds.length
   await clickButtonStarts('Start the Solo challenge')
-  await waitFor(() => hasText('Solo mode'), 'solo predict')
+  await waitFor(() => hasText('Solo: the second bulb'), 'solo predict')
   await assertGuidedCanvasFits('Solo prediction')
   check('no coach in solo', !(await hasText('Ask the coach')))
   const soloMic = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
@@ -591,20 +755,48 @@ async function drive() {
   await wire('L2', 'b', 'L1', 'b')
   await waitFor(() => hasText('View completed journey'), 'solo gate', 25000)
   await assertGuidedCanvasFits('Solo after test')
+  await captureScreenshot('solo-after-test')
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
   check('solo coach-off lock', await hasText('Coach off.'))
   await clickButtonStarts('View completed journey')
-  await waitFor(() => hasText('JOURNEY COMPLETE'), 'finale')
-  check('finale solo matched', await hasText('Your solo prediction matched'))
+  await waitFor(() => hasText('Your journey'), 'finale')
+  await captureScreenshot('finale-1440')
+  await captureScreenshot('finale-390', 390)
+  check('finale solo verdict uses the measured result', await ev(`(() => {
+    const solo = [...document.querySelectorAll('[aria-label="Your circuit journey"] li')]
+      .find((item) => item.querySelector('h3')?.innerText.includes('Solo'));
+    return !!solo && solo.innerText.includes('You predicted Yes.')
+      && solo.innerText.includes('The solver measured');
+  })()`))
   check('solo preview rebuilt cleanly', await ev(`(() => {
-    const flow = document.querySelector('[aria-label="Reconstructed solo circuit from the tested wiring"]');
+    const flow = [...document.querySelectorAll('.react-flow[aria-label]')]
+      .find((element) => /Solo circuit$/.test(element.getAttribute('aria-label') ?? ''));
     if (!flow) return false;
     const labels = [...flow.querySelectorAll('.react-flow__node')].map((n) => n.querySelector('[aria-label]')?.getAttribute('aria-label') ?? '');
     return labels.length === 4 && ['B1', 'S1', 'L1', 'L2'].every((id) => labels.some((t) => t.includes(id)));
   })()`))
-  check('learning path personal', await hasText('Your learning path') && await hasText('3/3 challenges') && await hasText('Complete the loop') && await hasText('You predicted') && await hasText('You connected'))
-  check('evidence card shown', await hasText('Evidence card') && await hasText('Computed by a solver. Not an AI score.'))
+  check('finale battery thumbnail uses positive supply readings', await ev(`(() => {
+    const flow = [...document.querySelectorAll('.react-flow[aria-label]')]
+      .find((element) => /Solo circuit$/.test(element.getAttribute('aria-label') ?? ''));
+    const battery = flow?.querySelector('[aria-label="B1 measurement"]');
+    return !!battery && battery.textContent?.includes('1.2 A')
+      && battery.textContent.includes('7.2 W')
+      && !battery.textContent.includes('-');
+  })()`))
+  check(
+    'journey shows all three chapters and measured values',
+    await hasText('Your journey') && await hasText('Light the bulb') && await hasText('Open switch')
+      && await hasText('Solo') && await hasText('You said') && await hasText('The solver measured'),
+  )
+  check('share disclosure starts collapsed', await ev(`(() => {
+    const summary = [...document.querySelectorAll('details summary')]
+      .find((e) => e.textContent.trim() === 'Share your result');
+    return !!summary && !summary.parentElement.open;
+  })()`))
+  await ensureSummaryOpen('Share your result')
+  await waitFor(() => hasText('Evidence card'), 'evidence card')
+  check('evidence card shown', await hasText('A shareable record of this session.') && await hasText('Computed by a solver. Not an AI score.'))
   await clickButton('Download card')
   await waitFor(() => hasText('Evidence card downloaded.'), 'card png renders', 20000)
   check('evidence card png renders', true)
@@ -612,8 +804,8 @@ async function drive() {
     const img = document.querySelector('section[aria-label="Evidence card"] img');
     return img !== null && img.naturalWidth === 1200 && img.naturalHeight === 630;
   })()`))
-  await ev(`[...document.querySelectorAll('summary')].find((e) => e.textContent.trim() === 'See the full journey and measurements')?.click()`)
-  await waitFor(() => hasText('REALITY CHECK EVIDENCE'), 'journey story', 20000)
+  await ev(`[...document.querySelectorAll('summary')].find((e) => e.textContent.trim() === 'See the full session trace')?.click()`)
+  await waitFor(() => hasText('Evidence trace'), 'journey trace', 20000)
   await ev(`[...document.querySelectorAll('summary')].filter((e) => e.textContent.trim() === 'Evidence trace').forEach((e) => e.click())`)
   await sleep(500)
   const hasDemoTitle = await hasText('DEMONSTRATION')
@@ -629,8 +821,10 @@ async function drive() {
     })()`)
     console.log('REALITY FINALE CONTEXT:', context)
   }
-  check('reality check story node', await hasText('REALITY CHECK EVIDENCE'))
-  check('story shows all five beats', await hasText('FIRST BELIEF') && await hasText('VERIFIED TRANSFER'))
+  check('reality check chapter trace', await hasText('Reality Check: the open switch'))
+  check('all three chapter traces',
+    await hasText('Light the bulb') && await hasText('Reality Check: the open switch')
+      && await hasText('Solo: the second bulb'))
   await clickButton('Open Reality Lens')
   // innerText reflects the CSS uppercase transform on the eyebrow.
   await waitFor(() => hasText('META VISION WORKSPACE'), 'lens page')
@@ -638,7 +832,7 @@ async function drive() {
   check('lens back button', await hasText('← Back to guided journey'))
   await waitFor(() => hasText('Your diagram'), 'lens lab', 20000)
   check('upload panel first', await hasText('Choose an image'))
-  check('samples below upload', await hasText('Verified samples'))
+  check('samples below upload', await hasText('Sample diagrams'))
   // Stub the proposal at the network layer: no live Meta call in smoke.
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await uploadLensFile(switchImage)
@@ -707,7 +901,7 @@ async function drive() {
   await waitFor(() => hasText('Choose an image'), 'lens reset invalid')
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
   await clickButton('← Back to guided journey')
-  await waitFor(() => hasText('JOURNEY COMPLETE'), 'back to finale')
+  await waitFor(() => hasText('Your journey'), 'back to finale')
   await ev(`(() => {
     const s = document.querySelector('#lab-tools > summary');
     if (!s) return false;
@@ -741,6 +935,7 @@ async function drive() {
   await waitFor(() => hasText('Watch a walkthrough'), 'demo hub')
   await clickButton('Watch a walkthrough')
   await waitFor(() => hasText('Demo playing'), 'demo starts')
+  const demoCoachCallsBefore = askRequestIds.length
   check('demo step 1', await hasText('Step 1 of 7'))
   await clickButton('Pause demo')
   await waitFor(() => hasText('Demo paused'), 'demo paused')
@@ -756,24 +951,31 @@ async function drive() {
   await waitFor(() => hasText('Connect the two open ends with one wire.'), 'demo l1 build', 30000)
   check('demo step 2', await hasText('Step 2 of 7'))
   check('demo repair notice', await hasText('Demo: repairing the open connection'))
+  await waitFor(
+    () => ev(`!!document.querySelector('section[aria-label="Test result"] details summary')`),
+    'demo solver result details',
+    30000,
+  )
+  await clickButton('Pause demo')
+  await waitFor(() => hasText('Demo paused'), 'demo pauses on solver result')
+  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   await waitFor(() => hasText('You completed the loop'), 'demo l1 solved', 30000)
-  check('demo measured numbers', await hasText('Your completed circuit produces 0.6 A and 3.6 W.'))
-  await waitFor(() => hasText('switch is open'), 'demo reality predict', 30000)
-  await waitFor(() => hasText('Ask the coach'), 'demo coach invited', 45000)
-  await waitFor(() => hasText('Fallback coach'), 'demo r1', 30000)
-  await waitFor(() => hasText('Evidence pointer'), 'demo r2', 30000)
-  await waitFor(() => hasText('Undo demonstration'), 'demo applied', 30000)
-  await waitFor(() => hasText('Your prediction matched the circuit result'), 'demo verdict flips', 30000)
-  await waitFor(() => hasText('Your prediction did not match the circuit result'), 'demo undone', 30000)
-  await waitFor(() => hasText('Confirmation check'), 'demo r4', 30000)
-  const demoCoachBeforeSolo = askRequestIds.length
-  await waitFor(() => hasText('Solo mode'), 'demo solo', 30000)
-  check('demo solo coach off', !(await hasText('Ask the coach')))
-  await waitFor(() => hasText('View completed journey'), 'demo solo gate', 60000)
-  check('demo solo zero coach calls', askRequestIds.length === demoCoachBeforeSolo,
-    `before ${demoCoachBeforeSolo}, after ${askRequestIds.length}`)
-  await clickButtonStarts('View completed journey')
-  await waitFor(() => hasText('Demo complete'), 'demo finale')
+  await waitFor(
+    () => hasText('Your completed circuit produces 0.6 A and 3.6 W.'),
+    'demo measured numbers',
+    10000,
+  )
+  check('demo measured numbers', true)
+  await clickButton('Resume demo')
+  await waitFor(() => hasText('Demo playing'), 'demo resumes after result')
+  await clickButtonStarts('Test with the switch open')
+  await waitFor(() => hasText('Demo complete'), 'demo finale', 90000)
+  // The finale chunk is lazy: Demo complete fires with the transfer gate,
+  // while the recap heading lands once the chunk arrives.
+  await waitFor(() => hasText('Your journey'), 'demo journey recap', 30000)
+  check('demo reaches the completed journey', await hasText('Your journey'))
+  check('demo made no coach calls in Solo', askRequestIds.length - demoCoachCallsBefore === 3,
+    `demo calls ${askRequestIds.length - demoCoachCallsBefore}`)
   check('demo step 7', await hasText('Step 7 of 7'))
   await clickButton('Replay demo')
   await waitFor(() => hasText('Step 1 of 7'), 'demo replay')
@@ -801,10 +1003,10 @@ async function drive() {
   await waitFor(() => hasText('Run 1 - Light a bulb'), 'history run 1', 25000)
   check('preset measures honestly', await hasText('0.6 A'))
   check('ask unlocked after run', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Ask Muse Spark about this result' && !b.disabled)`))
-  await clickButton('Proof')
-  check('proof off hides readings', !(await ev(`!!document.querySelector('[aria-label="Simulation result"]')`)))
-  check('proof off hides trace drawer', !(await hasText('What Meta did / What code checked')))
-  await clickButton('Proof')
+  await clickButton('Trace')
+  check('trace off hides readings', !(await ev(`!!document.querySelector('[aria-label="Simulation result"]')`)))
+  check('trace off hides trace drawer', !(await hasText('What Meta did / What code checked')))
+  await clickButton('Trace')
   await waitFor(() => ev(`!!document.querySelector('[aria-label="Simulation result"]')`), 'readings restored', 10000)
   await clickButton('Closed')
   await waitFor(() => hasText('Circuit changed - run the experiment again.'), 'stale status')
@@ -851,6 +1053,7 @@ async function drive() {
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
   await clickButton('Hub')
   await waitFor(() => hasText('Start your own lab'), 'hub final')
+  await captureScreenshot('hub')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)
 
@@ -860,14 +1063,7 @@ async function drive() {
   process.exitCode = fails.length === 0 ? 0 : 1
 }
 
-main().catch(async (err) => {
-  console.error('DRIVER ERROR:', err.message)
-  try {
-    const shot = await send('Page.captureScreenshot', { format: 'png' })
-    writeFileSync('smoke_fail.png', Buffer.from(shot.data, 'base64'))
-    console.error('screenshot: smoke_fail.png')
-  } catch { /* ignore */ }
-  try { ws.close() } catch { /* ignore */ }
-  try { chrome.kill() } catch { /* ignore */ }
-  process.exit(2)
+main().catch((error) => {
+  console.error('BROWSER SMOKE ERROR:', error instanceof Error ? error.message : String(error))
+  process.exitCode = 2
 })

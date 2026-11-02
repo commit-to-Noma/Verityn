@@ -67,4 +67,19 @@ export const SMART_DETAILS = [
     where: 'Finale timeline',
     evidence: 'frontend/src/journey/finaleMotion.test.ts',
   },
+  {
+    behavior: 'Hub health checks retry with visible startup progress',
+    where: 'Hub on first load',
+    evidence: 'frontend/src/components/HealthStatus.test.tsx',
+  },
+  {
+    behavior: 'Voice capture stops after silence and records stage timings',
+    where: 'Coach Dock voice timing details',
+    evidence: 'frontend/src/voice/voiceTimings.test.ts',
+  },
+  {
+    behavior: 'Finale handoff reuses the saved circuit in Experiment Bay',
+    where: 'Journey Finale experiment action',
+    evidence: 'frontend/src/components/JourneyFinale.test.tsx',
+  },
 ] as const

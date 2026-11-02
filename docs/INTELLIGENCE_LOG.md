@@ -16,3 +16,6 @@ the Under the hood Smart details section, and the README.
 - Current flow and bulb glow follow solver measurements — [visual mapping tests](../frontend/src/canvas/visuals.test.ts).
 - Solver readouts count up to the measured value — [readout tests](../frontend/src/components/ReadoutValue.test.ts).
 - Finale circuits reveal in order with reduced motion respected — [Finale motion tests](../frontend/src/journey/finaleMotion.test.ts).
+- Hub health checks retry with visible startup progress — [health status tests](../frontend/src/components/HealthStatus.test.tsx), also exercised by the browser smoke.
+- Voice capture stops after silence and records per-stage timings — [voice timing tests](../frontend/src/voice/voiceTimings.test.ts).
+- Finale handoff reuses the saved circuit in Experiment Bay — [Finale tests](../frontend/src/components/JourneyFinale.test.tsx) and [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx).

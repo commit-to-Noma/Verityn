@@ -63,11 +63,13 @@ plan.
   side-arrow, keyboard, screen-reader, reduced-motion, and
   no-auto-rotation interactions are preserved.
 - Voice (optional, never required): tap-to-talk coach replies and a
-  microphone in every Why box. Meta Muse Voice Transcribe turns each
+  microphone in every Why box and the Finale reflection. Meta Muse Voice Transcribe turns each
   recording into editable text; a clear spoken answer pre-selects the
   matching choice but never submits. Spoken coach playback is browser
   speech synthesis, defaults off, and uses a ranked English browser voice
   with short sentence pauses (Meta Muse Voice Transcribe is not text-to-speech).
+  Voice capture stops after 1.5 seconds of silence; stage timings are shown
+  in Coach Dock for the current session.
   Typing and manual lab controls remain available.
 - Deterministic MNA solver (`src/verityn/solver.py`): battery,
   resistor, bulb (fixed 10 Ω), switch, and wire circuits;
@@ -104,6 +106,9 @@ plan.
 | Current flow and bulb glow follow solver measurements | Circuit test result | [Visual mapping tests](./frontend/src/canvas/visuals.test.ts) |
 | Solver readouts count up to the measured value | Guided result card and circuit readouts | [Readout tests](./frontend/src/components/ReadoutValue.test.ts) |
 | Finale circuits reveal in order with reduced motion respected | Finale timeline | [Finale motion tests](./frontend/src/journey/finaleMotion.test.ts) |
+| Hub health checks retry with visible startup progress | Hub on first load | [Health status tests](./frontend/src/components/HealthStatus.test.tsx) |
+| Voice capture stops after silence and records per-stage timings | Coach Dock voice timing details | [Voice timing tests](./frontend/src/voice/voiceTimings.test.ts) |
+| Finale handoff reuses the saved circuit in Experiment Bay | Journey Finale experiment action | [Finale tests](./frontend/src/components/JourneyFinale.test.tsx) |
 
 ## Deliberately out of scope
 
@@ -195,7 +200,7 @@ BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journ
 | Tool | Used for | Evidence |
 |---|---|---|
 | Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Trace and validation notes](./docs/INTELLIGENCE_LOG.md) |
-| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, and Solo | [Voice API notes](./docs/ARCHITECTURE.md) |
+| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, Solo, and the Finale reflection | [Voice API notes](./docs/ARCHITECTURE.md) |
 | SAM | Sample only; no live inference | [Sample probe results](./docs/sam-spike-results.json) |
 
 Pointer and Demonstration are deterministic by design, not model calls. SAM is
