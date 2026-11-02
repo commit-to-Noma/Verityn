@@ -834,6 +834,10 @@ async function drive() {
   await waitFor(() => hasText('Your journey'), 'finale')
   await captureScreenshot('finale-1440')
   await captureScreenshot('finale-390', 390)
+  check('journey progress highlights Recap', await ev(`(() => {
+    const current = document.querySelector('[aria-label="Journey progress"] [aria-current="step"]');
+    return current?.textContent?.trim() === 'Recap';
+  })()`))
   check('finale solo verdict uses the measured result', await ev(`(() => {
     const solo = [...document.querySelectorAll('[aria-label="Your circuit journey"] li')]
       .find((item) => item.querySelector('h3')?.innerText.includes('Solo'));

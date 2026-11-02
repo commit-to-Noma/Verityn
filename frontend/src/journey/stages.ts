@@ -93,10 +93,10 @@ export const SHELL_NAV: ShellNavItem[] = [
   { id: 'solver', label: 'Verityn Solver', destination: 'experiment' },
 ]
 
-/** Header progress: one step per chapter of the guided journey. */
-export const PROGRESS_STEPS = ['Predict', 'Build', 'Reality Check', 'Solo'] as const
+/** Header progress: one step per chapter of the guided journey, plus the recap. */
+export const PROGRESS_STEPS = ['Predict', 'Build', 'Reality Check', 'Solo', 'Recap'] as const
 
-/** Index into PROGRESS_STEPS, or -1 before entering / length when complete. */
+/** Index into PROGRESS_STEPS, or -1 before entering. */
 export function progressIndex(stage: Stage): number {
   switch (stage) {
     case 'intro':
@@ -112,6 +112,6 @@ export function progressIndex(stage: Stage): number {
     case 'transfer-build':
       return 3
     case 'finale':
-      return PROGRESS_STEPS.length
+      return PROGRESS_STEPS.length - 1
   }
 }

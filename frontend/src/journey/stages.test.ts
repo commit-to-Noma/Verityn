@@ -120,8 +120,8 @@ describe('SHELL_NAV', () => {
 })
 
 describe('progressIndex', () => {
-  it('maps every stage onto the four chapter steps', () => {
-    expect(PROGRESS_STEPS).toEqual(['Predict', 'Build', 'Reality Check', 'Solo'])
+  it('maps every stage onto the chapter steps plus Recap', () => {
+    expect(PROGRESS_STEPS).toEqual(['Predict', 'Build', 'Reality Check', 'Solo', 'Recap'])
     expect(progressIndex('intro')).toBe(-1)
     expect(progressIndex('l1-predict')).toBe(0)
     expect(progressIndex('l1-build')).toBe(1)
@@ -129,6 +129,6 @@ describe('progressIndex', () => {
     expect(progressIndex('reality-build')).toBe(2)
     expect(progressIndex('transfer-predict')).toBe(3)
     expect(progressIndex('transfer-build')).toBe(3)
-    expect(progressIndex('finale')).toBe(PROGRESS_STEPS.length)
+    expect(progressIndex('finale')).toBe(PROGRESS_STEPS.length - 1)
   })
 })
