@@ -728,6 +728,7 @@ async function drive() {
   await captureScreenshot('reality-check-after-test')
   check('reality verdict line visible', await hasText('You predicted Yes'))
   check('reality verdict neutral', await hasText('This tests your prediction against the model, not you'))
+  check('reality battery supplies wording', await ev(`(document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '').includes('supplies 0.0 A (0.0 W)')`))
   await assertOneVoice('reality-after')
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
   check('retest button offered', await hasText('Close the switch and test again'))
@@ -816,6 +817,11 @@ async function drive() {
   await captureScreenshot('solo-after-test')
   check('solo verdict line visible', await hasText('You predicted Yes'))
   check('solo verdict neutral', await hasText('This tests your prediction against the model, not you'))
+  check('solo battery supplies wording', await ev(`(document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '').includes('supplies 1.2 A (7.2 W)')`))
+  check('solo canvas never negative', await ev(`(() => {
+    const text = document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '';
+    return !text.includes('-1.2 A') && !text.includes('-7.2 W');
+  })()`))
   await assertOneVoice('solo-after')
   check('solo made zero coach calls', askRequestIds.length === coachCallsBeforeSolo,
     `before ${coachCallsBeforeSolo}, after ${askRequestIds.length}`)
@@ -829,6 +835,10 @@ async function drive() {
       .find((item) => item.querySelector('h3')?.innerText.includes('Solo'));
     return !!solo && solo.innerText.includes('You predicted Yes.')
       && solo.innerText.includes('The solver measured');
+  })()`))
+  check('journey snapshots supplies wording', await ev(`(() => {
+    const journey = document.querySelector('[aria-label="Your circuit journey"]')?.innerText ?? '';
+    return journey.includes('supplies 1.2 A (7.2 W)') && !journey.includes('-1.2 A');
   })()`))
   check('solo preview rebuilt cleanly', await ev(`(() => {
     const flow = [...document.querySelectorAll('.react-flow[aria-label]')]

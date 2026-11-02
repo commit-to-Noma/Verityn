@@ -257,11 +257,20 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
           </button>
         ))}
       {data.measurement ? (
-        <div className="component-readout" aria-label={`${data.label} measurement`}>
-          <span>{data.measurement.voltage.toFixed(1)} V</span>
-          <span>{data.measurement.current.toFixed(1)} A</span>
-          <span>{data.measurement.power.toFixed(1)} W</span>
-        </div>
+        data.kind === 'battery' ? (
+          // Batteries deliver: the solver's signed current/power read
+          // negative, so the node shows supplied magnitudes. Signed
+          // values stay available in Trace.
+          <div className="component-readout" aria-label={`${data.label} measurement`}>
+            <span>{`supplies ${Math.abs(data.measurement.current).toFixed(1)} A (${Math.abs(data.measurement.power).toFixed(1)} W)`}</span>
+          </div>
+        ) : (
+          <div className="component-readout" aria-label={`${data.label} measurement`}>
+            <span>{data.measurement.voltage.toFixed(1)} V</span>
+            <span>{data.measurement.current.toFixed(1)} A</span>
+            <span>{data.measurement.power.toFixed(1)} W</span>
+          </div>
+        )
       ) : data.kind === 'switch' ? null : (
         <span className="font-mono text-[10px] text-ink-muted">
           {data.kind === 'battery' ? data.label : '10 Ω'}
