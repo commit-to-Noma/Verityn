@@ -450,6 +450,26 @@ body {
   filter: drop-shadow(0 0 4px var(--color-bad));
 }
 
+@keyframes review-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(251 113 133 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(251 113 133 / 0);
+  }
+}
+
+.review-pulse-dot {
+  animation: review-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-pulse-dot {
+    animation: none;
+  }
+}
+
 /* Recessed console screen: the flow grid sits INTO the bench, not on it. */
 .canvas-recessed {
   border: 1px solid #374151;

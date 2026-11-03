@@ -10,6 +10,7 @@ import {
   connectionReviewStatus,
   nextRevealStep,
   polarityText,
+  proposalHealth,
   regionStyle,
   reviewBanner,
   reviewSummary,
@@ -253,5 +254,37 @@ describe('wire traces', () => {
     expect(wireTraceSummary(2, 3)).toBe(
       '2 of 3 wires traced on your photo; the rest are terminal relationships only. The replica reconstructs all routes.',
     )
+  })
+})
+
+describe('proposalHealth', () => {
+  const full = (): VisionProposal =>
+    proposal({
+      status: 'needs_review',
+      components: [
+        { id: 'B1', type: 'battery', closed: null, polarity: { positive: 'a', negative: 'b' }, evidence: EVIDENCE('r-b') },
+        { id: 'S1', type: 'switch', closed: false, polarity: null, evidence: EVIDENCE('r-s') },
+        { id: 'L1', type: 'bulb', closed: null, polarity: null, evidence: EVIDENCE('r-l') },
+      ],
+    })
+
+  it('counts parts by kind and names open switches', () => {
+    const health = proposalHealth(full())
+    expect(health.partsLine).toBe('3 parts: 1 battery, 1 switch, 1 bulb')
+    expect(health.openSwitches).toEqual(['S1'])
+  })
+
+  it('counts parts needing review, zero when verified', () => {
+    expect(proposalHealth(full()).reviewCount).toBe(3)
+    const verified = proposal({
+      status: 'ready',
+      components: [
+        { id: 'B1', type: 'battery', closed: null, polarity: { positive: 'a', negative: 'b' }, evidence: EVIDENCE('r-b') },
+      ],
+      connections: [],
+    })
+    const health = proposalHealth(verified)
+    expect(health.reviewCount).toBe(0)
+    expect(health.openSwitches).toEqual([])
   })
 })

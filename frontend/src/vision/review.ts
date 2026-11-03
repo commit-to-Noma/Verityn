@@ -21,7 +21,7 @@ export type LensViewMode = 'compare' | 'original' | 'detected' | 'model'
 export const LENS_VIEW_MODES: ReadonlyArray<{ id: LensViewMode; label: string }> = [
   { id: 'compare', label: 'Compare' },
   { id: 'original', label: 'Original' },
-  { id: 'detected', label: 'Detected evidence' },
+  { id: 'detected', label: 'Marked photo' },
   { id: 'model', label: 'Interactive model' },
 ]
 
@@ -180,6 +180,45 @@ export function reviewSummary(proposal: VisionProposal): string {
   const wires = proposal.connections.length
   parts.push(`${wires} proposed ${wires === 1 ? 'connection' : 'connections'}`)
   return `We found ${parts.join(', ')}.`
+}
+
+/** Circuit health for the idle inspector: part counts, open switches,
+ * and how many parts still need review. Pure proposal read. */
+export function proposalHealth(proposal: VisionProposal): {
+  partsLine: string
+  openSwitches: string[]
+  reviewCount: number
+} {
+  const count = (type: string): number =>
+    proposal.components.filter((component) => component.type === type).length
+  const batteries = count('battery')
+  const switches = count('switch')
+  const bulbs = count('bulb')
+  const total = proposal.components.length
+  const parts: string[] = []
+  if (batteries > 0) {
+    parts.push(`${batteries} ${batteries === 1 ? 'battery' : 'batteries'}`)
+  }
+  if (switches > 0) {
+    parts.push(`${switches} ${switches === 1 ? 'switch' : 'switches'}`)
+  }
+  if (bulbs > 0) {
+    parts.push(`${bulbs} ${bulbs === 1 ? 'bulb' : 'bulbs'}`)
+  }
+  const openSwitches = proposal.components
+    .filter((component) => component.type === 'switch' && component.closed === false)
+    .map((component) => component.id)
+  let reviewCount = 0
+  for (const component of proposal.components) {
+    if (componentReviewStatus(component.id, proposal, false) === 'needs-review') {
+      reviewCount += 1
+    }
+  }
+  return {
+    partsLine: `${total} ${total === 1 ? 'part' : 'parts'}${parts.length > 0 ? `: ${parts.join(', ')}` : ''}`,
+    openSwitches,
+    reviewCount,
+  }
 }
 
 /** Extraction reveal steps: image → regions → replica → review. */

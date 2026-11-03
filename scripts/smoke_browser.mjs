@@ -998,9 +998,16 @@ async function drive() {
     return b?.getAttribute('aria-pressed') === 'true';
   })()`))
   check('replica beside original', await hasText('Interactive circuit replica'))
-  check('detected evidence list', await hasText('Detected evidence') && await hasText('switch_1'))
+  await waitFor(() => ev(`!!document.querySelector('button[aria-label^="switch_1"]')`), 'overlay parts', 15000)
+  check('overlay shows part ids', await hasText('switch_1'))
   check('proposal counts from data', await hasText('1 battery, 1 switch, 1 bulb'))
   check('needs-review copy', await hasText('Some connections need your review'))
+  check('inspector health summary', await hasText('Circuit health') && await hasText('3 parts: 1 battery, 1 switch, 1 bulb'))
+  check('needs-review pulse dot', await ev(`!!document.querySelector('.review-pulse-dot')`))
+  await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Focus photo')?.click()`)
+  check('focus photo hides replica', !(await hasText('Interactive circuit replica')))
+  await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Show replica')?.click()`)
+  await waitFor(() => hasText('Interactive circuit replica'), 'replica restored', 10000)
   await ev(`[...document.querySelectorAll('section[aria-label="Diagram upload and review"] button')].find((b) => b.textContent.includes('switch_1') && b.getAttribute('aria-pressed') !== null)?.click()`)
   check('inspector shows selection', await waitFor(() => ev(`document.querySelector('[aria-label="Review inspector"]')?.innerText.includes('switch_1')`), 'inspector selection', 10000))
   await captureScreenshot('lens-review')
@@ -1085,7 +1092,8 @@ async function drive() {
   await uploadLensFile(switchImage)
   await waitFor(() => hasText('Original diagram'), 'lens traced review', 20000)
   await waitFor(() => hasText('Confirm the model below before testing'), 'lens traced lock', 20000)
-  check('traced overlay renders', await ev(`document.querySelectorAll('svg[aria-label="Traced wires"] polyline').length === 3`))
+  check('traced overlay renders', await ev(`document.querySelectorAll('svg[aria-label="Traced wires"] > polyline').length === 3`))
+  check('traced wires clickable', await ev(`document.querySelectorAll('svg[aria-label="Traced wires"] g[role="button"]').length === 3`))
   check('certain wires solid', await ev(`(() => {
     const q = (r) => document.querySelector('svg[aria-label="Traced wires"] polyline[data-region="' + r + '"]')?.getAttribute('stroke-dasharray');
     return q('r-w1') === null && q('r-w2') === null;

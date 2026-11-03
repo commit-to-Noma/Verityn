@@ -21,6 +21,7 @@ import {
   connectionReviewStatus,
   nextRevealStep,
   polarityText,
+  proposalHealth,
   regionStyle,
   reviewBanner,
   reviewSummary,
@@ -157,6 +158,7 @@ function ReviewPanels({
   const [view, setView] = useState<LensViewMode>(DEFAULT_LENS_VIEW)
   const [selection, setSelection] = useState<string | null>(null)
   const [hover, setHover] = useState<string | null>(null)
+  const [focusPhoto, setFocusPhoto] = useState(false)
   const [corrected, setCorrected] = useState(false)
   const [reveal, setReveal] = useState<RevealStep>(() => (reducedMotion() ? 'review' : 'image'))
   const [compareSplit, setCompareSplit] = useState(50)
@@ -210,6 +212,7 @@ function ReviewPanels({
 
   const showOriginal = view === 'compare' || view === 'original' || view === 'detected'
   const showModel = loadable && (view === 'compare' || view === 'model')
+  const showModelEff = showModel && !focusPhoto
   const showOverlays = view !== 'original' && reveal !== 'image'
   const tracedWires = proposal.connections
     .map((connection, index) => ({
@@ -249,6 +252,7 @@ function ReviewPanels({
   const inspectedWire =
     inspectedWireIndex >= 0 ? (proposal.connections[inspectedWireIndex] ?? null) : null
   const inspectedWireId = inspectedWire !== null ? `V${inspectedWireIndex + 1}` : null
+  const health = proposalHealth(proposal)
 
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
@@ -300,6 +304,48 @@ function ReviewPanels({
           </div>
         </div>
       </div>
+      <div className="glass-panel flex flex-col gap-2 p-4">
+      <h4 className="text-base font-semibold">Review before testing</h4>
+      {loadable && !confirmed && (
+        <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        {loadable && !confirmed && (
+          <button
+            type="button"
+            onClick={() => {
+              interrupt()
+              onConfirm()
+            }}
+            className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+          >
+            Confirm model
+          </button>
+        )}
+        {loadable && !confirmed && (
+          <button
+            type="button"
+            onClick={editModel}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Edit model
+          </button>
+        )}
+        {confirmed && (
+          <p className="text-ink-muted text-sm" role="status">
+            Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
+            the circuit you approved.
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={onReset}
+          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        >
+          Try another image
+        </button>
+      </div>
+      </div>
       {reveal !== 'review' && (
         <button
           type="button"
@@ -309,7 +355,7 @@ function ReviewPanels({
           Skip to review
         </button>
       )}
-      {view === 'compare' && showOriginal && showModel && (
+      {view === 'compare' && showOriginal && showModelEff && (
         <label className="text-ink-muted hidden items-center gap-3 text-xs xl:flex">
           Adjust panel widths
           <input
@@ -327,9 +373,11 @@ function ReviewPanels({
       <div className="min-w-0">
       <div
         className={`grid gap-4 ${
-          view === 'compare' && showOriginal && showModel
-            ? 'xl:grid-cols-[minmax(0,var(--lens-a))_minmax(0,var(--lens-b))]'
-            : 'xl:grid-cols-2'
+          focusPhoto && showOriginal && !showModelEff
+            ? 'xl:grid-cols-1'
+            : view === 'compare' && showOriginal && showModelEff
+              ? 'xl:grid-cols-[minmax(0,var(--lens-a))_minmax(0,var(--lens-b))]'
+              : 'xl:grid-cols-2'
         }`}
         style={
           {
@@ -341,7 +389,22 @@ function ReviewPanels({
       >
         {showOriginal && (
           <div className="glass-panel flex flex-col gap-3 p-4">
-            <h4 className="text-base font-semibold">Original diagram</h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-base font-semibold">Original diagram</h4>
+              {showModel && (
+                <button
+                  type="button"
+                  aria-pressed={focusPhoto}
+                  onClick={() => {
+                    interrupt()
+                    setFocusPhoto((current) => !current)
+                  }}
+                  className="border-glass-border ml-auto min-h-[36px] rounded-[10px] border px-3 text-xs font-medium"
+                >
+                  {focusPhoto ? 'Show replica' : 'Focus photo'}
+                </button>
+              )}
+            </div>
             <div className="relative self-start">
               <img src={image} alt="Uploaded schematic" className="max-h-80 rounded-[10px]" />
               {testedResult?.ok === true && (
@@ -401,6 +464,41 @@ function ReviewPanels({
                           />
                         )
                       })}
+                      {tracedWires.map((wire) => (
+                        <g
+                          key={wire.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={selection === wire.id}
+                          aria-label={`${wire.id} wire, ${wire.ambiguous ? 'needs review' : 'verified'}`}
+                          onClick={() => toggleSelection(wire.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              toggleSelection(wire.id)
+                            }
+                          }}
+                          onMouseEnter={() => setHover(wire.id)}
+                          onMouseLeave={() =>
+                            setHover((current) => (current === wire.id ? null : current))
+                          }
+                          onFocus={() => setHover(wire.id)}
+                          onBlur={() =>
+                            setHover((current) => (current === wire.id ? null : current))
+                          }
+                          className="cursor-pointer"
+                          style={{ pointerEvents: 'stroke' }}
+                        >
+                          <title>{wire.id}</title>
+                          <polyline
+                            points={wirePathPoints(wire.path)}
+                            fill="none"
+                            stroke="transparent"
+                            strokeWidth={14}
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        </g>
+                      ))}
                     </svg>
                   )}
                   {proposal.components.map((component) => {
@@ -426,6 +524,13 @@ function ReviewPanels({
                         <span className="bg-flow text-on-accent absolute -top-5 left-0 rounded px-1 font-mono text-[10px] font-medium whitespace-nowrap">
                           {component.id}
                         </span>
+                        {(status === 'needs-review' || status === 'unsupported-diagram') && (
+                          <span
+                            aria-hidden="true"
+                            title={REVIEW_STATUS_LABELS[status]}
+                            className="review-pulse-dot bg-bad absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full"
+                          />
+                        )}
                       </button>
                     )
                   })}
@@ -458,103 +563,14 @@ function ReviewPanels({
                   })}
               </ul>
             )}
-            <h5 className="text-sm font-semibold">Detected evidence</h5>
-            <ul className="flex flex-col gap-1">
-              {proposal.components.map((component) => {
-                const status = componentReviewStatus(component.id, proposal, corrected)
-                const active = selection === component.id || hover === component.id
-                return (
-                  <li key={component.id}>
-                    <button
-                      type="button"
-                      aria-pressed={selection === component.id}
-                      onClick={() => toggleSelection(component.id)}
-                      onMouseEnter={() => setHover(component.id)}
-                      onMouseLeave={() => setHover((current) => (current === component.id ? null : current))}
-                      className={`flex w-full items-baseline gap-2 rounded-[8px] px-2 py-1.5 text-left text-sm ${
-                        active ? 'bg-flow/10' : ''
-                      }`}
-                    >
-                      <span className="font-mono font-medium">{component.id}</span>
-                      <span className="text-ink-muted capitalize">{component.type}</span>
-                      {component.type === 'battery' &&
-                        component.polarity !== undefined &&
-                        component.polarity !== null && (
-                          <span className="font-mono text-xs" title="Detected polarity">
-                            {polarityText(component.polarity)}
-                          </span>
-                        )}
-                      {component.type === 'battery' && component.polarity === null && (
-                        <span className="text-ink-muted text-xs">polarity unknown</span>
-                      )}
-                      {component.type === 'switch' && (
-                        <span className="text-ink-muted">
-                          {component.closed === null
-                            ? 'state unknown'
-                            : component.closed
-                              ? 'closed'
-                              : 'open'}
-                        </span>
-                      )}
-                      <span className="text-ink-muted text-xs">{REVIEW_STATUS_LABELS[status]}</span>
-                      {trace && (
-                        <span className="text-ink-muted ml-auto font-mono text-xs">
-                          {component.evidence.region_id}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                )
-              })}
-              {proposal.connections.map((connection, index) => {
-                const id = `V${index + 1}`
-                const status = connectionReviewStatus(connection)
-                const active = selection === id || hover === id
-                return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      aria-pressed={selection === id}
-                      onClick={() => toggleSelection(id)}
-                      onMouseEnter={() => setHover(id)}
-                      onMouseLeave={() => setHover((current) => (current === id ? null : current))}
-                      className={`flex w-full items-baseline gap-2 rounded-[8px] px-2 py-1.5 text-left text-sm ${
-                        active ? 'bg-flow/10' : ''
-                      }`}
-                    >
-                      <span className="font-mono font-medium">{id}</span>
-                      <span className="text-ink-muted">
-                        {connection.from.node}.{connection.from.terminal} ↔ {connection.to.node}.
-                        {connection.to.terminal}
-                      </span>
-                      <span className="text-ink-muted text-xs">{REVIEW_STATUS_LABELS[status]}</span>
-                      {trace && (
-                        <span className="text-ink-muted ml-auto font-mono text-xs">
-                          {connection.evidence.region_id}
-                        </span>
-                      )}
-                    </button>
-                    {selection === id && status === 'connection-ambiguous' && (
-                      <p className="text-ink-muted px-2 pb-1 text-xs">
-                        {ambiguousWireNote(connection.evidence.path !== null)}
-                      </p>
-                    )}
-                  </li>
-                )
-              })}
-            </ul>
             <p className="text-ink-muted text-xs">
               {wireTraceSummary(tracedWires.length, proposal.connections.length)}
             </p>
           </div>
         )}
-        {showModel && (
+        {showModelEff && (
           <div ref={replicaRef} className="glass-panel flex scroll-mt-4 flex-col gap-3 p-4">
             <h4 className="text-base font-semibold">Interactive circuit replica</h4>
-            <p className="text-ink-muted text-xs">
-              Positions mapped from the detected regions. Wire routes are reconstructed between
-              the proposed terminals  -  not traced from the image.
-            </p>
             {(reveal === 'replica' || reveal === 'review') && (
               <CircuitCanvas
                 key={`review-${nonce}`}
@@ -631,10 +647,23 @@ function ReviewPanels({
             </div>
           )}
           {inspectedComponent === null && inspectedWire === null && (
-            <p className="text-ink-muted text-sm">
-              Select a part or a wire — on the photo, in the evidence list, or on the replica — to
-              inspect it here.
-            </p>
+            <div className="border-glass-border flex flex-col gap-1 rounded-[10px] border p-3">
+              <p className="text-sm font-medium">Circuit health</p>
+              <p className="text-ink-muted text-sm">{health.partsLine}</p>
+              {health.openSwitches.length > 0 ? (
+                <p className="text-ink-muted text-sm">Open at {health.openSwitches.join(', ')}</p>
+              ) : health.reviewCount > 0 ? (
+                <p className="text-ink-muted text-sm">
+                  {health.reviewCount} {health.reviewCount === 1 ? 'part needs' : 'parts need'}{' '}
+                  review before testing
+                </p>
+              ) : (
+                <p className="text-ok text-sm">Ready to confirm</p>
+              )}
+              <p className="text-ink-muted text-xs">
+                Select a part or a wire to inspect it here.
+              </p>
+            </div>
           )}
         </div>
         {result.assumptions.map((assumption) => (
@@ -642,46 +671,6 @@ function ReviewPanels({
             Assumed: {assumption}
           </p>
         ))}
-        <h4 className="text-base font-semibold">Review before testing</h4>
-        {loadable && !confirmed && (
-          <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
-        )}
-        <div className="flex flex-wrap items-center gap-3">
-          {loadable && !confirmed && (
-            <button
-              type="button"
-              onClick={() => {
-                interrupt()
-                onConfirm()
-              }}
-              className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-            >
-              Confirm model
-            </button>
-          )}
-          {loadable && !confirmed && (
-            <button
-              type="button"
-              onClick={editModel}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Edit model
-            </button>
-          )}
-          {confirmed && (
-            <p className="text-ink-muted text-sm" role="status">
-              Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
-              the circuit you approved.
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={onReset}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Try another image
-          </button>
-        </div>
       </aside>
       </div>
       {showTriptych(confirmed, testedResult) && testedResult !== null && (
