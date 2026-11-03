@@ -2027,8 +2027,7 @@ function CanvasInner({
     { id: 'delete', label: 'Delete', Icon: Eraser },
   ] as const
 
-  const palettePane = (
-    <>
+  const paletteTools = (
       <div className="flex gap-2" role="group" aria-label="Palette">
         {tools.map(({ id, label, Icon }) => (
           <button
@@ -2073,6 +2072,21 @@ function CanvasInner({
           </button>
         ))}
       </div>
+  )
+
+  /** Bay-only floating tool dock: the same palette buttons ride over the
+   * canvas bottom-center (mac-dock style) instead of stacking above it.
+   * Guided Lab keeps the inline palettePane below, untouched. */
+  const toolDock = (
+    <div aria-label="Part dock" className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
+      <div className="border-glass-border pointer-events-auto rounded-2xl border bg-black/70 p-2 shadow-xl backdrop-blur-md">
+        {paletteTools}
+      </div>
+    </div>
+  )
+
+  const paletteExtras = (
+    <>
       {challenge === undefined && importRequest == null && (
         <p className="text-ink-muted text-sm">
           {nodes.length === 0 && mode !== 'experiment' ? DEFAULT_INSTRUCTIONS : instructions}
@@ -2122,9 +2136,16 @@ function CanvasInner({
       )}
     </>
   )
+  /** Guided inline composition: buttons above the canvas, exactly as before. */
+  const palettePane = (
+    <>
+      {paletteTools}
+      {paletteExtras}
+    </>
+  )
   const canvasPane = (
     <>
-      <div ref={canvasContainerRef} className={`canvas-recessed relative h-105 overflow-hidden rounded-2xl lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : 'lg:h-[min(58vh,620px)]'}`}>
+      <div ref={canvasContainerRef} className={`canvas-recessed relative h-105 overflow-hidden rounded-2xl lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : mode === 'experiment' ? 'lg:h-[min(66vh,680px)]' : 'lg:h-[min(58vh,620px)]'}`}>
         <BatteryFlipContext.Provider value={flipBattery}>
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
@@ -2197,6 +2218,7 @@ function CanvasInner({
             {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.lit ? 'Lit' : 'Dark'}
           </div>
         )}
+        {mode === 'experiment' && toolDock}
       </div>
     </>
   )
@@ -2390,7 +2412,7 @@ function CanvasInner({
   // Keep the original full workbench composition for non-guided canvases.
   const experimentPane = (
     <>
-      {palettePane}
+      {mode === 'experiment' ? paletteExtras : palettePane}
       {canvasPane}
       {actionPane}
       {feedbackPane}

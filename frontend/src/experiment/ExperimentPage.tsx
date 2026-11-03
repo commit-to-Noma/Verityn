@@ -1056,12 +1056,12 @@ export default function ExperimentPage({
         </div>
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="relative min-w-0">
-          <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
-            <CircuitCanvas
+      <div className="relative min-w-0">
+        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
+          <CircuitCanvas
             key={`experiment-${bench.key}`}
             mode="experiment"
+            layout="stacked"
             proofStage="experiment"
             seed={bench.seed}
             runRequest={runRequest}
@@ -1078,48 +1078,49 @@ export default function ExperimentPage({
             onFailed={handleFailed}
           />
         </Suspense>
-          {rigRunning && (
-            <div
-              role="status"
-              aria-label="Sweep running, bench locked"
-              className="absolute inset-0 z-20 cursor-not-allowed rounded-2xl"
-            >
-              <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 text-xs">
-                Sweep running — bench locked
-              </p>
+        {rigRunning && (
+          <div
+            role="status"
+            aria-label="Sweep running, bench locked"
+            className="absolute inset-0 z-20 cursor-not-allowed rounded-2xl"
+          >
+            <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 text-xs">
+              Sweep running — bench locked
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        {batteries.length > 0 && (
+          <section
+            aria-label="Bench batteries"
+            className="glass-panel relative flex flex-col gap-3 overflow-hidden p-4"
+          >
+            <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
+            <h3 className="text-base font-semibold">Batteries</h3>
+            <p className="text-ink-muted text-sm">
+              Set a battery voltage, then run the experiment to measure what changes.
+              Double-click a battery on the bench to flip its polarity.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {batteries.map((part) => {
+                const applied = batteryVolts[part.id] ?? part.volts ?? 6
+                return (
+                  <BatteryRow
+                    key={`${bench.key}:${part.id}:${applied}`}
+                    id={part.id}
+                    volts={applied}
+                    onApply={handleVoltage}
+                    disabled={rigRunning}
+                  />
+                )
+              })}
             </div>
-          )}
-        </div>
+          </section>
+        )}
 
-        <div className="flex min-w-0 flex-col gap-6">
-          {batteries.length > 0 && (
-            <section
-              aria-label="Bench batteries"
-              className="glass-panel relative flex flex-col gap-3 overflow-hidden p-4"
-            >
-              <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
-              <h3 className="text-base font-semibold">Batteries</h3>
-              <p className="text-ink-muted text-sm">
-                Set a battery voltage, then run the experiment to measure what changes.
-                Double-click a battery on the bench to flip its polarity.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                {batteries.map((part) => {
-                  const applied = batteryVolts[part.id] ?? part.volts ?? 6
-                  return (
-                    <BatteryRow
-                      key={`${bench.key}:${part.id}:${applied}`}
-                      id={part.id}
-                      volts={applied}
-                      onApply={handleVoltage}
-                      disabled={rigRunning}
-                    />
-                  )
-                })}
-              </div>
-            </section>
-          )}
-
+        <div className={batteries.length === 0 ? 'min-w-0 lg:col-span-2' : 'min-w-0'}>
           <StressRigPanel
             batteries={batteries}
             rig={rig}

@@ -742,6 +742,7 @@ async function drive() {
   await fillInput('predict-why', 'um complete loop loop lights, um')
   await clickButtonStarts('Continue')
   await clickButton('Test again')
+  check('guided build keeps inline palette', await ev(`!![...document.querySelectorAll('[aria-label="Palette"]')].find((el) => el.offsetParent !== null && !el.closest('[aria-label="Part dock"]'))`))
   await waitFor(() => hasText('MEASURED BY THE SOLVER'), 'Reality Check measurement', 25000)
   await assertGuidedCanvasFits('Reality Check after test')
   check('prediction chip is cleaned of fillers and repeats', await ev(`(() => {
@@ -1013,6 +1014,8 @@ async function drive() {
   await captureScreenshot('lens-review')
   // The replica (and its lock notice) mounts on the reveal beat after the panels.
   await waitFor(() => hasText('Confirm the model below before testing'), 'lens lock', 20000)
+  check('lens replica keeps inline palette', await ev(`!![...document.querySelectorAll('[aria-label="Palette"]')].find((el) => el.offsetParent !== null && !el.closest('[aria-label="Part dock"]'))`))
+  check('no dock in lens review', await ev(`![...document.querySelectorAll('[aria-label="Part dock"]')].some((el) => el.offsetParent !== null)`))
   check('confirm gate visible', await hasText('Confirm the model below before testing it against the simulator.'))
   check('no proof before confirm', !(await hasText('Confirmed circuit tested')))
   await clickButton('Confirm model')
@@ -1202,6 +1205,10 @@ async function drive() {
   await waitFor(() => hasText('Ready to test your circuit.'), 'preset ready')
   check('active preset badge', await hasText('In progress'))
   check('preset prompt shown', await hasText('What carries the current?'))
+  check('tool dock floats on canvas', await ev(`!!document.querySelector('.canvas-recessed [aria-label="Part dock"] [aria-label="Palette"]')`))
+  check('dock holds four tools', await ev(`[...document.querySelectorAll('[aria-label="Part dock"] [aria-label="Palette"] button')].map((b) => b.textContent.trim()).join(',')`) === 'Battery,Bulb,Switch,Delete')
+  check('canvas spans full width', await ev(`(() => { const c = document.querySelector('.canvas-recessed'); return !c.closest('div[class*="grid-cols"]') && c.getBoundingClientRect().width / c.parentElement.getBoundingClientRect().width > 0.95 })()`))
+  check('single palette in bay', await ev(`[...document.querySelectorAll('[aria-label="Palette"]')].filter((el) => el.offsetParent !== null).length`) === 1)
   await sleep(1500)
   check('no auto-run in experiment', !(await hasText('Simulation result')))
   const explainBefore = explainRequestIds.length
@@ -1324,6 +1331,7 @@ async function drive() {
   await clickButton('Guided Lab')
   await waitFor(() => hasText('Continue to fix it'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
+  check('no dock in guided', await ev(`![...document.querySelectorAll('[aria-label="Part dock"]')].some((el) => el.offsetParent !== null)`))
   await clickButton('Hub')
   await waitFor(() => hasText('Start your own lab'), 'hub final')
   await captureScreenshot('hub')
