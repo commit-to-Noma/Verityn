@@ -801,10 +801,13 @@ async function drive() {
   await ev(`[...document.querySelectorAll('[aria-label="Coach dock"] summary')].find((e) => e.textContent.includes('Earlier'))?.click()`)
   check('coach invites live flipping', await hasText('Try flipping the switch off and on'))
   await captureScreenshot('reality-followup')
-  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
-  check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
   await waitFor(() => hasText('Fallback coach'), 'fake R1', 20000)
+  check('reply box asks in the open', await ev(`document.querySelector('#coach-reply')?.offsetParent !== null`))
+  await captureScreenshot('reality-reply-box', 1440, '[aria-label="Coach questions"]')
+  await assertOneVoice('reality-rung-visible')
+  await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
+  check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
   await fillInput('coach-reply', 'close the switch S1')
   await clickButton('Save')
   await waitFor(() => hasText('Coach heard'), 'engaged reply unlocks', 10000)
@@ -851,6 +854,7 @@ async function drive() {
   check('undo restores dark reading', await hasText('0.0 W'))
   await clickButton('Try the demonstration')
   await waitFor(() => hasText('Confirmation check'), 'r4', 20000)
+  await assertOneVoice('reality-ladder-complete')
 
   check('3 coach/ask responses captured', askRequestIds.length === 3, `got ${askRequestIds.length}`)
   const bodies = []

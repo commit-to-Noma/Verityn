@@ -242,6 +242,7 @@ function CoachAsk({
   coachVoiceEnabled,
   ladderMemory,
   onLadderChange,
+  hideServedText = false,
 }: {
   session: string | null
   /** Null only while no run has been judged; the ladder asks only when visible. */
@@ -272,6 +273,9 @@ function CoachAsk({
   ladderMemory: { current: LadderMemory }
   /** Writes ladder progress back to canvas memory; the child never mutates the prop. */
   onLadderChange: (memory: LadderMemory) => void
+  /** The dock already speaks each served rung: show only the interaction
+   * (reply forms, demo offer, rung buttons), never the served words twice. */
+  hideServedText?: boolean
 }) {
   const [rungs, setRungs] = useState<LadderRung[]>(() => ladderMemory.current.rungs)
   const [status, setStatus] = useState<LadderStatus>({ phase: 'idle' })
@@ -516,8 +520,10 @@ function CoachAsk({
                 answered in {formatLatency(card.ms)}
               </span>
             </div>
-            <p className="text-base">{card.text}</p>
-            {caption !== null && <p className="text-ink-muted text-xs">{caption}</p>}
+            {!hideServedText && <p className="text-base">{card.text}</p>}
+            {!hideServedText && caption !== null && (
+              <p className="text-ink-muted text-xs">{caption}</p>
+            )}
             {card.rung === 'R2' &&
               demonstration !== null &&
               demonstration !== undefined &&
@@ -779,6 +785,7 @@ function ClaimVerdict({
   renderDone,
   ladderMemory,
   onLadderChange,
+  hideLadder = false,
 }: {
   state: VerdictState
   choice: Choice
@@ -800,6 +807,8 @@ function ClaimVerdict({
   renderDone?: () => ReactNode
   ladderMemory: { current: LadderMemory }
   onLadderChange: (memory: LadderMemory) => void
+  /** The ladder renders hoisted elsewhere: skip it here so it mounts once. */
+  hideLadder?: boolean
 }) {
   // The ladder stays mounted across idle/checking/done so served rungs survive
   // demonstration verdict flips; only the judged netlist is ever asked about.
@@ -844,7 +853,7 @@ function ClaimVerdict({
           </button>
         </div>
       )}
-      {coachAvailable && (
+      {coachAvailable && !hideLadder && (
         <CoachAsk
           session={session}
           netlist={state.phase === 'done' ? state.netlist : null}
@@ -2521,6 +2530,7 @@ function CanvasInner({
             }
             ladderMemory={ladderMemory}
             onLadderChange={handleLadderChange}
+            hideLadder={proofStage === 'reality-build'}
           />
         </div>
       )}
@@ -2618,6 +2628,34 @@ function CanvasInner({
     ) : null
   const isRealityResult =
     proofStage === 'reality-build' && completed && runState.phase === 'done'
+  const realityContradicted =
+    verdictState.phase === 'done' && verdictState.verdict.status === 'CONTRADICTED'
+  /** Reality Check asks its question in the open: the gate demands an
+   * answer, so the reply box cannot hide behind See details. The dock
+   * speaks each served rung; the hoisted ladder only interacts. It
+   * stays mounted across verdict flips (hidden when matched) so served
+   * rungs and demo progress survive, exactly like before. */
+  const ladderPane = (
+    <CoachAsk
+      session={coachSession ?? null}
+      netlist={verdictState.phase === 'done' ? verdictState.netlist : null}
+      onResult={handleCoached}
+      onInteract={onCoachInteract}
+      onActions={setServerActions}
+      demonstration={demonstration}
+      onDemonstrate={handleDemonstrate}
+      autoDemonstrate={autoDemonstrate}
+      autoAsk={autoAsk}
+      autoInitialHint={autoInitialHint}
+      demoSignal={demoSignal}
+      demoAppliedBefore={demoEvents.some((event) => event.phase === 'applied')}
+      contradicted={realityContradicted}
+      coachVoiceEnabled={coachVoiceEnabled}
+      ladderMemory={ladderMemory}
+      onLadderChange={handleLadderChange}
+      hideServedText
+    />
+  )
 
   return (
     <section aria-labelledby="canvas-heading" className="scroll-mt-44">
@@ -2655,6 +2693,12 @@ function CanvasInner({
                   {predictionBlock}
                   {coachDock}
                   {resultCard}
+                </section>
+                <section
+                  aria-label="Coach questions"
+                  className={realityContradicted ? 'flex min-w-0 flex-col gap-4' : 'hidden'}
+                >
+                  {ladderPane}
                 </section>
                 <section
                   aria-label="Sandbox actions"
