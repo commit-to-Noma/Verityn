@@ -65,36 +65,37 @@ const FIELD_GLOW: Record<STEMFieldId, string> = {
   mathematics: '#44c28f',
 }
 
-function FieldIcon({ field }: { field: STEMFieldId }) {
+function FieldIcon({ field, idSuffix = '' }: { field: STEMFieldId; idSuffix?: string }) {
+  const gradientId = (name: string) => `field-${field}-${name}${idSuffix}`
   return (
     <svg viewBox="0 0 100 100" className="h-[82px] w-[82px] overflow-visible drop-shadow-[0_8px_8px_rgb(0_0_0/0.55)] sm:h-[108px] sm:w-[108px]" aria-hidden="true">
       <defs>
-        <linearGradient id={`field-${field}-surface`} x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={gradientId('surface')} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={field === 'science' ? '#c8fbff' : field === 'technology' ? '#e5d7ff' : field === 'engineering' ? '#fff1bb' : '#c9ffe1'} />
           <stop offset="48%" stopColor={field === 'science' ? '#35c5d2' : field === 'technology' ? '#9a7be9' : field === 'engineering' ? '#e3a739' : '#44c28f'} />
           <stop offset="100%" stopColor={field === 'science' ? '#126071' : field === 'technology' ? '#443079' : field === 'engineering' ? '#79502b' : '#225d4b'} />
         </linearGradient>
-        <linearGradient id={`field-${field}-glass`} x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={gradientId('glass')} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#f4ffff" stopOpacity=".9" />
           <stop offset="50%" stopColor="#83f5ff" stopOpacity=".42" />
           <stop offset="100%" stopColor="#14778a" stopOpacity=".88" />
         </linearGradient>
-        <linearGradient id={`field-${field}-metal`} x1="0" y1="0" x2="0.9" y2="1">
+        <linearGradient id={gradientId('metal')} x1="0" y1="0" x2="0.9" y2="1">
           <stop offset="0%" stopColor="#fff4c4" />
           <stop offset="42%" stopColor="#f0bd54" />
           <stop offset="100%" stopColor="#9b5b20" />
         </linearGradient>
         {field === 'science' && (
-          <clipPath id="science-flask-interior">
+          <clipPath id={`science-flask-interior${idSuffix}`}>
             <path d="M42 40V24l-5-7h26l-5 7v16l20 38c2 4 0 7-5 7H30c-5 0-7-3-5-7z" />
           </clipPath>
         )}
       </defs>
       {field === 'science' && (
         <g stroke="#d9fbff" strokeLinejoin="round">
-          <path d="M39 10h22v7l-6 7v18l22 36c4 7 0 13-8 13H31c-8 0-12-6-8-13l22-36V24l-6-7z" fill={`url(#field-${field}-glass)`} strokeWidth="3" />
-          <path d="M24 68h52v30H24z" fill="#31d3d9" clipPath="url(#science-flask-interior)" />
-          <path d="M24 68h52" fill="none" stroke="#a9fbff" strokeWidth="2" clipPath="url(#science-flask-interior)" />
+          <path d="M39 10h22v7l-6 7v18l22 36c4 7 0 13-8 13H31c-8 0-12-6-8-13l22-36V24l-6-7z" fill={`url(#${gradientId('glass')})`} strokeWidth="3" />
+          <path d="M24 68h52v30H24z" fill="#31d3d9" clipPath={`url(#science-flask-interior${idSuffix})`} />
+          <path d="M24 68h52" fill="none" stroke="#a9fbff" strokeWidth="2" clipPath={`url(#science-flask-interior${idSuffix})`} />
           <path d="M43 14h14M49 28v13M34 73h12" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
           <circle cx="59" cy="80" r="3" fill="#d9fbff" stroke="none" />
           <circle cx="68" cy="76" r="2" fill="#d9fbff" stroke="none" />
@@ -102,7 +103,7 @@ function FieldIcon({ field }: { field: STEMFieldId }) {
       )}
       {field === 'technology' && (
         <g stroke="#e9ddff" strokeLinejoin="round">
-          <path d="m25 18 47-8v44l-47 9z" fill={`url(#field-${field}-surface)`} strokeWidth="3" />
+          <path d="m25 18 47-8v44l-47 9z" fill={`url(#${gradientId('surface')})`} strokeWidth="3" />
           <path d="m31 23 35-6v31l-35 7z" fill="#171c3b" stroke="#eee5ff" strokeWidth="2" />
           <path d="m37 43 8-11 7 6 8-13" fill="none" stroke="#85f5ff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           <circle cx="60" cy="25" r="2.5" fill="#fff" stroke="none" />
@@ -114,7 +115,7 @@ function FieldIcon({ field }: { field: STEMFieldId }) {
       )}
       {field === 'engineering' && (
         <g stroke="#fff1bc" strokeLinejoin="round">
-          <g fill={`url(#field-${field}-metal)`} strokeWidth="2">
+          <g fill={`url(#${gradientId('metal')})`} strokeWidth="2">
             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
               <rect key={angle} x="43" y="8" width="14" height="26" rx="4" transform={`rotate(${angle} 50 50)`} />
             ))}
@@ -127,7 +128,7 @@ function FieldIcon({ field }: { field: STEMFieldId }) {
       )}
       {field === 'mathematics' && (
         <g stroke="#d8ffeb" strokeLinejoin="round">
-          <path d="m29 19 39-8 12 9v61l-39 9-12-10z" fill={`url(#field-${field}-surface)`} strokeWidth="3" />
+          <path d="m29 19 39-8 12 9v61l-39 9-12-10z" fill={`url(#${gradientId('surface')})`} strokeWidth="3" />
           <path d="m68 11 12 9v61l-12-8z" fill="#27674f" strokeWidth="2" />
           <path d="m39 29 24-5v10l-24 5z" fill="#f3fff8" stroke="#abf4ce" strokeWidth="2" />
           <g fill="#eafff3" stroke="#75d9a6" strokeWidth="1.5">
@@ -622,7 +623,7 @@ export default function LabIntro({
               }}
             />
             <span className="block scale-[2.9] opacity-30 blur-[3px] sm:scale-[3.5]">
-              <FieldIcon field={stemField} />
+              <FieldIcon field={stemField} idSuffix="-backdrop" />
             </span>
           </div>
         </div>
@@ -798,7 +799,10 @@ export default function LabIntro({
                 0{index + 1}
               </span>
               <div>
-                <p className="text-base font-semibold">{reason.title}</p>
+                <p className="text-base font-semibold">
+                  <span className="sr-only">Reason {index + 1} of {IMPACT_CASES.length}: </span>
+                  {reason.title}
+                </p>
                 <p className="mt-1 text-sm leading-6 text-ink-muted">{reason.problem}</p>
               </div>
               <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
