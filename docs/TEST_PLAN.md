@@ -432,6 +432,12 @@ Phase 6 result acceptance (all in the real browser unless noted):
   limit, and the previous-run delta from real history; the
   comparison reports battery and power changes computed from
   the two runs, never invented ratios.
+- The Stress Test Rig steps one battery through a validated
+  ladder (at most 25 points, 0.1–24 V); every point is a real
+  bench run labeled `Rig <id> <V> V`, the table reads state
+  from history, and the summary names first glow, overwork,
+  and the blow point (unit: ladder, states, summary; browser:
+  2–8 V sweep, threshold table, screenshot `rig-after-sweep`).
 - Explanations unlock for fresh runs only; the server adds
   limits, battery count/total, conditions, and volts to the
   grounded facts (unit: spy payload, fake overwork/exploded

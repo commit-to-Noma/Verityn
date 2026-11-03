@@ -11,6 +11,7 @@
  *     -> Experiment presets, manual run, stale, history, one explain call
  *     -> Overload flow: intact run, voltage edit, overload, damage latch,
  *        grounded explanation, reset restores intact
+ *     -> Stress rig sweep: voltage ladder, threshold table, Rig history labels
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
  * interactions. Coach and vision responses are stubbed at the network layer:
@@ -1235,6 +1236,14 @@ async function drive() {
   await clickPresetButton('Overwork the bulb', 'Test')
   await waitFor(() => hasText('Run 7 - Overwork the bulb'), 'overwork after reset', 25000)
   check('reset restores intact', await hasText('Intact') && !(await hasText('Exploded')))
+  await fillInput('rig-start-volts', '2')
+  await fillInput('rig-end-volts', '8')
+  await fillInput('rig-step-volts', '2')
+  await clickButton('Run sweep')
+  await waitFor(() => hasText('First glow at 4 V (run 9).'), 'rig thresholds', 90000)
+  check('rig history labels', await hasText('Run 8 - Rig B1 2 V'))
+  check('rig table states', await ev(`[...document.querySelectorAll('section[aria-label="Stress Test Rig"] tbody tr')].map((tr) => tr.lastElementChild.textContent).join(',')`) === 'Dark,Lit,Lit,Lit')
+  await captureScreenshot('rig-after-sweep', 1440, '[aria-label="Stress Test Rig"]')
   await clickButton('Guided Lab')
   await waitFor(() => hasText('Continue to fix it'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))
