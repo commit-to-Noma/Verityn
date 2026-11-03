@@ -9,9 +9,9 @@
       "outputDirectory": "dist"
     },
     "api": {
-      "root": "api/",
+      "root": "./",
       "framework": "flask",
-      "entrypoint": "index:app",
+      "entrypoint": "api.index:app",
       "installCommand": "pip install -r requirements.txt"
     }
   },
