@@ -42,3 +42,11 @@ export function latchedExplosion(
   }
   return latched
 }
+
+/** Bulb ids that fractured on this run: exploded now, not latched before. */
+export function freshlyExploded(
+  conditions: Record<string, ComponentCondition> | undefined,
+  latched: Record<string, 'exploded'>,
+): string[] {
+  return Object.keys(latchedExplosion(conditions)).filter((id) => latched[id] !== 'exploded')
+}

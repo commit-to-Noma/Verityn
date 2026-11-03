@@ -10,7 +10,7 @@ import {
   type SimulateResult,
 } from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
-import { latchedExplosion, validateBatteryVolts } from './bench'
+import { freshlyExploded, latchedExplosion, validateBatteryVolts } from './bench'
 import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, friendlyErrorCode, hudReading, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 import {
@@ -653,6 +653,8 @@ export default function ExperimentPage({
   rigRef.current = rig
   const runsRef = useRef(runs)
   runsRef.current = runs
+  const benchConditionsRef = useRef(benchConditions)
+  benchConditionsRef.current = benchConditions
   const rigPendingRef = useRef<{ batteryId: string; volts: number } | null>(null)
   /** One-shot history label for a replayed sweep point. */
   const replayLabelRef = useRef<string | null>(null)
@@ -799,6 +801,7 @@ export default function ExperimentPage({
       setMissions((current) => updateMissionProgress(current, record, result, netlist))
       if (activeRig.phase === 'running' && pending !== null) {
         const points = [...activeRig.points, { setVolts: pending.volts, run: record }]
+        const fractured = freshlyExploded(result.conditions, benchConditionsRef.current)
         if (!record.valid) {
           // A locked bench rejects every point identically: stop at the first.
           setRig({
@@ -807,6 +810,18 @@ export default function ExperimentPage({
             points,
             stopped: true,
             stopNote: `Sweep stopped: ${friendlyErrorCode(record.errorCode)}. Fix the bench and run again.`,
+          })
+          setMissions((current) => markSweepComplete(current, points.length))
+        } else if (fractured.length > 0) {
+          // A dead filament cannot measure further points: end the sweep on
+          // the fracture instead of replaying the blast up the ladder.
+          const names = fractured.map((id) => friendlyComponentName(id)).join(' and ')
+          setRig({
+            phase: 'done',
+            plan: activeRig.plan,
+            points,
+            stopped: true,
+            stopNote: `Sweep stopped: ${names} fractured at ${pending.volts} V. Higher points would re-test a dead bulb.`,
           })
           setMissions((current) => markSweepComplete(current, points.length))
         } else if (points.length < activeRig.plan.points.length) {

@@ -1490,12 +1490,17 @@ function CanvasInner({
         const opposedBench = result.ok ? batteriesOppose(result, netlist) : false
         // Bulbs the solver just blew: strain first, destruction after a beat,
         // so the Time Bomb shakes before it pops instead of flashing.
+        // Already-latched bulbs stay exploded without replaying the strain:
+        // invalidation wipes the visual condition between sweep points, so
+        // the latch (not the node art) decides what counts as fresh.
+        const alreadyDead = benchConditionsRef.current ?? {}
         const newlyExploded = new Set(
           mode === 'experiment' && result.ok
             ? Object.entries(result.conditions ?? {})
                 .filter(
                   ([partId, condition]) =>
                     condition === 'exploded' &&
+                    alreadyDead[partId] !== 'exploded' &&
                     nodes.some(
                       (node) => node.id === partId && node.data.condition !== 'exploded',
                     ),

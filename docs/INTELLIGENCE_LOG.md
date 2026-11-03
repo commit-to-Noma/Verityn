@@ -43,3 +43,5 @@ the Under the hood Smart details section, and the README.
 - Dim bulbs read dim: glow below half nominal renders a dull ember, banner/HUD say DIM — [banner tests](../frontend/src/canvas/banner.test.ts), [node tests](../frontend/src/components/canvas/CircuitNode.test.tsx), smoke duo checks.
 - Polarity Duel names its 0 V standoff: STANDOFF banner/HUD, Opposing badges on both batteries — smoke duel checks.
 - Runs scroll the canvas into view first; Time Bomb strain beat extended to 2.2 s — smoke bomb checks.
+- Stress Rig stops at fracture: a freshly exploded bulb ends the sweep with its point kept and a "fractured at N V" note — [bench tests](../frontend/src/experiment/bench.test.ts), smoke fracture checks.
+- Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh — smoke bomb checks still pass first-run strain.
