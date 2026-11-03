@@ -1,9 +1,8 @@
-import { Atom, ChevronLeft, ChevronRight, Eye, Lightbulb, MessagesSquare, Mic, Play } from 'lucide-react'
+import { Atom, ChevronLeft, ChevronRight, Lightbulb, MessagesSquare, Mic, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
 import { EngineCommand, type EngineCommandKind } from './UnderTheHoodTryIts'
-import { LENS_SAMPLES } from '../lens/samples'
 import { friendlyErrorCode } from '../experiment/history'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
@@ -19,33 +18,23 @@ import {
 const IMPACT_CASES = [
   {
     title: 'Thinking stays human',
-    problem: 'AI can answer before a learner has time to think.',
-    response:
-      'Predict first. A coach guides; the solver checks the circuit.',
+    response: 'Predict first. A coach guides; the solver checks.',
   },
   {
-    title: 'Practice should not depend on a lab bench',
-    problem: 'Equipment and second chances are not always available.',
-    response:
-      'Build, reset, and retry safely in the browser.',
+    title: 'Practice anywhere',
+    response: 'Reset and retry safely, no bench needed.',
   },
   {
-    title: 'Diagrams should not stay static',
-    problem: 'A still picture cannot show what changes in a system.',
-    response:
-      'Turn diagrams into models you can review and test.',
+    title: 'Living diagrams',
+    response: 'Review a diagram, then test it for real.',
   },
   {
-    title: 'A wrong answer should teach something',
-    problem: 'A bare “wrong” gives little reason to keep exploring.',
-    response:
-      'Compare predictions with results and learn what changed.',
+    title: 'Wrong answers teach',
+    response: 'Compare prediction vs result — see what changed.',
   },
   {
-    title: 'Curiosity needs room to play',
-    problem: 'Worksheets reward one right answer, so creative tinkering gets squeezed out.',
-    response:
-      'The Experiment Bay brings back messing about on purpose: wire anything, blow bulbs safely, then ask why.',
+    title: 'Room to play',
+    response: 'Wire anything. Blow bulbs safely. Ask why.',
   },
 ] as const
 
@@ -401,7 +390,7 @@ function STEMOrbit() {
   )
 }
 
-type ConsoleTab = 'logic' | 'voice' | 'physics' | 'vision'
+type ConsoleTab = 'logic' | 'voice' | 'physics'
 
 const CONSOLE_TABS: ReadonlyArray<{
   id: ConsoleTab
@@ -412,8 +401,13 @@ const CONSOLE_TABS: ReadonlyArray<{
   { id: 'logic', card: 'Muse Spark', sub: 'Reasoning & logic', icon: MessagesSquare },
   { id: 'voice', card: 'Muse Voice', sub: 'Audio processing', icon: Mic },
   { id: 'physics', card: 'Verityn Solver', sub: 'Mathematical truth', icon: Atom },
-  { id: 'vision', card: 'SAM samples', sub: 'Saved masks only', icon: Eye },
 ]
+
+const CONSOLE_ENGINES: Record<ConsoleTab, EngineCommandKind> = {
+  logic: 'spark',
+  voice: 'voice',
+  physics: 'solver',
+}
 
 const VOICE_BEHAVIORS = [
   {
@@ -436,12 +430,12 @@ const VOICE_BEHAVIORS = [
   },
 ] as const
 
-/** Live terminal side of the console. Feeds are labeled worked examples built
- * from documented numbers — never presented as live output. */
-function ConsoleLivePanel({ tab }: { tab: ConsoleTab }) {
+/** Worked-example feed for one tab. Labeled illustrations built from
+ * documented numbers — never presented as live output. */
+function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
   if (tab === 'logic') {
     return (
-      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+      <>
         <p className="text-xs font-semibold text-flow">muse-spark · example trace</p>
         <div className="mt-2 flex flex-col gap-1 text-ink-muted">
           <p><span className="text-flow">[check]</span> Evaluating circuit…</p>
@@ -452,12 +446,12 @@ function ConsoleLivePanel({ tab }: { tab: ConsoleTab }) {
         <p className="mt-2 font-sans text-[11px] text-ink-muted">
           Illustrated from the documented Time Bomb run; drafts must still pass the leak and number guards.
         </p>
-      </div>
+      </>
     )
   }
   if (tab === 'voice') {
     return (
-      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+      <>
         <p className="text-xs font-semibold text-flow">muse-voice · example trace</p>
         <div className="mt-2 flex flex-col gap-1 text-ink-muted">
           <p><span className="text-flow">[audio]</span> 5-second buffer · speech detected █▄█▅</p>
@@ -467,60 +461,51 @@ function ConsoleLivePanel({ tab }: { tab: ConsoleTab }) {
         <p className="mt-2 font-sans text-[11px] text-ink-muted">
           Illustrated transcript; display drops fillers while the raw text stays in Trace.
         </p>
-      </div>
+      </>
     )
-  }
-  if (tab === 'physics') {
-    return (
-      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
-        <p className="text-xs font-semibold text-flow">solver · worked example</p>
-        <div className="mt-2 flex flex-col gap-1 text-ink">
-          <p>% Ohm&apos;s Law Evaluation Node</p>
-          <p>Resistance = 10.00 Ohms</p>
-          <p>Voltage = 6.00 Volts</p>
-          <p>Current = Voltage / Resistance → 0.60 Amps</p>
-          <p>Power = Voltage × Current → 3.60 Watts</p>
-          <p>Status = INTACT (safe boundaries)</p>
-        </div>
-        <p className="mt-2 font-sans text-[11px] text-ink-muted">
-          Light a bulb, documented — every live run is measured the same way.
-        </p>
-      </div>
-    )
-  }
-  const sample = LENS_SAMPLES[0]
-  if (sample === undefined) {
-    return null
   }
   return (
-    <div className="grid items-center gap-3 rounded-xl border border-flow/30 bg-black p-3 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)] sm:grid-cols-2">
-      <div className="relative overflow-hidden rounded-lg">
-        <img src={sample.image} alt="" aria-hidden="true" className="block h-auto w-full" />
-        <svg
-          viewBox={`0 0 ${sample.width} ${sample.height}`}
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full"
-        >
-          {[sample.boxes.battery, sample.boxes.bulb].map((box, index) => (
-            <rect
-              key={index}
-              x={box.left}
-              y={box.top}
-              width={box.right - box.left}
-              height={box.bottom - box.top}
-              rx={6}
-              fill="none"
-              stroke="var(--color-flow)"
-              strokeWidth={3}
-            />
-          ))}
-        </svg>
+    <>
+      <p className="text-xs font-semibold text-flow">solver · worked example</p>
+      <div className="mt-2 flex flex-col gap-1 text-ink">
+        <p>% Ohm&apos;s Law Evaluation Node</p>
+        <p>Resistance = 10.00 Ohms</p>
+        <p>Voltage = 6.00 Volts</p>
+        <p>Current = Voltage / Resistance → 0.60 Amps</p>
+        <p>Power = Voltage × Current → 3.60 Watts</p>
+        <p>Status = INTACT (safe boundaries)</p>
       </div>
-      <div>
-        <p className="font-mono text-xs font-semibold text-flow">sam · saved mask</p>
-        <p className="mt-1 font-sans text-xs leading-5 text-ink-muted">
-          {sample.title}: taps select saved boxes with SAM provenance; no live inference runs here.
-        </p>
+      <p className="mt-2 font-sans text-[11px] text-ink-muted">
+        Light a bulb, documented — every live run is measured the same way.
+      </p>
+    </>
+  )
+}
+
+/** One tab's terminal: trace, executable command, and evidence refs in a
+ * single window — no floating cards. */
+function ConsoleTerminal({ tab }: { tab: ConsoleTab }) {
+  const refs = tab === 'voice' ? VOICE_BEHAVIORS : SMART_DETAILS.filter((item) => item.group === tab)
+  return (
+    <div className="rounded-xl border border-flow/30 bg-black p-4 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+      <ConsoleTrace tab={tab} />
+      <div aria-hidden="true" className="my-3 border-t border-glass-border" />
+      <EngineCommand engine={CONSOLE_ENGINES[tab]} bare />
+      <div aria-hidden="true" className="my-3 border-t border-glass-border" />
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <span className="text-flow">$ refs</span>
+        {refs.map((item) => (
+          <a
+            key={item.evidence}
+            href={`${META_EVIDENCE_BASE}${item.evidence}`}
+            title={`${item.behavior} — seen: ${item.where}`}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-glass-border px-2 py-0.5 font-sans text-[11px] text-ink-muted transition-colors hover:border-flow/60 hover:text-ink"
+          >
+            {item.title}
+          </a>
+        ))}
       </div>
     </div>
   )
@@ -678,115 +663,46 @@ export default function LabIntro({
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Under the hood</p>
         <h3 id="under-the-hood-heading" className="mt-1 text-xl font-semibold">Try the real building blocks</h3>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-          Four tools do everything on this page. The coach asks, your voice answers, the solver measures, and the
-          samples show their work.
+          Three tools do everything on this page. The coach asks, your voice answers, the solver measures.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <article className="glass-panel flex flex-col gap-2 border-flow/30 p-5 sm:col-span-2 sm:flex-row sm:items-center sm:gap-5">
-            <div className="sm:max-w-xs">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">The coach</p>
-              <h4 className="mt-1 text-lg font-semibold">Muse Spark</h4>
-            </div>
-            <p className="text-sm text-ink-muted">Asks the R1 question, drafts solver-grounded explanations, and proposes what Reality Lens sees. A labelled fallback stands in when the model is unreachable.</p>
-          </article>
-          <article className="glass-panel flex flex-col gap-2 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Your voice in</p>
-            <h4 className="font-semibold">Muse Voice Transcribe</h4>
-            <p className="text-sm text-ink-muted">Turns speech into editable Why text in Predict, Reality Check, and Solo.</p>
-          </article>
-          <article className="glass-panel flex flex-col gap-2 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">The ground truth</p>
-            <h4 className="font-semibold">Verityn Solver</h4>
-            <p className="text-sm text-ink-muted">Measures each circuit locally for current, voltage, power, and validity.</p>
-          </article>
-          <article className="glass-panel flex flex-col gap-1 p-4 sm:col-span-2 sm:flex-row sm:items-baseline sm:gap-3">
-            <h4 className="shrink-0 font-semibold">SAM: sample only</h4>
-            <p className="text-sm text-ink-muted">
-              Segmentation examples are tappable samples with saved provenance; no live SAM inference is used.{' '}
-              <a
-                className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Sample probe results
-              </a>
-            </p>
-          </article>
-        </div>
-        <details className="glass-panel mt-4 p-4">
-          <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
-            Smart details
-          </summary>
-          <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-            <div role="tablist" aria-label="Engines" className="flex gap-2 sm:grid sm:grid-cols-2 lg:flex lg:flex-col">
-              {CONSOLE_TABS.map((tab) => {
-                const Icon = tab.icon
-                const selected = consoleTab === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    onClick={() => setConsoleTab(tab.id)}
-                    className={`flex min-h-[56px] flex-1 items-center gap-3 rounded-[10px] border p-3 text-left lg:flex-none ${
-                      selected
-                        ? 'border-flow/60 bg-flow/5 shadow-[0_0_16px_-4px_var(--color-flow)]'
-                        : 'border-glass-border'
-                    }`}
-                  >
-                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-glass-border bg-black/40">
-                      <Icon className="h-4 w-4 text-flow" aria-hidden="true" />
-                      {selected && (
-                        <span aria-hidden="true" className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-flow shadow-[0_0_8px_var(--color-flow)]" />
-                      )}
+        <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <div role="tablist" aria-label="Engines" className="flex flex-col gap-2 sm:grid sm:grid-cols-3 lg:flex lg:flex-col">
+            {CONSOLE_TABS.map((tab) => {
+              const Icon = tab.icon
+              const selected = consoleTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setConsoleTab(tab.id)}
+                  className={`flex min-h-[56px] flex-1 items-center gap-3 rounded-[10px] border p-3 text-left lg:flex-none ${
+                    selected
+                      ? 'border-flow/60 bg-flow/5 shadow-[0_0_16px_-4px_var(--color-flow)]'
+                      : 'border-glass-border'
+                  }`}
+                >
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-glass-border bg-black/40">
+                    <Icon className="h-4 w-4 text-flow" aria-hidden="true" />
+                    {selected && (
+                      <span aria-hidden="true" className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-flow shadow-[0_0_8px_var(--color-flow)]" />
+                    )}
+                  </span>
+                  <span>
+                    <span className={`block text-sm font-semibold ${selected ? 'text-ink' : 'text-ink-muted'}`}>
+                      {tab.card}
                     </span>
-                    <span>
-                      <span className={`block text-sm font-semibold ${selected ? 'text-ink' : 'text-ink-muted'}`}>
-                        {tab.card}
-                      </span>
-                      <span className="block text-[11px] text-ink-muted">{tab.sub}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <div role="tabpanel" className="flex min-w-0 flex-col gap-3">
-              <ConsoleLivePanel tab={consoleTab} />
-              <EngineCommand
-                engine={
-                  (
-                    { logic: 'spark', voice: 'voice', physics: 'solver', vision: 'lens' } satisfies Record<
-                      ConsoleTab,
-                      EngineCommandKind
-                    >
-                  )[consoleTab]
-                }
-              />
-              <ul className="grid gap-3 sm:grid-cols-2">
-                {(consoleTab === 'voice'
-                  ? VOICE_BEHAVIORS
-                  : SMART_DETAILS.filter((item) => item.group === consoleTab)
-                ).map((item) => (
-                  <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
-                    <p className="text-sm font-semibold">{item.title}</p>
-                    <p className="mt-0.5 text-xs text-ink-muted">{item.behavior}</p>
-                    <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
-                    <a
-                      className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
-                      href={`${META_EVIDENCE_BASE}${item.evidence}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Test or trace
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                    <span className="block text-[11px] text-ink-muted">{tab.sub}</span>
+                  </span>
+                </button>
+              )
+            })}
           </div>
-        </details>
+          <div role="tabpanel" className="min-w-0">
+            <ConsoleTerminal tab={consoleTab} />
+          </div>
+        </div>
       </section>
 
       <section aria-labelledby="impact-heading" className="w-full">
@@ -823,7 +739,7 @@ export default function LabIntro({
               <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">02</span>{IMPACT_CASES[1].title}</p>
               <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">03</span>{IMPACT_CASES[2].title}</p>
             </div>
-            <p className="text-sm leading-6 text-ink-muted">Retry safely in the browser, then review and test living diagrams.</p>
+            <p className="text-sm leading-6 text-ink-muted">Reset freely — then test the diagram itself.</p>
             <div aria-hidden="true" className="relative overflow-hidden rounded-xl border border-glass-border bg-black/50 bg-[radial-gradient(circle_at_50%_50%,rgb(51_65_85/0.5)_1px,transparent_1px)] [background-size:14px_14px] p-3">
               <svg viewBox="0 0 220 54" className="h-12 w-full text-flow">
                 <rect x="8" y="14" width="22" height="26" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />

@@ -45,3 +45,5 @@ the Under the hood Smart details section, and the README.
 - Runs scroll the canvas into view first; Time Bomb strain beat extended to 2.2 s — smoke bomb checks.
 - Stress Rig stops at fracture: a freshly exploded bulb ends the sweep with its point kept and a "fractured at N V" note — [bench tests](../frontend/src/experiment/bench.test.ts), smoke fracture checks.
 - Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh — smoke bomb checks still pass first-run strain.
+- Hub Under-the-hood is a 3-tab diagnostic console: tabs left, one terminal right with trace, executable command, and evidence refs; text wall removed — smoke console checks.
+- Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM sample-only wording — smoke footnote checks.
