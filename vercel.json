@@ -12,8 +12,7 @@
       "root": "api/",
       "framework": "flask",
       "entrypoint": "index:app",
-      "installCommand": "pip install -r requirements.txt",
-      "includeFiles": "{../backend/**,../src/**}"
+      "installCommand": "pip install -r requirements.txt"
     }
   },
   "rewrites": [
