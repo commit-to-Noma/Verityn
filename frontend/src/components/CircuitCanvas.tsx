@@ -2077,14 +2077,12 @@ function CanvasInner({
       </div>
   )
 
-  /** Bay-only floating tool dock: the same palette buttons ride over the
-   * canvas bottom-center (mac-dock style) instead of stacking above it.
+  /** Bay-only tool footer: the palette buttons sit in a grounded
+   * translucent bar spanning the canvas width instead of floating.
    * Guided Lab keeps the inline palettePane below, untouched. */
   const toolDock = (
-    <div aria-label="Part dock" className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center">
-      <div className="border-glass-border pointer-events-auto rounded-2xl border bg-black/70 p-2 shadow-xl backdrop-blur-md">
-        {paletteTools}
-      </div>
+    <div aria-label="Part dock" className="absolute inset-x-0 bottom-0 z-10 flex justify-center border-t border-glass-border bg-black/60 py-2 backdrop-blur-md">
+      {paletteTools}
     </div>
   )
 

@@ -1,8 +1,10 @@
 import { Fragment, Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { CircleCheckBig, CircleQuestionMark, CircleX, ImagePlus, LoaderCircle } from 'lucide-react'
-import type { SimulateResult, VisionProposeResult } from '../api/client'
+import type { Netlist, SimulateResult, VisionProposeResult } from '../api/client'
 import { ApiError, proposeCircuit, visionProviderBadge } from '../api/client'
+import type { HudReading } from '../canvas/banner'
+import { hudReading } from '../experiment/history'
 import type { ImageGeometry } from '../canvas/layout'
 import { layoutProposalFromGeometry } from '../canvas/layout'
 import { glowIntensity } from '../canvas/visuals'
@@ -139,6 +141,7 @@ function ReviewPanels({
   nonce,
   confirmed,
   testedResult,
+  hud,
   onConfirm,
   onTested,
   onReset,
@@ -151,8 +154,9 @@ function ReviewPanels({
   nonce: number
   confirmed: boolean
   testedResult: SimulateResult | null
+  hud: HudReading | null
   onConfirm: () => void
-  onTested: (result: SimulateResult) => void
+  onTested: (result: SimulateResult, netlist: Netlist) => void
   onReset: () => void
   onRotate: () => void
   onTryExperiment?: (seed: LessonSeed, label: string) => void
@@ -165,7 +169,7 @@ function ReviewPanels({
   const [focusPhoto, setFocusPhoto] = useState(false)
   const [corrected, setCorrected] = useState(false)
   const [reveal, setReveal] = useState<RevealStep>(() => (reducedMotion() ? 'review' : 'image'))
-  const [compareSplit, setCompareSplit] = useState(50)
+  const [compareSplit, setCompareSplit] = useState(33)
   const replicaRef = useRef<HTMLDivElement | null>(null)
 
   const loadable = canLoadProposal(proposal)
@@ -308,48 +312,6 @@ function ReviewPanels({
           </div>
         </div>
       </div>
-      <div className="glass-panel flex flex-col gap-2 p-4">
-      <h4 className="text-base font-semibold">Review before testing</h4>
-      {loadable && !confirmed && (
-        <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
-      )}
-      <div className="flex flex-wrap items-center gap-3">
-        {loadable && !confirmed && (
-          <button
-            type="button"
-            onClick={() => {
-              interrupt()
-              onConfirm()
-            }}
-            className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-          >
-            Confirm model
-          </button>
-        )}
-        {loadable && !confirmed && (
-          <button
-            type="button"
-            onClick={editModel}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Edit model
-          </button>
-        )}
-        {confirmed && (
-          <p className="text-ink-muted text-sm" role="status">
-            Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
-            the circuit you approved.
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onReset}
-          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-        >
-          Try another image
-        </button>
-      </div>
-      </div>
       {reveal !== 'review' && (
         <button
           type="button"
@@ -373,15 +335,11 @@ function ReviewPanels({
           />
         </label>
       )}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="min-w-0">
       <div
-        className={`grid gap-4 ${
-          focusPhoto && showOriginal && !showModelEff
-            ? 'xl:grid-cols-1'
-            : view === 'compare' && showOriginal && showModelEff
-              ? 'xl:grid-cols-[minmax(0,var(--lens-a))_minmax(0,var(--lens-b))]'
-              : 'xl:grid-cols-2'
+        className={`grid items-stretch gap-4 ${
+          showOriginal && showModelEff
+            ? 'xl:grid-cols-[minmax(0,var(--lens-a))_minmax(0,var(--lens-b))_280px]'
+            : 'xl:grid-cols-[minmax(0,1fr)_280px]'
         }`}
         style={
           {
@@ -597,17 +555,16 @@ function ReviewPanels({
                 title="Check the replica"
                 importRequest={{ seed, uncertainIds, nonce }}
                 reportRejections
-                simulateLocked={canTest ? null : 'Confirm the model below before testing it against the simulator.'}
+                simulateLocked={canTest ? null : 'Confirm the model in the inspector before testing it against the simulator.'}
                 peerSelection={selection}
                 onPeerSelect={setSelection}
                 onDirty={() => setCorrected(true)}
-                onSolved={(result) => onTested(result)}
+                onSolved={(result, netlist) => onTested(result, netlist)}
+                hud={hud}
               />
             )}
           </div>
         )}
-      </div>
-      </div>
       <aside aria-label="Review inspector" className="glass-panel flex min-w-0 flex-col gap-3 p-4">
         <div className="flex flex-col gap-2">
           <h4 className="text-base font-semibold">Inspector</h4>
@@ -688,6 +645,45 @@ function ReviewPanels({
             Assumed: {assumption}
           </p>
         ))}
+        <div className="mt-auto flex flex-col gap-2 border-t border-glass-border pt-3">
+          {loadable && !confirmed && (
+            <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
+          )}
+          {loadable && !confirmed && (
+            <button
+              type="button"
+              onClick={() => {
+                interrupt()
+                onConfirm()
+              }}
+              className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+            >
+              Confirm model
+            </button>
+          )}
+          {loadable && !confirmed && (
+            <button
+              type="button"
+              onClick={editModel}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Edit model
+            </button>
+          )}
+          {confirmed && (
+            <p className="text-ink-muted text-sm" role="status">
+              Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
+              the circuit you approved.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={onReset}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Try another image
+          </button>
+        </div>
       </aside>
       </div>
       {showTriptych(confirmed, testedResult) && testedResult !== null && (
@@ -732,6 +728,7 @@ export default function SnapBuildLab({
   const [confirmed, setConfirmed] = useState(false)
   const [tested, setTested] = useState(false)
   const [lensResult, setLensResult] = useState<SimulateResult | null>(null)
+  const [lensNetlist, setLensNetlist] = useState<Netlist | null>(null)
   const [dragging, setDragging] = useState(false)
   const controller = useRef<AbortController | null>(null)
   const reviewRef = useRef<HTMLDivElement | null>(null)
@@ -796,6 +793,7 @@ export default function SnapBuildLab({
         setConfirmed(false)
         setTested(false)
         setLensResult(null)
+        setLensNetlist(null)
         setState({ phase: 'proposed', image, size, result, nonce: nonce.current })
       } catch (err) {
         if (next.signal.aborted) {
@@ -829,6 +827,7 @@ export default function SnapBuildLab({
     setConfirmed(false)
     setTested(false)
     setLensResult(null)
+    setLensNetlist(null)
     setState({ phase: 'idle' })
   }
 
@@ -1179,10 +1178,12 @@ export default function SnapBuildLab({
               nonce={state.nonce}
               confirmed={confirmed}
               testedResult={lensResult}
+              hud={lensResult !== null && lensNetlist !== null ? hudReading(lensResult, lensNetlist) : null}
               onConfirm={() => setConfirmed(true)}
-              onTested={(result) => {
+              onTested={(result, netlist) => {
                 setTested(true)
                 setLensResult(result)
+                setLensNetlist(netlist)
               }}
               onReset={reset}
               onRotate={() => rotateAndReread(state.image, state.size)}
