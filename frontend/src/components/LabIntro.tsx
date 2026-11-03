@@ -47,6 +47,14 @@ const FIELD_ANGLES: Record<STEMFieldId, number> = {
 const FIELD_ORBIT_X_RADIUS = 0.352
 const FIELD_ORBIT_Y_RADIUS = 0.252
 
+/** Reactive backdrop tint per selected discipline. */
+const FIELD_GLOW: Record<STEMFieldId, string> = {
+  science: '#35c5d2',
+  technology: '#9a7be9',
+  engineering: '#e3a739',
+  mathematics: '#44c28f',
+}
+
 function FieldIcon({ field }: { field: STEMFieldId }) {
   return (
     <svg viewBox="0 0 100 100" className="h-[82px] w-[82px] overflow-visible drop-shadow-[0_8px_8px_rgb(0_0_0/0.55)] sm:h-[108px] sm:w-[108px]" aria-hidden="true">
@@ -295,6 +303,23 @@ function STEMOrbit() {
         onKeyDown={handleOrbitKeyDown}
         aria-describedby="stem-orbit-instructions"
       >
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            key={selectedId}
+            className="field-backdrop-enter relative flex items-center justify-center"
+            style={{ filter: `drop-shadow(0 0 70px ${FIELD_GLOW[selectedId]}59)` }}
+          >
+            <div
+              className="absolute h-60 w-60 rounded-full sm:h-80 sm:w-80"
+              style={{
+                background: `radial-gradient(circle, ${FIELD_GLOW[selectedId]}40 0%, transparent 70%)`,
+              }}
+            />
+            <span className="block scale-[2.6] opacity-30 sm:scale-[3.2]">
+              <FieldIcon field={selectedId} />
+            </span>
+          </div>
+        </div>
         <div
           role="group"
           aria-label="Rotate STEM pathways"
@@ -711,6 +736,8 @@ export default function LabIntro({
         <div aria-hidden="true" className="mt-3 h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
           Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
+          Predicting before the AI speaks keeps the reasoning with you — Verityn sharpens thinking instead of letting
+          it atrophy.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <article className="glass-panel flex h-full flex-col gap-3 p-5 lg:col-span-2 lg:row-span-2">

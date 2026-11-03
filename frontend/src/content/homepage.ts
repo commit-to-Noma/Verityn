@@ -104,14 +104,14 @@ export const STEM_FIELDS: STEMField[] = [
     id: 'science',
     title: 'Science',
     description:
-      'Model a natural system, predict what will change, then compare your idea with simulated results.',
+      'Model a natural system, predict what will change, then compare your idea with simulated results. Sneak peek: a virtual chemistry bench — mix solutions and predict the reaction, with Muse Spark probing your hypothesis and Muse Voice capturing your lab notes.',
     status: 'future',
   },
   {
     id: 'technology',
     title: 'Technology',
     description:
-      'Design a useful tool, test how it behaves, and improve it through repeated trials.',
+      'Design a useful tool, test how it behaves, and improve it through repeated trials. Sneak peek: program a rover through obstacle courses, with Muse Spark as your debugging coach.',
     status: 'future',
   },
   {
@@ -124,7 +124,7 @@ export const STEM_FIELDS: STEMField[] = [
     id: 'mathematics',
     title: 'Mathematics',
     description:
-      'Change values in a model, spot patterns, and see how one quantity affects another.',
+      'Change values in a model, spot patterns, and see how one quantity affects another. Sneak peek: a function playground — stretch curves and watch predictions update, narrated by Muse Spark.',
     status: 'future',
   },
 ]

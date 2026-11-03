@@ -34,6 +34,14 @@ describe('homepage copy', () => {
     expect(STEM_FIELDS.find((field) => field.id === 'mathematics')?.description).toContain('Change values')
   })
 
+  it('teases roadmap labs with the Meta tools they will use', () => {
+    for (const field of STEM_FIELDS.filter((entry) => entry.status === 'future')) {
+      expect(field.description).toContain('Sneak peek:')
+      expect(field.description).toMatch(/Muse (Spark|Voice)/)
+    }
+    expect(STEM_FIELDS.find((field) => field.id === 'engineering')?.description).not.toContain('Sneak peek:')
+  })
+
   it('keeps the feature turntable complete and removes redundant hero routes', () => {
     expect(LABORATORY_STATIONS.map((station) => station.id)).toEqual([
       'lab',

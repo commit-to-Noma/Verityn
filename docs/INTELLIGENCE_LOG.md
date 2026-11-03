@@ -47,3 +47,6 @@ the Under the hood Smart details section, and the README.
 - Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh — smoke bomb checks still pass first-run strain.
 - Hub Under-the-hood is a 3-tab diagnostic console: tabs left, one terminal right with trace, executable command, and evidence refs; text wall removed — smoke console checks.
 - Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM sample-only wording — smoke footnote checks.
+- STEM orbit backdrop reacts to selection: the picked discipline's asset renders large behind the ring, tinted and glowing in its field color — verified by hero screenshots (gear/math/science).
+- Roadmap disciplines tease their labs with planned Meta tools (chemistry bench, rover coding, function playground) — [homepage tests](../frontend/src/components/LabIntro.test.ts).
+- Bento intro names cognitive atrophy: predicting before the AI speaks keeps reasoning with the learner.

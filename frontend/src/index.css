@@ -283,6 +283,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .stem-orbit-flow,
   .stem-orbit-pulse,
+  .field-backdrop-enter,
   .stem-field-button:hover .stem-icon-scale > svg,
   .stem-field-button:focus-visible .stem-icon-scale > svg,
   .stem-icon-jiggle .stem-icon-scale > svg {
@@ -783,6 +784,23 @@ body {
 
 .stem-orbit-pulse {
   animation: stem-orbit-pulse 4s ease-in-out infinite;
+}
+
+/* Reactive discipline backdrop: the selected field's silhouette fades in
+   behind the ring, tinted and glowing in the field color. */
+@keyframes field-backdrop-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.field-backdrop-enter {
+  animation: field-backdrop-enter 0.45s ease-out;
 }
 
 .stem-icon-scale {
