@@ -1,8 +1,10 @@
-import { Atom, ChevronLeft, ChevronRight, Eye, MessagesSquare, Play } from 'lucide-react'
+import { Atom, ChevronLeft, ChevronRight, Eye, Lightbulb, MessagesSquare, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
 import UnderTheHoodTryIts from './UnderTheHoodTryIts'
+import { LENS_SAMPLES } from '../lens/samples'
+import { friendlyErrorCode } from '../experiment/history'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
   HOMEPAGE_ENTRIES,
@@ -405,6 +407,71 @@ function STEMOrbit() {
   )
 }
 
+/** Live output side of the diagnostic console: one honest panel per system. */
+function ConsoleLivePanel({ tab }: { tab: 'vision' | 'logic' | 'physics' }) {
+  if (tab === 'vision') {
+    const sample = LENS_SAMPLES[0]
+    if (sample === undefined) {
+      return null
+    }
+    return (
+      <div className="grid items-center gap-3 rounded-xl border border-glass-border bg-black/30 p-3 sm:grid-cols-2">
+        <div className="relative overflow-hidden rounded-lg">
+          <img src={sample.image} alt="" aria-hidden="true" className="block h-auto w-full" />
+          <svg
+            viewBox={`0 0 ${sample.width} ${sample.height}`}
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full"
+          >
+            {[sample.boxes.battery, sample.boxes.bulb].map((box, index) => (
+              <rect
+                key={index}
+                x={box.left}
+                y={box.top}
+                width={box.right - box.left}
+                height={box.bottom - box.top}
+                rx={6}
+                fill="none"
+                stroke="var(--color-flow)"
+                strokeWidth={3}
+              />
+            ))}
+          </svg>
+        </div>
+        <div>
+          <p className="font-mono text-xs font-semibold text-flow">vision · saved mask</p>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            {sample.title}: detected regions stay on the sample. Taps select saved boxes with SAM
+            provenance; no live inference runs here.
+          </p>
+        </div>
+      </div>
+    )
+  }
+  if (tab === 'logic') {
+    return (
+      <div className="rounded-xl border border-glass-border bg-black/30 p-3">
+        <p className="font-mono text-xs font-semibold text-flow">logic · fallback ladder</p>
+        <ol className="mt-2 flex list-decimal flex-col gap-1 pl-5 font-mono text-[11px] leading-5 text-ink-muted">
+          <li>Draft must end in a statement and pass the leak and number guards.</li>
+          <li>On a question ending, drop the last sentence or retry once with the error fed back.</li>
+          <li>Final fallback shows a neutral line, never red; provider chip tells the truth.</li>
+        </ol>
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-xl border border-glass-border bg-black/30 p-3 font-mono text-[11px] leading-5">
+      <p className="font-mono text-xs font-semibold text-flow">physics · worked example</p>
+      <p className="mt-2 text-ink">I = V/R = 6.0 V / 10 Ω = 0.6 A</p>
+      <p className="text-ink">P = V·I = 6.0 V × 0.6 A = 3.6 W</p>
+      <p className="mt-1 font-sans text-[11px] text-ink-muted">
+        Light a bulb, documented — the solver measures every live run the same way.
+      </p>
+    </div>
+  )
+}
+
 function scrollToId(id: string) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   document.getElementById(id)?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
@@ -439,6 +506,9 @@ export default function LabIntro({
       scrollToId('under-the-hood')
     }
   }
+  const [loopStop, setLoopStop] = useState(0)
+  const [consoleTab, setConsoleTab] = useState<'vision' | 'logic' | 'physics'>('vision')
+  const [sandboxLit, setSandboxLit] = useState(false)
 
   return (
     <section aria-labelledby="intro-heading" className="intro-ambient -m-4 flex flex-col items-center gap-10 px-4 py-16 sm:-m-6 sm:py-20">
@@ -510,15 +580,45 @@ export default function LabIntro({
           </div>
           <p className="max-w-sm text-sm text-ink-muted">Your idea leads. The lab helps you test it.</p>
         </div>
-        <ol aria-label="The laboratory loop" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {LAB_LOOP.map((item, index) => (
-            <li key={item.step} className="flex flex-col gap-2 rounded-2xl border border-glass-border bg-glass/45 p-4">
-              <span className="font-mono text-xs font-semibold text-flow">0{index + 1}</span>
-              <h4 className="text-sm font-semibold">{item.step}</h4>
-              <p className="text-xs leading-5 text-ink-muted">{item.doing}</p>
-            </li>
-          ))}
+        <ol aria-label="The laboratory loop" className="relative flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div aria-hidden="true" className="absolute bottom-4 left-[21px] top-4 w-px bg-glass-border sm:bottom-auto sm:left-4 sm:right-4 sm:top-[21px] sm:h-px sm:w-auto" />
+          <div aria-hidden="true" className="loop-signal absolute bottom-4 left-[21px] top-4 w-px sm:bottom-auto sm:left-4 sm:right-4 sm:top-[21px] sm:h-px sm:w-auto" />
+          {LAB_LOOP.map((item, index) => {
+            const active = loopStop === index
+            return (
+              <li key={item.step} className="relative flex flex-1 items-start gap-3 sm:flex-col sm:items-center sm:gap-2 sm:text-center">
+                <button
+                  type="button"
+                  aria-expanded={active}
+                  onClick={() => setLoopStop(index)}
+                  onMouseEnter={() => setLoopStop(index)}
+                  onFocus={() => setLoopStop(index)}
+                  className="group flex min-h-[44px] items-center gap-3 rounded-[12px] px-1 sm:flex-col sm:gap-2"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold transition ${
+                      active
+                        ? 'border-flow bg-flow/20 text-flow shadow-[0_0_16px_var(--color-flow)]'
+                        : 'border-glass-border bg-glass text-ink-muted group-hover:border-flow/60 group-hover:text-ink'
+                    }`}
+                  >
+                    0{index + 1}
+                  </span>
+                  <span className={`text-sm font-semibold ${active ? 'text-ink' : 'text-ink-muted'}`}>
+                    {item.step}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ol>
+        <div aria-live="polite" className="mt-3 rounded-2xl border border-flow/30 bg-flow/5 p-4">
+          <p className="text-sm text-ink">
+            <span className="mr-2 font-mono text-xs font-bold text-flow">0{loopStop + 1}</span>
+            {LAB_LOOP[loopStop]?.doing}
+          </p>
+        </div>
       </section>
       <section id="under-the-hood" aria-labelledby="under-the-hood-heading" className="w-full">
         <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Under the hood</p>
@@ -564,85 +664,145 @@ export default function LabIntro({
           <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
             Smart details
           </summary>
-          {SMART_GROUPS.map((group) => {
-            const items = SMART_DETAILS.filter((item) => item.group === group.id)
-            const Icon = group.icon
-            return (
-              <div key={group.id} className="mt-4">
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 shrink-0 text-flow" aria-hidden="true" />
-                  <h4 className="text-sm font-semibold">{group.label}</h4>
-                  <p className="text-xs text-ink-muted">{group.tagline}</p>
-                  <span className="ml-auto rounded-full border border-glass-border px-2 py-px text-[11px] text-ink-muted">
-                    {items.length}
-                  </span>
-                </div>
-                <ul className="mt-2 grid gap-3 sm:grid-cols-2">
-                  {items.map((item) => (
-                    <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
-                      <p className="text-sm font-semibold">{item.title}</p>
-                      <p className="mt-0.5 text-xs text-ink-muted">{item.behavior}</p>
-                      <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
-                      <a
-                        className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
-                        href={`${META_EVIDENCE_BASE}${item.evidence}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Test or trace
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
+          <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+            <div role="tablist" aria-label="Systems" className="flex gap-2 lg:flex-col">
+              {SMART_GROUPS.map((group) => {
+                const Icon = group.icon
+                const count = SMART_DETAILS.filter((item) => item.group === group.id).length
+                const selected = consoleTab === group.id
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setConsoleTab(group.id)}
+                    className={`flex min-h-[44px] flex-1 items-center gap-2 rounded-[10px] border px-3 text-left text-sm font-medium lg:flex-none ${
+                      selected ? 'border-flow/60 bg-flow/5 text-ink' : 'border-glass-border text-ink-muted'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0 text-flow" aria-hidden="true" />
+                    {group.label}
+                    <span className="ml-auto rounded-full border border-glass-border px-2 py-px text-[11px] text-ink-muted">
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <div role="tabpanel" className="flex min-w-0 flex-col gap-3">
+              <ConsoleLivePanel tab={consoleTab} />
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {SMART_DETAILS.filter((item) => item.group === consoleTab).map((item) => (
+                  <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{item.behavior}</p>
+                    <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
+                    <a
+                      className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
+                      href={`${META_EVIDENCE_BASE}${item.evidence}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Test or trace
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </details>
         <UnderTheHoodTryIts />
       </section>
 
-      <section aria-labelledby="impact-heading" className="grid w-full overflow-hidden rounded-[20px] border border-flow/25 bg-[radial-gradient(circle_at_10%_0%,rgb(56_214_233/0.2),transparent_42%),linear-gradient(135deg,rgb(14_38_60/0.9),rgb(10_14_28/0.55))] lg:grid-cols-[0.78fr_1.22fr]">
-        <div className="flex flex-col justify-between gap-6 border-b border-flow/20 p-6 lg:border-b-0 lg:border-r lg:p-8">
-          <div className="flex flex-col gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Why Verityn matters</p>
-            <h3 id="impact-heading" className="max-w-md text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Answers are everywhere. Understanding is not.</h3>
-            <div aria-hidden="true" className="h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
-            <p className="max-w-md text-sm leading-6 text-ink-muted">
-              Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
+      <section aria-labelledby="impact-heading" className="w-full">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Why Verityn matters</p>
+        <h3 id="impact-heading" className="mt-1 max-w-2xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Answers are everywhere. Understanding is not.</h3>
+        <div aria-hidden="true" className="mt-3 h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
+          Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <article className="glass-panel flex flex-col gap-3 p-5 lg:col-span-2 lg:row-span-2">
+            <p className="font-mono text-xs font-semibold text-light">01</p>
+            <h4 className="text-lg font-semibold">{IMPACT_CASES[0].title}</h4>
+            <p className="text-sm leading-6 text-ink-muted">{IMPACT_CASES[0].problem}</p>
+            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
+              <span className="mr-1 font-semibold text-flow">Verityn:</span>
+              {IMPACT_CASES[0].response}
             </p>
-          </div>
-          <p className="max-w-md border-l-2 border-light pl-3 text-sm leading-6 text-ink">
-            It makes science more reachable, keeps AI accountable to evidence, and turns mistakes into something learners can use.
-          </p>
-        </div>
-        <div className="grid sm:grid-cols-2 sm:divide-x sm:divide-glass-border">
-          {[IMPACT_CASES.slice(0, 2), IMPACT_CASES.slice(2)].map((column, columnIndex) => (
-            <ol
-              key={columnIndex}
-              className={
-                columnIndex === 1
-                  ? 'divide-y divide-glass-border border-t border-glass-border sm:border-t-0'
-                  : 'divide-y divide-glass-border'
-              }
-            >
-              {column.map((item, index) => {
-                const number = columnIndex * 2 + index + 1
-                return (
-                  <li key={item.title} className="flex min-h-48 flex-col gap-3 p-5 sm:p-6">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs font-semibold text-light">0{number}</span>
-                      <p className="text-sm font-semibold">{item.title}</p>
-                    </div>
-                    <p className="text-sm leading-6 text-ink-muted">{item.problem}</p>
-                    <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
-                      <span className="mr-1 font-semibold text-flow">Verityn:</span>
-                      {item.response}
-                    </p>
-                  </li>
-                )
-              })}
-            </ol>
-          ))}
+            <div aria-hidden="true" className="mt-auto rounded-xl border border-glass-border bg-black/30 p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-coach">Coach preview</p>
+              <p className="mt-2 w-fit max-w-full rounded-lg rounded-bl-none bg-glass-strong px-3 py-2 text-xs text-ink">
+                What do you expect the circuit to do?
+              </p>
+              <div className="mt-2 flex gap-2">
+                {['Yes', 'No', 'Not sure'].map((choice) => (
+                  <span key={choice} className="rounded-[8px] border border-glass-border px-2 py-1 text-[11px] text-ink-muted">
+                    {choice}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </article>
+          <article className="glass-panel flex flex-col gap-3 p-5 sm:col-span-2">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">02</span>{IMPACT_CASES[1].title}</p>
+              <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">03</span>{IMPACT_CASES[2].title}</p>
+            </div>
+            <p className="text-sm leading-6 text-ink-muted">{IMPACT_CASES[1].response} {IMPACT_CASES[2].response}</p>
+            <div aria-hidden="true" className="relative overflow-hidden rounded-xl border border-glass-border bg-black/50 bg-[radial-gradient(circle_at_50%_50%,rgb(51_65_85/0.5)_1px,transparent_1px)] [background-size:14px_14px] p-3">
+              <svg viewBox="0 0 220 54" className="h-12 w-full text-flow">
+                <rect x="8" y="14" width="22" height="26" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+                <polyline points="30,40 110,40 110,27" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
+                <polyline points="30,14 110,14 110,22" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
+                <circle cx="110" cy="25" r="8" fill="var(--color-glow-light)" opacity="0.9" />
+                <polyline points="118,25 150,25 150,40 212,40" fill="none" stroke="currentColor" strokeWidth="2" />
+                <polyline points="150,14 212,14 212,40" fill="none" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              <span className="absolute right-2 top-2 rounded-full border border-glass-border bg-black/60 px-2 py-0.5 font-mono text-[10px]">0.6 A · Lit</span>
+            </div>
+          </article>
+          <article className="glass-panel flex flex-col gap-3 p-5">
+            <p className="font-mono text-xs font-semibold text-light">04</p>
+            <h4 className="text-sm font-semibold">{IMPACT_CASES[3].title}</h4>
+            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
+              <span className="mr-1 font-semibold text-flow">Verityn:</span>
+              {IMPACT_CASES[3].response}
+            </p>
+            <ul aria-label="Example friendly error labels" className="mt-auto flex flex-wrap gap-1.5">
+              {['SHORTED_BATTERY', 'DANGLING_TERMINAL', 'NO_PATH'].map((code) => (
+                <li key={code} className="rounded-full border border-bad/50 bg-bad/10 px-2.5 py-1 text-[11px] font-medium">
+                  {friendlyErrorCode(code)}
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article className="glass-panel flex flex-col gap-3 p-5">
+            <p className="font-mono text-xs font-semibold text-light">05</p>
+            <h4 className="text-sm font-semibold">{IMPACT_CASES[4].title}</h4>
+            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
+              <span className="mr-1 font-semibold text-flow">Verityn:</span>
+              {IMPACT_CASES[4].response}
+            </p>
+            <div className="mt-auto flex items-center gap-3">
+              <button
+                type="button"
+                aria-pressed={sandboxLit}
+                onClick={() => setSandboxLit((current) => !current)}
+                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+              >
+                {sandboxLit ? 'Switch off' : 'Try the switch'}
+              </button>
+              <span className="flex items-center gap-2 text-sm" aria-live="polite">
+                <Lightbulb
+                  aria-hidden="true"
+                  className={`h-6 w-6 ${sandboxLit ? 'text-light drop-shadow-[0_0_10px_var(--color-glow-light)]' : 'text-ink-muted'}`}
+                />
+                {sandboxLit ? 'Lit' : 'Dark'}
+              </span>
+            </div>
+          </article>
         </div>
       </section>
     </section>

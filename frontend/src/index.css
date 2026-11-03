@@ -773,3 +773,42 @@ body {
   background: var(--color-coach);
   box-shadow: 0 0 10px var(--color-coach);
 }
+
+/* Hub loop timeline: a signal particle zaps down the track. */
+.loop-signal {
+  background: linear-gradient(to bottom, transparent, var(--color-flow) 45%, var(--color-flow) 55%, transparent);
+  background-size: 100% 220%;
+  animation: loop-signal-y 2.6s linear infinite;
+}
+
+@media (min-width: 640px) {
+  .loop-signal {
+    background: linear-gradient(to right, transparent, var(--color-flow) 45%, var(--color-flow) 55%, transparent);
+    background-size: 220% 100%;
+    animation-name: loop-signal-x;
+  }
+}
+
+@keyframes loop-signal-y {
+  from {
+    background-position: 0 110%;
+  }
+  to {
+    background-position: 0 -10%;
+  }
+}
+
+@keyframes loop-signal-x {
+  from {
+    background-position: 110% 0;
+  }
+  to {
+    background-position: -10% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loop-signal {
+    animation: none;
+  }
+}
