@@ -55,3 +55,5 @@ the Under the hood Smart details section, and the README.
 - Built with Meta footnote removed; SAM returns as the console's fourth tab with its sample-only mask and live proposal command — smoke console vision checks.
 - Hub sections numbered and divided (01 method, 02 hood, 03 why) so each reads as its own block.
 - Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline — [homepage tests](../frontend/src/components/LabIntro.test.ts).
+- STEM backdrop faded to a true background (25% silhouette, softer hue/glow) so the headline stays readable — verified by hero screenshot.
+- Why-Verityn reasons split 2 + 3 across two columns to fill the section width — smoke five-reasons check.

@@ -659,7 +659,7 @@ async function drive() {
   check('why matters', await hasText('Answers are everywhere. Understanding is not.'))
   await ev(`[...document.querySelectorAll('[aria-label="The laboratory loop"] button')].find((b) => b.textContent.includes('Test with the simulator'))?.click()`)
   check('loop timeline expands stops', await hasText('measured, not guessed'))
-  check('why matters lists five reasons', await ev(`document.querySelectorAll('#impact-heading ~ ol > li').length`) === 5)
+  check('why matters lists five reasons', await ev(`document.querySelectorAll('#impact-heading ~ div ol > li').length`) === 5)
   await captureScreenshot('hub')
   // Tool turntable: visible stations, rotation, keyboard, and real routes.
   check('turntable visible', await hasText('Explore the laboratory') && await hasText('1 / 5 · VERITYN TOOLS'))

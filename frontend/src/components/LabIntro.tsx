@@ -613,15 +613,15 @@ export default function LabIntro({
           <div
             key={stemField}
             className="field-backdrop-enter relative flex items-center justify-center"
-            style={{ filter: `drop-shadow(0 0 70px ${FIELD_GLOW[stemField]}59)` }}
+            style={{ filter: `drop-shadow(0 0 70px ${FIELD_GLOW[stemField]}40)` }}
           >
             <div
               className="absolute h-[264px] w-[264px] rounded-full sm:h-[352px] sm:w-[352px]"
               style={{
-                background: `radial-gradient(circle, ${FIELD_GLOW[stemField]}40 0%, transparent 70%)`,
+                background: `radial-gradient(circle, ${FIELD_GLOW[stemField]}28 0%, transparent 70%)`,
               }}
             />
-            <span className="block scale-[2.9] opacity-50 sm:scale-[3.5]">
+            <span className="block scale-[2.9] opacity-25 sm:scale-[3.5]">
               <FieldIcon field={stemField} />
             </span>
           </div>
@@ -791,23 +791,30 @@ export default function LabIntro({
           Predicting before the AI speaks keeps the reasoning with you — Verityn sharpens thinking instead of letting
           it atrophy.
         </p>
-        <ol className="mt-4 flex max-w-3xl flex-col gap-3">
-          {IMPACT_CASES.map((reason, index) => (
-            <li key={reason.title} className="glass-panel flex flex-col gap-1.5 p-5">
-              <p className="text-base font-semibold">
-                <span className="mr-3 font-mono text-xs font-semibold text-light">
-                  0{index + 1}
-                </span>
-                {reason.title}
-              </p>
-              <p className="text-sm leading-6 text-ink-muted">{reason.problem}</p>
-              <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
-                <span className="mr-1 font-semibold text-flow">Verityn:</span>
-                {reason.response}
-              </p>
-            </li>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {[IMPACT_CASES.slice(0, 2), IMPACT_CASES.slice(2)].map((column, columnIndex) => (
+            <ol key={columnIndex} className="flex flex-col gap-3">
+              {column.map((reason, index) => {
+                const number = columnIndex * 2 + index + 1
+                return (
+                  <li key={reason.title} className="glass-panel flex flex-1 flex-col gap-1.5 p-5">
+                    <p className="text-base font-semibold">
+                      <span className="mr-3 font-mono text-xs font-semibold text-light">
+                        0{number}
+                      </span>
+                      {reason.title}
+                    </p>
+                    <p className="text-sm leading-6 text-ink-muted">{reason.problem}</p>
+                    <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
+                      <span className="mr-1 font-semibold text-flow">Verityn:</span>
+                      {reason.response}
+                    </p>
+                  </li>
+                )
+              })}
+            </ol>
           ))}
-        </ol>
+        </div>
       </section>
     </section>
   )
