@@ -1118,6 +1118,8 @@ async function drive() {
   check('compare clears cleanly', !(await ev(`!!document.querySelector('[aria-label="Sample comparison"]')`)))
   await clickButton('Draw a sketch instead')
   await waitFor(() => ev(`!!document.querySelector('canvas[aria-label="Circuit sketch pad"]')`), 'sketch pad', 10000)
+  check('insulated traces on by default', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Insulated traces' && b.getAttribute('aria-pressed') === 'true')`))
+  check('insulated caption shown', await hasText('Insulated Trace Mode active'))
   await ev(`document.querySelector('canvas[aria-label="Circuit sketch pad"]')?.scrollIntoView({ block: 'center' })`)
   await sleep(400)
   const sketchAt = await ev(`(() => { const r = document.querySelector('canvas[aria-label="Circuit sketch pad"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`)
@@ -1127,6 +1129,13 @@ async function drive() {
   }
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sketchAt.x + 60, y: sketchAt.y, button: 'left', clickCount: 1 })
   check('sketch stroke arms export', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Use sketch' && !b.disabled)`))
+  // Second stroke crosses the first: the insulation shield must flash.
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: sketchAt.x, y: sketchAt.y - 60, button: 'left', clickCount: 1 })
+  for (let i = 1; i <= 6; i++) {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: sketchAt.x, y: sketchAt.y - 60 + i * 20 })
+  }
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sketchAt.x, y: sketchAt.y + 60, button: 'left', clickCount: 1 })
+  check('insulated shield flashes on cross', await waitFor(() => ev(`!!document.querySelector('.trace-collision')`), 'shield flash', 10000))
   await captureScreenshot('lens-sketch', 1440, 'canvas[aria-label="Circuit sketch pad"]')
   visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
   await clickButton('Use sketch')
@@ -1275,6 +1284,14 @@ async function drive() {
   await waitFor(() => hasText('Ready to test your circuit.'), 'preset ready')
   check('active preset badge', await hasText('In progress'))
   check('preset prompt shown', await hasText('What carries the current?'))
+  check('execution deck side by side', await ev(`(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Run experiment')
+    const pill = [...document.querySelectorAll('[role="status"]')].find((el) => el.textContent.includes('Ready to test your circuit.'))
+    if (!btn || !pill) return false
+    const a = btn.getBoundingClientRect()
+    const b = pill.getBoundingClientRect()
+    return a.bottom > b.top && a.top < b.bottom
+  })()`))
   check('tool dock floats on canvas', await ev(`!!document.querySelector('.canvas-recessed [aria-label="Part dock"] [aria-label="Palette"]')`))
   check('dock holds four tools', await ev(`[...document.querySelectorAll('[aria-label="Part dock"] [aria-label="Palette"] button')].map((b) => b.textContent.trim()).join(',')`) === 'Battery,Bulb,Switch,Delete')
   check('canvas spans full width', await ev(`(() => { const c = document.querySelector('.canvas-recessed'); return !c.closest('div[class*="grid-cols"]') && c.getBoundingClientRect().width / c.parentElement.getBoundingClientRect().width > 0.95 })()`))
@@ -1351,7 +1368,10 @@ async function drive() {
   await fillInput('battery-B1-volts', '19')
   await clickButton('Apply')
   await waitFor(() => hasText('Circuit changed - run the experiment again.'), 'blow stale')
+  const blowStart = Date.now()
   await clickButton('Run experiment')
+  await waitFor(() => ev(`!!document.querySelector('.bulb-damaged')`), 'blast lands', 25000)
+  check('explosion stages a strain beat', Date.now() - blowStart >= 450)
   await waitFor(() => hasText('Run 7 - Free build'), 'exploded run', 25000)
   check('exploded latched', await hasText('Exploded'))
   check('exploded reads dark', await hasText('0.0 A'))

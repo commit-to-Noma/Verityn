@@ -30,3 +30,6 @@ the Under the hood Smart details section, and the README.
 - Saved Reality Lens segments are tappable with SAM provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
 - Shell nav holds three primary tabs (Under-the-hood lives on the Hub page only) — [shell nav tests](../frontend/src/journey/stages.test.ts), also exercised by the browser smoke.
 - Guided Lab entry stays on the Hub behind a full-screen swoosh, then lands in the lab — browser smoke `lab entry swoosh` checks; `.stage-enter` uses backwards fill so retained transforms never trap fixed overlays.
+- Bay run deck sits side by side (run button + status pill in one execution row) — browser smoke `execution deck side by side`.
+- Fresh explosions strain first: overworked shake paints 600 ms before the blast, skipped under reduced motion — browser smoke `explosion stages a strain beat`.
+- Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch — [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.

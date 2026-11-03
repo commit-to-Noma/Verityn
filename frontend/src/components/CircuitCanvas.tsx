@@ -1465,23 +1465,55 @@ function CanvasInner({
             .filter(([, condition]) => condition === 'overworked')
             .map(([id]) => id),
         )
-        setNodes((current) =>
-          current.map((node) => ({
-            ...node,
-            data: {
-              ...node.data,
-              glow: result.ok && node.data.kind === 'bulb'
-                ? glowIntensity(result.components[node.id]?.power ?? 0)
-                : 0,
-              glowBurst: result.ok && node.data.kind === 'bulb' &&
-                shouldBurstGlow(node.data.glow, result.components[node.id]?.power ?? 0),
-              invalid: offenders.has(node.id),
-              measurement: result.ok ? result.components[node.id] : undefined,
-            condition:
-              mode === 'experiment' && result.ok ? result.conditions[node.id] : undefined,
-            },
-          })),
+        // Bulbs the solver just blew: strain first, destruction after a beat,
+        // so the Time Bomb shakes before it pops instead of flashing.
+        const newlyExploded = new Set(
+          mode === 'experiment' && result.ok
+            ? Object.entries(result.conditions ?? {})
+                .filter(
+                  ([partId, condition]) =>
+                    condition === 'exploded' &&
+                    nodes.some(
+                      (node) => node.id === partId && node.data.condition !== 'exploded',
+                    ),
+                )
+                .map(([partId]) => partId)
+            : [],
         )
+        const applyResultToNodes = (staged: boolean): void => {
+          setNodes((current) =>
+            current.map((node) => ({
+              ...node,
+              data: {
+                ...node.data,
+                glow: result.ok && node.data.kind === 'bulb'
+                  ? glowIntensity(result.components[node.id]?.power ?? 0)
+                  : 0,
+                glowBurst: result.ok && node.data.kind === 'bulb' &&
+                  shouldBurstGlow(node.data.glow, result.components[node.id]?.power ?? 0),
+                invalid: offenders.has(node.id),
+                measurement: result.ok ? result.components[node.id] : undefined,
+                condition:
+                  mode === 'experiment' && result.ok
+                    ? staged && newlyExploded.has(node.id)
+                      ? 'overworked'
+                      : result.conditions[node.id]
+                    : undefined,
+              },
+            })),
+          )
+        }
+        if (newlyExploded.size > 0 && !reducedMotion()) {
+          applyResultToNodes(true)
+          // Paint beat: let the shake render before the blast.
+          await new Promise((resolve) => window.setTimeout(resolve, 600))
+          if (requestId.current !== id) {
+            return
+          }
+          applyResultToNodes(false)
+        } else {
+          applyResultToNodes(false)
+        }
         setEdges((current) =>
           current.map((edge) => {
             const dead = !result.ok
@@ -1515,14 +1547,7 @@ function CanvasInner({
           playZap()
         }
         if (mode === 'experiment' && result.ok) {
-          const blown = Object.entries(result.conditions ?? {}).some(
-            ([partId, condition]) =>
-              condition === 'exploded' &&
-              nodes.some(
-                (node) => node.id === partId && node.data.condition !== 'exploded',
-              ),
-          )
-          if (blown) {
+          if (newlyExploded.size > 0) {
             playPop()
           } else if (
             Object.values(result.components).some(
@@ -2244,6 +2269,61 @@ function CanvasInner({
       </div>
     </>
   )
+  const runButton = (
+    <button
+      type="button"
+      disabled={runState.phase === 'loading' || simulateLocked !== null}
+      onClick={runUser}
+      title={simulateLocked ?? undefined}
+      className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {runState.phase === 'loading' ? (
+        <>
+          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+          Simulating…
+        </>
+      ) : mode === 'experiment' ? (
+        'Run experiment'
+      ) : loopClosed ? (
+        'Test again'
+      ) : (
+        'Test circuit'
+      )}
+    </button>
+  )
+  const demoUndoButton = demoUndo !== null && (
+    <button
+      type="button"
+      onClick={handleDemoUndo}
+      title="Restores the pre-demonstration circuit and re-runs the solver."
+      className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+    >
+      Undo demonstration
+    </button>
+  )
+  const showStatus =
+    runState.phase === 'idle' &&
+    !(challenge !== undefined && nextBuildStep !== null) &&
+    importRequest == null
+  const statusBlock = showStatus && (
+    <div
+      className={`flow-status ${loopClosed ? 'flow-status-ready' : ''} ${mode === 'experiment' ? 'min-w-60 flex-1' : ''}`}
+      role="status"
+    >
+      <span className="flow-status-dot" aria-hidden="true" />
+      <span>
+        {nodes.length === 0
+          ? 'Drag a battery into the workspace to begin.'
+          : mode === 'experiment'
+            ? ranOnceRef.current
+              ? 'Circuit changed  -  run the experiment again.'
+              : 'Ready to test your circuit.'
+            : loopClosed
+              ? 'Loop closed  -  checking your circuit…'
+              : 'Connect the loose dots to complete the loop.'}
+      </span>
+    </div>
+  )
   const actionPane = (
     <>
       {simulateLocked !== null && (
@@ -2251,64 +2331,27 @@ function CanvasInner({
           {simulateLocked}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={runState.phase === 'loading' || simulateLocked !== null}
-          onClick={runUser}
-          title={simulateLocked ?? undefined}
-          className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {runState.phase === 'loading' ? (
-            <>
-              <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-              Simulating…
-            </>
-          ) : mode === 'experiment' ? (
-            'Run experiment'
-          ) : loopClosed ? (
-            'Test again'
-          ) : (
-            'Test circuit'
-          )}
-        </button>
-        {mode !== 'experiment' && (
-          <button
-            type="button"
-            onClick={clear}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Clear
-          </button>
-        )}
-        {demoUndo !== null && (
-          <button
-            type="button"
-            onClick={handleDemoUndo}
-            title="Restores the pre-demonstration circuit and re-runs the solver."
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Undo demonstration
-          </button>
-        )}
-      </div>
-      {runState.phase === 'idle' &&
-        !(challenge !== undefined && nextBuildStep !== null) &&
-        importRequest == null && (
-        <div className={`flow-status ${loopClosed ? 'flow-status-ready' : ''}`} role="status">
-          <span className="flow-status-dot" aria-hidden="true" />
-          <span>
-            {nodes.length === 0
-              ? 'Drag a battery into the workspace to begin.'
-              : mode === 'experiment'
-                ? ranOnceRef.current
-                  ? 'Circuit changed  -  run the experiment again.'
-                  : 'Ready to test your circuit.'
-                : loopClosed
-                  ? 'Loop closed  -  checking your circuit…'
-                  : 'Connect the loose dots to complete the loop.'}
-          </span>
+      {mode === 'experiment' ? (
+        <div className="flex flex-wrap items-center gap-3" aria-label="Execution deck">
+          {runButton}
+          {demoUndoButton}
+          {statusBlock}
         </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {runButton}
+            <button
+              type="button"
+              onClick={clear}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Clear
+            </button>
+            {demoUndoButton}
+          </div>
+          {statusBlock}
+        </>
       )}
     </>
   )

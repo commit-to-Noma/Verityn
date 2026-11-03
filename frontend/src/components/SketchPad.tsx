@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ImageGeometry } from '../canvas/layout'
-import { acceptPointer, sketchExportSize, sketchReducer, type SketchStroke } from '../sketch/strokes'
+import {
+  acceptPointer,
+  sketchExportSize,
+  sketchReducer,
+  splitStrokeByOverlap,
+  type SketchPoint,
+  type SketchStroke,
+} from '../sketch/strokes'
 
 const INK = '#0f172a'
 const PAPER = '#ffffff'
@@ -48,7 +55,40 @@ export default function SketchPad({
   const [strokes, setStrokes] = useState<SketchStroke[]>([])
   const [erase, setErase] = useState(false)
   const [penOnly, setPenOnly] = useState(false)
+  const [insulated, setInsulated] = useState(true)
+  const [collisions, setCollisions] = useState<(SketchPoint & { id: number })[]>([])
+  const flashId = useRef(0)
   const active = useRef<SketchStroke | null>(null)
+  const strokesRef = useRef<SketchStroke[]>([])
+  strokesRef.current = strokes
+  const batchRef = useRef(1)
+  const flashTimer = useRef<number | null>(null)
+
+  useEffect(
+    () => () => {
+      if (flashTimer.current !== null) {
+        window.clearTimeout(flashTimer.current)
+      }
+    },
+    [],
+  )
+
+  const flashCollisions = (points: SketchPoint[]): void => {
+    if (points.length === 0) {
+      return
+    }
+    // Cap the markers: a long graze flashes a trail, not a thousand dots.
+    setCollisions(
+      points.slice(0, 24).map((spot) => {
+        flashId.current += 1
+        return { ...spot, id: flashId.current }
+      }),
+    )
+    if (flashTimer.current !== null) {
+      window.clearTimeout(flashTimer.current)
+    }
+    flashTimer.current = window.setTimeout(() => setCollisions([]), 900)
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -77,7 +117,50 @@ export default function SketchPad({
       return
     }
     stroke.points.push(point(event))
-    paint(ctx, [...strokes, stroke])
+    paint(ctx, [...strokesRef.current, stroke])
+    if (insulated && !stroke.erase && strokesRef.current.length > 0) {
+      const { collisions: hits } = splitStrokeByOverlap(
+        strokesRef.current,
+        { points: stroke.points.slice(-1), erase: false },
+      )
+      if (hits.length > 0) {
+        flashCollisions(hits)
+      }
+    }
+  }
+
+  const commitStroke = (): void => {
+    const stroke = active.current
+    if (stroke === null) {
+      return
+    }
+    if (insulated && !stroke.erase && strokesRef.current.length > 0) {
+      const { segments, collisions: hits } = splitStrokeByOverlap(strokesRef.current, stroke)
+      batchRef.current = Math.max(1, segments.length)
+      setStrokes((current) =>
+        sketchReducer(
+          current,
+          { type: 'strokes', strokes: segments.map((points) => ({ points, erase: false })) },
+        ),
+      )
+      flashCollisions(hits)
+    } else {
+      batchRef.current = 1
+      setStrokes((current) => sketchReducer(current, { type: 'stroke', stroke }))
+    }
+    active.current = null
+  }
+
+  const undoBatch = (): void => {
+    const steps = batchRef.current
+    batchRef.current = 1
+    setStrokes((current) => {
+      let out = current
+      for (let step = 0; step < steps; step += 1) {
+        out = sketchReducer(out, { type: 'undo' })
+      }
+      return out
+    })
   }
 
   const exportSketch = (): void => {
@@ -104,6 +187,7 @@ export default function SketchPad({
       <p className="text-ink-muted text-sm">
         Draw a battery, switch, bulb and wires. Label values if you can.
       </p>
+      <div className="relative">
       <canvas
         ref={canvasRef}
         role="img"
@@ -127,14 +211,21 @@ export default function SketchPad({
         onPointerUp={(event) => {
           if (active.current !== null) {
             drawTo(event)
-            setStrokes((current) => sketchReducer(current, { type: 'stroke', stroke: active.current ?? { points: [], erase } }))
-            active.current = null
+            commitStroke()
           }
         }}
         onPointerCancel={() => {
           active.current = null
         }}
       />
+      {collisions.length > 0 && (
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          {collisions.map((spot) => (
+            <span key={spot.id} className="trace-collision" style={{ left: spot.x, top: spot.y }} />
+          ))}
+        </div>
+      )}
+      </div>
       <div className="flex flex-wrap items-center gap-3" role="toolbar" aria-label="Sketch tools">
         <button
           type="button"
@@ -154,7 +245,7 @@ export default function SketchPad({
         </button>
         <button
           type="button"
-          onClick={() => setStrokes((current) => sketchReducer(current, { type: 'undo' }))}
+          onClick={undoBatch}
           disabled={strokes.length === 0}
           className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:opacity-40"
         >
@@ -162,11 +253,23 @@ export default function SketchPad({
         </button>
         <button
           type="button"
-          onClick={() => setStrokes((current) => sketchReducer(current, { type: 'clear' }))}
+          onClick={() => {
+            batchRef.current = 1
+            setStrokes((current) => sketchReducer(current, { type: 'clear' }))
+          }}
           disabled={strokes.length === 0}
           className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:opacity-40"
         >
           Clear
+        </button>
+        <button
+          type="button"
+          onClick={() => setInsulated((current) => !current)}
+          aria-pressed={insulated}
+          title="Fresh ink within 8 px of existing ink is trimmed to prevent dead-shorts."
+          className={`min-h-[44px] rounded-[10px] border px-4 text-sm font-medium ${insulated ? 'bg-flow text-on-accent border-transparent' : 'border-glass-border'}`}
+        >
+          Insulated traces
         </button>
         <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm">
           <input
@@ -178,6 +281,12 @@ export default function SketchPad({
           Pen only
         </label>
       </div>
+      {insulated && (
+        <p className="text-ink-muted text-xs" role="note">
+          <span aria-hidden="true">⚡ </span>Insulated Trace Mode active: wires drawn within 8 px
+          of existing ink automatically clear the overlapping segment to prevent dead-shorts.
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
