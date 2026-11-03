@@ -36,7 +36,7 @@ function paint(ctx: CanvasRenderingContext2D, strokes: SketchStroke[]): void {
   ctx.restore()
 }
 
-/** Flagged trial: draw a circuit by hand, export it into the vision flow. */
+/** Draw a circuit by hand, export it into the vision flow. */
 export default function SketchPad({
   onExport,
   onCancel,

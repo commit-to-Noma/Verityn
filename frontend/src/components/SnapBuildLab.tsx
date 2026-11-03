@@ -9,6 +9,7 @@ import { glowIntensity } from '../canvas/visuals'
 import { LIT_POWER_W, type LessonSeed } from '../lessons/lesson'
 import type { LensSample } from '../lens/samples'
 import { LENS_SAMPLES, sampleLevel } from '../lens/samples'
+import { toggleCompare } from '../lens/compare'
 import { showTriptych } from '../lens/triptych'
 import {
   DEFAULT_LENS_VIEW,
@@ -32,6 +33,7 @@ import {
 } from '../vision/review'
 import { useProofMode } from '../proof/store'
 import { LENS_ACCEPT, firstLensFile, validateLensFile } from '../vision/upload'
+import { rotateImageQuarterTurn } from '../vision/straighten'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
 import HealthStatus from './HealthStatus'
@@ -140,6 +142,7 @@ function ReviewPanels({
   onConfirm,
   onTested,
   onReset,
+  onRotate,
   onTryExperiment,
 }: {
   image: string
@@ -151,6 +154,7 @@ function ReviewPanels({
   onConfirm: () => void
   onTested: (result: SimulateResult) => void
   onReset: () => void
+  onRotate: () => void
   onTryExperiment?: (seed: LessonSeed, label: string) => void
 }) {
   const proposal = result.proposal
@@ -391,19 +395,32 @@ function ReviewPanels({
           <div className="glass-panel flex flex-col gap-3 p-4">
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-base font-semibold">Original diagram</h4>
-              {showModel && (
+              <div className="ml-auto flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  aria-pressed={focusPhoto}
                   onClick={() => {
                     interrupt()
-                    setFocusPhoto((current) => !current)
+                    onRotate()
                   }}
-                  className="border-glass-border ml-auto min-h-[36px] rounded-[10px] border px-3 text-xs font-medium"
+                  title="Rotates the photo 90° clockwise and asks Spark to re-read it (another vision call)."
+                  className="border-glass-border min-h-[36px] rounded-[10px] border px-3 text-xs font-medium"
                 >
-                  {focusPhoto ? 'Show replica' : 'Focus photo'}
+                  Rotate and re-read
                 </button>
-              )}
+                {showModel && (
+                  <button
+                    type="button"
+                    aria-pressed={focusPhoto}
+                    onClick={() => {
+                      interrupt()
+                      setFocusPhoto((current) => !current)
+                    }}
+                    className="border-glass-border min-h-[36px] rounded-[10px] border px-3 text-xs font-medium"
+                  >
+                    {focusPhoto ? 'Show replica' : 'Focus photo'}
+                  </button>
+                )}
+              </div>
             </div>
             <div className="relative self-start">
               <img src={image} alt="Uploaded schematic" className="max-h-80 rounded-[10px]" />
@@ -720,7 +737,8 @@ export default function SnapBuildLab({
   const reviewRef = useRef<HTMLDivElement | null>(null)
   const nonce = useRef(0)
   const [sketching, setSketching] = useState(false)
-  const sketchTrial = new URLSearchParams(window.location.search).has('sketch')
+  const [comparing, setComparing] = useState(false)
+  const [compareIds, setCompareIds] = useState<string[]>([])
 
   useEffect(() => () => controller.current?.abort(), [])
 
@@ -814,29 +832,67 @@ export default function SnapBuildLab({
     setState({ phase: 'idle' })
   }
 
+  /** Sideways photo: rotate the pixels a quarter turn and ask Spark to re-read. */
+  const rotateAndReread = (image: string, size: ImageGeometry) => {
+    void rotateImageQuarterTurn(image, size).then(
+      (rotated) => interpret(rotated.image, rotated.size),
+      () =>
+        setState({
+          phase: 'error',
+          message: 'Could not rotate that image.',
+          image,
+          size,
+          reason: 'file',
+        }),
+    )
+  }
+
   const steps = lensSteps(state.phase === 'proposed', confirmed, tested)
 
-  const sampleCards = LENS_SAMPLES.map((sample) => (
-    <button
-      key={sample.id}
-      type="button"
-      onClick={() => setLensSample(sample)}
-      className="glass-panel group relative flex min-w-56 flex-col overflow-hidden text-left sm:min-w-0"
-    >
-      <img
-        src={sample.image}
-        alt=""
-        className="h-28 w-full object-cover"
-      />
-      <span className="absolute top-2 right-2 rounded-full border border-glass-border bg-black/60 px-2 py-0.5 text-[11px] font-medium text-ink backdrop-blur-sm">
-        {sampleLevel(sample.id)}
-      </span>
-      <span className="flex flex-col gap-1 p-3">
-        <span className="text-sm font-medium">{sample.title}</span>
-        <span className="text-ink-muted text-xs">Open Reality Lens →</span>
-      </span>
-    </button>
-  ))
+  const compareSamples = compareIds
+    .map((id) => LENS_SAMPLES.find((sample) => sample.id === id))
+    .filter((sample): sample is LensSample => sample !== undefined)
+
+  const sampleCards = LENS_SAMPLES.map((sample) => {
+    const picked = compareIds.includes(sample.id)
+    return (
+      <button
+        key={sample.id}
+        type="button"
+        aria-pressed={comparing ? picked : undefined}
+        onClick={() => {
+          if (comparing) {
+            setCompareIds((current) => toggleCompare(current, sample.id))
+          } else {
+            setLensSample(sample)
+          }
+        }}
+        className={`glass-panel group relative flex min-w-56 flex-col overflow-hidden text-left sm:min-w-0 ${
+          comparing && picked ? 'border-flow ring-2 ring-flow/60' : ''
+        }`}
+      >
+        <img
+          src={sample.image}
+          alt=""
+          className="h-28 w-full object-cover"
+        />
+        <span className="absolute top-2 right-2 rounded-full border border-glass-border bg-black/60 px-2 py-0.5 text-[11px] font-medium text-ink backdrop-blur-sm">
+          {sampleLevel(sample.id)}
+        </span>
+        {comparing && picked && (
+          <span className="bg-flow text-on-accent absolute top-2 left-2 rounded-full px-2 py-0.5 text-[11px] font-semibold">
+            Picked {compareIds.indexOf(sample.id) + 1}
+          </span>
+        )}
+        <span className="flex flex-col gap-1 p-3">
+          <span className="text-sm font-medium">{sample.title}</span>
+          <span className="text-ink-muted text-xs">
+            {comparing ? 'Tap to compare' : 'Open Reality Lens →'}
+          </span>
+        </span>
+      </button>
+    )
+  })
 
   return (
     <section
@@ -898,16 +954,7 @@ export default function SnapBuildLab({
         </ol>
       </div>
       <div className="flex flex-col gap-3">
-        {sketchTrial && !sketching && state.phase === 'idle' && (
-          <button
-            type="button"
-            onClick={() => setSketching(true)}
-            className="border-glass-border min-h-[44px] self-start rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Draw a sketch instead (trial)
-          </button>
-        )}
-        {sketchTrial && sketching && state.phase === 'idle' && (
+        {sketching && state.phase === 'idle' && (
           <SketchPad
             onExport={(image, size) => {
               setSketching(false)
@@ -916,7 +963,7 @@ export default function SnapBuildLab({
             onCancel={() => setSketching(false)}
           />
         )}
-        {!(sketchTrial && sketching && state.phase === 'idle') && state.phase === 'idle' && (
+        {!sketching && state.phase === 'idle' && (
         <div
           aria-label="Diagram drop zone"
           onDragOver={(event) => {
@@ -969,13 +1016,20 @@ export default function SnapBuildLab({
                 }}
               />
             </label>
+            <button
+              type="button"
+              onClick={() => setSketching(true)}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Draw a sketch instead
+            </button>
           </div>
           <div className="mt-1 flex justify-center">
             <HealthStatus compact />
           </div>
         </div>
         )}
-        {!(sketchTrial && sketching && state.phase === 'idle') && state.phase !== 'idle' && (
+        {state.phase !== 'idle' && (
         <div
           aria-label="Diagram drop zone"
           onDragOver={(event) => {
@@ -1131,6 +1185,7 @@ export default function SnapBuildLab({
                 setLensResult(result)
               }}
               onReset={reset}
+              onRotate={() => rotateAndReread(state.image, state.size)}
               onTryExperiment={onTryExperiment}
             />
           </div>
@@ -1183,19 +1238,69 @@ export default function SnapBuildLab({
               Rehearse the full loop on a curated circuit — review, confirm, measure. No upload needed.
             </p>
           </div>
-          <div
-            className="text-ink-muted flex items-center gap-3 text-xs"
-            aria-label={`${LENS_SAMPLES.length} samples across Starter and Challenge levels`}
-          >
-            <span aria-hidden="true">{LENS_SAMPLES.length} diagrams</span>
-            <span className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="bg-ok h-1.5 w-1.5 rounded-full" /> Starter
-            </span>
-            <span className="flex items-center gap-1.5" aria-hidden="true">
-              <span className="bg-flow h-1.5 w-1.5 rounded-full" /> Challenge
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              className="text-ink-muted flex items-center gap-3 text-xs"
+              aria-label={`${LENS_SAMPLES.length} samples across Starter and Challenge levels`}
+            >
+              <span aria-hidden="true">{LENS_SAMPLES.length} diagrams</span>
+              <span className="flex items-center gap-1.5" aria-hidden="true">
+                <span className="bg-ok h-1.5 w-1.5 rounded-full" /> Starter
+              </span>
+              <span className="flex items-center gap-1.5" aria-hidden="true">
+                <span className="bg-flow h-1.5 w-1.5 rounded-full" /> Challenge
+              </span>
+            </div>
+            <button
+              type="button"
+              aria-pressed={comparing}
+              onClick={() => {
+                setComparing((current) => !current)
+                setCompareIds([])
+              }}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              {comparing ? 'Done comparing' : 'Compare two'}
+            </button>
           </div>
         </div>
+        {comparing && (
+          <p className="text-ink-muted text-sm" role="status">
+            {compareSamples.length === 0
+              ? 'Pick two diagrams to set them side by side.'
+              : compareSamples.length === 1
+                ? `One picked — ${compareSamples[0]?.title}. Pick one more.`
+                : 'Two picked — study the pair, or open either one.'}
+          </p>
+        )}
+        {comparing && compareSamples.length === 2 && (
+          <div aria-label="Sample comparison" className="grid gap-3 sm:grid-cols-2">
+            {compareSamples.map((sample) => (
+              <div key={sample.id} className="glass-panel flex flex-col gap-2 p-4">
+                <img
+                  src={sample.image}
+                  alt={`${sample.title} schematic diagram`}
+                  className="h-40 w-full rounded-[10px] object-cover"
+                />
+                <p className="text-sm font-medium">
+                  {sample.title} · {sampleLevel(sample.id)}
+                </p>
+                <p className="text-ink-muted text-sm">{sample.question}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setComparing(false)
+                    setCompareIds([])
+                    setLensSample(sample)
+                  }}
+                  className="border-glass-border min-h-[44px] self-start rounded-[10px] border px-4 text-sm font-medium"
+                >
+                  Open {sample.title}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
           {sampleCards}
         </div>

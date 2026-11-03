@@ -1075,6 +1075,34 @@ async function drive() {
   check('invalid shows solver label', await hasText("Computed by Verityn's solver."))
   await clickButton('Try another image')
   await waitFor(() => hasText('Choose an image'), 'lens reset invalid')
+  // Compare two samples side by side, then sketch a diagram by hand.
+  await clickButton('Compare two')
+  await waitFor(() => hasText('Pick two diagrams'), 'compare mode', 10000)
+  await ev(`[...document.querySelectorAll('#lens-samples button')].find((b) => b.textContent.includes('Textbook loop'))?.click()`)
+  await ev(`[...document.querySelectorAll('#lens-samples button')].find((b) => b.textContent.includes('Open switch loop'))?.click()`)
+  await waitFor(() => ev(`!!document.querySelector('[aria-label="Sample comparison"]')`), 'compare panel', 10000)
+  check('compare panel pairs samples', await ev(`document.querySelector('[aria-label="Sample comparison"]')?.innerText.includes('Textbook loop') && document.querySelector('[aria-label="Sample comparison"]')?.innerText.includes('Open switch loop')`))
+  await captureScreenshot('lens-compare', 1440, '[aria-label="Sample comparison"]')
+  await clickButton('Done comparing')
+  check('compare clears cleanly', !(await ev(`!!document.querySelector('[aria-label="Sample comparison"]')`)))
+  await clickButton('Draw a sketch instead')
+  await waitFor(() => ev(`!!document.querySelector('canvas[aria-label="Circuit sketch pad"]')`), 'sketch pad', 10000)
+  await ev(`document.querySelector('canvas[aria-label="Circuit sketch pad"]')?.scrollIntoView({ block: 'center' })`)
+  await sleep(400)
+  const sketchAt = await ev(`(() => { const r = document.querySelector('canvas[aria-label="Circuit sketch pad"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`)
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: sketchAt.x - 60, y: sketchAt.y, button: 'left', clickCount: 1 })
+  for (let i = 1; i <= 6; i++) {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: sketchAt.x - 60 + i * 20, y: sketchAt.y })
+  }
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: sketchAt.x + 60, y: sketchAt.y, button: 'left', clickCount: 1 })
+  check('sketch stroke arms export', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Use sketch' && !b.disabled)`))
+  await captureScreenshot('lens-sketch', 1440, 'canvas[aria-label="Circuit sketch pad"]')
+  visionStubs.push(JSON.stringify({ proposal: switchFixture.proposal, assumptions: [], provider: 'fixture-stub' }))
+  await clickButton('Use sketch')
+  await waitFor(() => hasText('Original diagram'), 'sketch review', 20000)
+  check('sketch enters vision flow', await ev(`!!document.querySelector('img[alt="Uploaded schematic"]')`))
+  await clickButton('Try another image')
+  await waitFor(() => hasText('Choose an image'), 'lens reset sketch')
   visionStubs.push(JSON.stringify({
     proposal: {
       status: 'needs_review',
@@ -1104,6 +1132,17 @@ async function drive() {
   check('ambiguous wire dashed', await ev(`document.querySelector('svg[aria-label="Traced wires"] polyline[data-region="r-w3"]')?.getAttribute('stroke-dasharray') === '5 3'`))
   check('traced summary', await hasText('Wire routes are traced on your photo'))
   await captureScreenshot('lens-traced-wires', 1440, 'svg[aria-label="Traced wires"]')
+  visionStubs.push(JSON.stringify({
+    proposal: { status: 'unsupported', components: [], connections: [] },
+    assumptions: [],
+    provider: 'fixture-stub',
+  }))
+  await captureScreenshot('lens-rotate', 1440, 'button[title^="Rotates the photo"]')
+  await clickButton('Rotate and re-read')
+  await waitFor(() => ev(`document.querySelector('img[alt="Uploaded schematic"]')?.src.startsWith('data:image/png') ?? false`), 'rotated pixels', 20000)
+  check('rotate swaps the photo', await ev(`document.querySelector('img[alt="Uploaded schematic"]')?.src.startsWith('data:image/png') ?? false`))
+  await waitFor(() => hasText('does not look like a supported circuit'), 'rotated re-read', 20000)
+  check('rotate re-asks vision', await hasText('does not look like a supported circuit'))
   await clickButton('Try another image')
   await waitFor(() => hasText('Choose an image'), 'lens reset traced')
   check('lazy lab chunk loaded', lazyChunks.size > 0, [...lazyChunks].join(', '))
