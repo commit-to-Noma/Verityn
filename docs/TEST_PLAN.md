@@ -465,6 +465,15 @@ Phase 6 result acceptance (all in the real browser unless noted):
   dead backend yields a stop note, never a zombie lock — with
   a 30 s run watchdog (browser: lock, cancel, short refusal;
   probes: rage-click, dead-backend sweep).
+- Missions live in a slide-out Mission Log drawer (closed by
+  default, Escape closes); sweeps run cinema-paced (short
+  sweeps take at least 5 s) under an analog gauge with
+  amber/red zones, and finished sweeps offer a replay slider
+  whose re-runs are real logged runs; voltage edits never
+  clear the explosion latch; a dead backend shows an honest
+  local ask notice instead of a fake explanation (browser:
+  drawer, gauge, replay scrub and re-run; probe: dead-backend
+  ask notice).
 - Explanations unlock for fresh runs only; the server adds
   limits, battery count/total, conditions, and volts to the
   grounded facts (unit: spy payload, fake overwork/exploded

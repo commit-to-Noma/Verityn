@@ -1228,7 +1228,10 @@ async function drive() {
   check('run comparison shown', await hasText('Compared with run 1'))
   check('mission threshold', await missionDone('threshold'))
   check('mission gap finder', await missionDone('gap-finder'))
+  await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.includes('Mission Log'))?.click()`)
+  check('mission drawer opens', await waitFor(() => ev(`document.getElementById('mission-drawer')?.getAttribute('aria-hidden') === 'false'`), 'mission drawer', 10000))
   await captureScreenshot('bay-missions', 1440, '[aria-label="Missions"]')
+  await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Close' && b.getAttribute('aria-label') === 'Close mission log')?.click()`)
   await ev(`document.querySelector('[data-run="2"]')?.click()`)
   await waitFor(() => hasText('Run 2 — Free build'), 'run detail', 10000)
   check('run detail shows params', await hasText('Light 1: 0.0 V'))
@@ -1296,7 +1299,19 @@ async function drive() {
   check('rig table states', await ev(`[...document.querySelectorAll('section[aria-label="Stress Test Rig"] tbody tr')].map((tr) => tr.lastElementChild.textContent).join(',')`) === 'Dark,Lit,Lit,Lit')
   check('mission full spectrum', await missionDone('full-spectrum'))
   check('rig amber accent', await ev(`!!document.querySelector('section[aria-label="Stress Test Rig"] .bg-light')`))
+  check('sweep gauge lands on last point', await ev(`document.querySelector('section[aria-label="Stress Test Rig"] [data-volts]')?.getAttribute('data-volts') === '8'`))
   await captureScreenshot('rig-after-sweep', 1440, '[aria-label="Stress Test Rig"]')
+  await ev(`(() => {
+    const el = document.querySelector('input[aria-label="Replay sweep point"]');
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set;
+    setter.call(el, '2');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`)
+  await waitFor(() => hasText('Point 3 of 4: 6 V'), 'replay scrub', 10000)
+  await clickButton('Re-run this point')
+  await waitFor(() => hasText('Run 13 - Rig B1 6 V replay'), 'replay run', 25000)
+  check('replay run logged', await hasText('Run 13 - Rig B1 6 V replay'))
   await fillInput('rig-start-volts', '0.1')
   await fillInput('rig-end-volts', '24')
   await fillInput('rig-step-volts', '1')
