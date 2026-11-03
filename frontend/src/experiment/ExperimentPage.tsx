@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
-import { ClipboardList, Sparkles, Volume2, VolumeX } from 'lucide-react'
+import { ClipboardList, Sparkles } from 'lucide-react'
 import {
   ApiError,
   explainResult,
@@ -12,7 +12,7 @@ import type { LessonSeed } from '../lessons/lesson'
 import { latchedDamage, validateBatteryVolts } from './bench'
 import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
-import { isSoundEnabled, setSoundEnabled } from './sound'
+import { friendlyComponentName } from '../components/componentNames'
 
 const CircuitCanvas = lazy(() => import('../components/CircuitCanvas'))
 
@@ -60,7 +60,7 @@ function BatteryRow({
   return (
     <div className="flex flex-wrap items-end gap-2">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium">{id}</span>
+        <span className="font-medium">{friendlyComponentName(id)}</span>
         <span className="flex items-center gap-1">
           <input
             id={`battery-${id}-volts`}
@@ -72,7 +72,7 @@ function BatteryRow({
               }
             }}
             inputMode="decimal"
-            aria-label={`Battery ${id} voltage in volts`}
+            aria-label={`${friendlyComponentName(id)} voltage in volts`}
             aria-invalid={error !== null}
             className="border-glass-border min-h-[44px] w-24 rounded-[10px] border bg-transparent px-3 text-sm"
           />
@@ -154,7 +154,7 @@ function LatestResult({
             return (
               <li key={bulb.id} className="flex flex-col gap-1">
                 <p className="text-sm font-medium">
-                  {bulb.id}
+                  {friendlyComponentName(bulb.id)}
                   {condition !== undefined && (
                     <span className={CONDITION_CLASS[condition]}>  -  {CONDITION_LABEL[condition]}</span>
                   )}
@@ -224,29 +224,6 @@ function DiagnosticsCard({
         ))}
       </ul>
     </div>
-  )
-}
-
-/** Free bench: build anything, run the solver, keep a session history.
- * No prediction gate, no ladder, no shared state with the guided lab. */
-function SoundToggle() {
-  const [on, setOn] = useState(isSoundEnabled)
-  const Icon = on ? Volume2 : VolumeX
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      aria-label={on ? 'Mute bench sounds' : 'Unmute bench sounds'}
-      onClick={() => {
-        const next = !on
-        setOn(next)
-        setSoundEnabled(next)
-      }}
-      className="border-glass-border flex min-h-[44px] shrink-0 items-center gap-2 rounded-[10px] border px-3 text-sm font-medium"
-    >
-      <Icon className="h-4 w-4" aria-hidden="true" />
-      {on ? 'Sound on' : 'Muted'}
-    </button>
   )
 }
 
@@ -369,24 +346,9 @@ export default function ExperimentPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <section aria-labelledby="experiment-heading" className="flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Experiment</p>
-            <h2 id="experiment-heading" className="text-xl font-semibold">
-              Build something. Test what happens.
-            </h2>
-          </div>
-          <SoundToggle />
-        </div>
-        <p className="text-ink-muted text-sm">
-          Experiment freely with batteries, switches, bulbs, and wires. The simulator calculates
-          the result after every test.
-        </p>
-        {bench.label !== 'Free build' && (
-          <p className="text-flow text-sm" role="status">Loaded circuit: {bench.label}</p>
-        )}
-      </section>
+      {bench.label !== 'Free build' && (
+        <p className="text-flow text-sm" role="status">Loaded circuit: {bench.label}</p>
+      )}
 
       <section aria-label="Starter experiments" className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Start from a working bench</h3>

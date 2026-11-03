@@ -83,7 +83,7 @@ describe('diagnoseRun', () => {
 
   it('names the overloaded bulb with its measured numbers', () => {
     expect(diagnoseRun(overloaded(), LOOP, null)).toEqual([
-      'L1 took 14.4 W against a 6.0 W safe limit (6.0 V, 1.2 A). ' +
+      'Light 1 took 14.4 W against a 6.0 W safe limit (6.0 V, 1.2 A). ' +
         'Lower a battery voltage or add another bulb to share the load.',
     ])
   })
@@ -96,7 +96,7 @@ describe('diagnoseRun', () => {
     } as unknown as SimulateResult
     const before = describeRun(5, 'Overload the bulb', overloaded(), LOOP)
     expect(diagnoseRun(damaged, LOOP, before)).toEqual([
-      'L1 is damaged and passes no current. Run 5 pushed it to 14.4 W. Reset the bench to restore it.',
+      'Light 1 is damaged and passes no current. Run 5 pushed it to 14.4 W. Reset the bench to restore it.',
     ])
   })
 
@@ -107,7 +107,7 @@ describe('diagnoseRun', () => {
       ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
     } as unknown as SimulateResult
     expect(diagnoseRun(damaged, LOOP, null)).toEqual([
-      'L1 is damaged and passes no current. It blew past its 6.0 W limit. Reset the bench to restore it.',
+      'Light 1 is damaged and passes no current. It blew past its 6.0 W limit. Reset the bench to restore it.',
     ])
   })
 })
@@ -136,7 +136,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(overloaded)).toBe(
-      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  L1 overloaded',
+      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  Light 1 overloaded',
     )
     const damaged = describeRun(
       3,
@@ -145,7 +145,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(damaged)).toBe(
-      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  L1 damaged',
+      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  Light 1 damaged',
     )
   })
 })
@@ -191,7 +191,7 @@ describe('compareRuns', () => {
     )
     expect(compareRuns(prev, curr)).toBe(
       'Compared with run 1: more current (0.6 A → 1.2 A), ' +
-        'L1 power 3.6 W → 14.4 W (4.0×).',
+        'Light 1 power 3.6 W → 14.4 W (4.0×).',
     )
   })
 

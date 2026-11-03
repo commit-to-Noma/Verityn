@@ -58,8 +58,18 @@ def test_explain_lit_loop_uses_solver_numbers(client):
     assert body["valid"] is True
     assert body["error_code"] is None
     assert body["provider"] == "prototype-fake"
-    assert "L1 lit: 0.6 A and 3.6 W" in body["text"]
-    assert "S1" in body["text"]
+    assert "Light 1 lit: 0.6 A and 3.6 W" in body["text"]
+    assert "Switch 1" in body["text"]
+    assert "L1" not in body["text"]
+    assert "S1" not in body["text"]
+
+
+def test_friendly_name_translates_canvas_ids():
+    assert fake_coach.friendly_name("B1") == "Battery 1"
+    assert fake_coach.friendly_name("L2") == "Light 2"
+    assert fake_coach.friendly_name("S1") == "Switch 1"
+    assert fake_coach.friendly_name("mystery") == "mystery"
+    assert fake_coach.friendly_name("X9") == "X9"
 
 
 def test_explain_dark_loop_reports_zero_reading(client):
@@ -327,14 +337,14 @@ def test_explain_rejected_passes_empty_conditions():
 def test_explain_fake_overload_cites_measured_watts_and_limit():
     text = coach.explain_result(
         OVERLOAD_LOOP, fake_coach.FakeCoachProvider())["text"]
-    assert "L1 drew 14.4 W, past its 6.0 W safe limit" in text
+    assert "Light 1 drew 14.4 W, past its 6.0 W safe limit" in text
     assert "overloaded" in text
 
 
 def test_explain_fake_damaged_names_the_open_bulb():
     text = coach.explain_result(
         DAMAGED_LOOP, fake_coach.FakeCoachProvider())["text"]
-    assert "L1 is damaged and no longer completes the circuit" in text
+    assert "Light 1 is damaged and no longer completes the circuit" in text
     assert "0.0 A and 0.0 W" in text
 
 

@@ -13,6 +13,7 @@ const CANVAS_FALLBACK = <p className="text-ink-muted text-sm">Preparing the work
 import type { ChapterRecap } from './journey/story'
 import JourneyShell from './components/JourneyShell'
 import HealthStatus from './components/HealthStatus'
+import SoundToggle from './experiment/SoundToggle'
 import LabIntro from './components/LabIntro'
 import LensShowcase from './components/LensShowcase'
 import PredictionScreen, { type PredictionDemo } from './components/PredictionScreen'
@@ -968,15 +969,21 @@ export default function App() {
       <JourneyShell stage="intro" auto={false} tools={developerTools} location="experiment" onNavigate={handleNavigate} wide>
         <div className="flex flex-col gap-6">
           <section aria-labelledby="experiment-page-heading" className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
-                Free bench
-              </p>
-              <h1 id="experiment-page-heading" className="text-3xl font-semibold tracking-tight">
-                Experiment Bay
-              </h1>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="flex max-w-2xl flex-col gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-flow">
+                  Experiment Bay · Free bench
+                </p>
+                <h1 id="experiment-page-heading" className="text-3xl font-semibold tracking-tight">
+                  Build something. Test what happens.
+                </h1>
+                <p className="text-ink-muted text-sm">
+                  Wire anything, run the simulator, and compare runs. Nothing here is graded.
+                </p>
+              </div>
               <div className="flex items-center gap-2">
                 <HealthStatus compact />
+                <SoundToggle />
               </div>
             </div>
             <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>

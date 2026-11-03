@@ -14,6 +14,7 @@ fallback path.
 """
 
 import math
+import re
 
 from verityn.coach import CoachProviderError
 
@@ -108,6 +109,23 @@ def _finite(value):
     return isinstance(value, (int, float)) and math.isfinite(value)
 
 
+_KIND_WORDS = {"b": "Battery", "battery": "Battery", "l": "Light",
+               "bulb": "Light", "s": "Switch", "switch": "Switch"}
+
+
+def friendly_name(component_id):
+    """Canvas id to plain words ("L1" -> "Light 1"); unknown shapes pass through."""
+    if not isinstance(component_id, str):
+        return component_id
+    match = re.match(r"^([A-Za-z]+)(\d+)$", component_id.strip())
+    if match is None:
+        return component_id
+    word = _KIND_WORDS.get(match.group(1).lower())
+    if word is None:
+        return component_id
+    return f"{word} {match.group(2)}"
+
+
 def explain_experiment(*, facts, valid, error_code, switches, bulbs,
                        conditions=None, batteries=None):
     """Deterministic experiment explanation from server-side facts only.
@@ -130,9 +148,9 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
         watts = (facts or {}).get(f"{bid}.power_W", 0.0)
         amps = amps if _finite(amps) else 0.0
         watts = watts if _finite(watts) else 0.0
-        return (f"{bid} is damaged and no longer completes the circuit: "
-                f"{amps:.1f} A and {watts:.1f} W. Reset the bench to "
-                "restore an intact bulb.")
+        return (f"{friendly_name(bid)} is damaged and no longer completes "
+                f"the circuit: {amps:.1f} A and {watts:.1f} W. Reset the "
+                "bench to restore an intact bulb.")
     overloaded = [bid for bid in bulbs
                   if conditions.get(bid) == "overloaded"]
     if overloaded:
@@ -140,9 +158,10 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
         watts = (facts or {}).get(f"{bid}.power_W")
         limit = (facts or {}).get(f"{bid}.limit_W")
         if _finite(watts) and _finite(limit):
-            return (f"{bid} drew {watts:.1f} W, past its {limit:.1f} W "
-                    "safe limit  -  the extra voltage overloaded it. Run "
-                    "again to see the failed state, or reset the bench.")
+            return (f"{friendly_name(bid)} drew {watts:.1f} W, past its "
+                    f"{limit:.1f} W safe limit  -  the extra voltage "
+                    "overloaded it. Run again to see the failed state, or "
+                    "reset the bench.")
     lit = [bid for bid in bulbs
            if _finite((facts or {}).get(f"{bid}.power_W"))
            and facts[f"{bid}.power_W"] > DARK_POWER_W]
@@ -152,27 +171,30 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
         watts = (facts or {}).get(f"{first}.power_W", 0.0)
         amps = amps if _finite(amps) else 0.0
         watts = watts if _finite(watts) else 0.0
-        return (f"The loop is complete but no bulb lit: {first} reads "
-                f"{amps:.1f} A and {watts:.1f} W. Is a switch open, or "
-                "is a terminal loose?")
+        return (f"The loop is complete but no bulb lit: "
+                f"{friendly_name(first)} reads {amps:.1f} A and "
+                f"{watts:.1f} W. Is a switch open, or is a terminal "
+                "loose?")
     if len(lit) == 1:
         bid = lit[0]
         amps = facts.get(f"{bid}.current_A", 0.0)
         watts = facts.get(f"{bid}.power_W", 0.0)
         amps = amps if _finite(amps) else 0.0
         watts = watts if _finite(watts) else 0.0
-        outcome = (f"{bid} lit: {amps:.1f} A and {watts:.1f} W. Current "
-                   "has a complete path from the battery through the bulb.")
+        outcome = (f"{friendly_name(bid)} lit: {amps:.1f} A and "
+                   f"{watts:.1f} W. Current has a complete path from the "
+                   "battery through the bulb.")
     else:
-        outcome = (f"{len(lit)} bulbs lit ({', '.join(lit)}). Current "
+        outcome = (f"{len(lit)} bulbs lit "
+                   f"({', '.join(friendly_name(b) for b in lit)}). Current "
                    "reaches every lit bulb through a complete path.")
     closed = [sid for sid, state in (switches or {}).items() if state]
     if closed:
-        suggestion = (f"Try opening {closed[0]} and running again  -  what "
-                      "happens to the current?")
-    elif switches:
-        suggestion = (f"Try closing {sorted(switches)[0]} and running "
+        suggestion = (f"Try opening {friendly_name(closed[0])} and running "
                       "again  -  what happens to the current?")
+    elif switches:
+        suggestion = (f"Try closing {friendly_name(sorted(switches)[0])} "
+                      "and running again  -  what happens to the current?")
     else:
         suggestion = ("Try adding a switch to the loop and running it "
                       "open and closed.")

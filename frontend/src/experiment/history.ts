@@ -1,5 +1,6 @@
 import type { ComponentCondition, Netlist, SimulateResult } from '../api/client'
 import { bannerModel } from '../canvas/banner'
+import { friendlyComponentName } from '../components/componentNames'
 
 /** One bulb's measured outcome in a run; condition is null when the
  * solver reported none (old-shape results and rejected runs). */
@@ -137,7 +138,7 @@ export function summarizeRun(record: RunRecord): string {
   const base = `Run ${record.n}  -  ${record.label}  -  ${record.sourceVolts.toFixed(1)} V net source  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
   const events = record.bulbs
     .filter((bulb) => bulb.condition === 'overloaded' || bulb.condition === 'damaged')
-    .map((bulb) => `${bulb.id} ${bulb.condition}`)
+    .map((bulb) => `${friendlyComponentName(bulb.id)} ${bulb.condition}`)
   return events.length === 0 ? base : `${base}  -  ${events.join(', ')}`
 }
 
@@ -183,7 +184,7 @@ export function compareRuns(previous: RunRecord | null, current: RunRecord): str
     if (!eventful || Math.abs(bulb.watts - before.watts) < 0.05) {
       continue
     }
-    const span = `${bulb.id} power ${before.watts.toFixed(1)} W → ${bulb.watts.toFixed(1)} W`
+    const span = `${friendlyComponentName(bulb.id)} power ${before.watts.toFixed(1)} W → ${bulb.watts.toFixed(1)} W`
     if (before.watts > 0 && bulb.watts > 0) {
       parts.push(`${span} (${(bulb.watts / before.watts).toFixed(1)}×)`)
     } else {
@@ -215,7 +216,7 @@ export function diagnoseRun(
     const limit = result.ratings?.[bulb.id]?.max_safe_watts
     if (condition === 'overloaded' && measured !== undefined && limit !== undefined) {
       lines.push(
-        `${bulb.id} took ${measured.power.toFixed(1)} W against a ${limit.toFixed(1)} W safe limit ` +
+        `${friendlyComponentName(bulb.id)} took ${measured.power.toFixed(1)} W against a ${limit.toFixed(1)} W safe limit ` +
           `(${measured.voltage.toFixed(1)} V, ${measured.current.toFixed(1)} A). ` +
           'Lower a battery voltage or add another bulb to share the load.',
       )
@@ -228,7 +229,7 @@ export function diagnoseRun(
             ? ' It blew past its safe limit.'
             : ` It blew past its ${limit.toFixed(1)} W limit.`
       lines.push(
-        `${bulb.id} is damaged and passes no current.${blew} Reset the bench to restore it.`,
+        `${friendlyComponentName(bulb.id)} is damaged and passes no current.${blew} Reset the bench to restore it.`,
       )
     }
   }
