@@ -163,6 +163,12 @@ export default function App() {
   const realityBulbLit = useRef<boolean | null>(null)
   const realityQuestionAsked = useRef(false)
   const introAnnounced = useRef(false)
+  /** Flip-to-Solo milestone: switch positions live-tested at the reality result. */
+  const realityPositionsRef = useRef<Set<boolean>>(new Set())
+  const realityRepliedRef = useRef(false)
+  const retestClosedRef = useRef(false)
+  const excursionDoneRef = useRef(false)
+  const flipArmedRef = useRef(false)
   useEffect(() => {
     autoRef.current = auto
     demoRef.current = demo
@@ -336,9 +342,52 @@ export default function App() {
       return
     }
     cancelAdvance()
+    flipArmedRef.current = false
     setComplete(null)
     complete.advance()
   }, [cancelAdvance, complete])
+
+  /** Flip-to-Solo trigger version; the arming effect runs post-render,
+   * so it sees fresh stage/gate state, never stale mirrors. */
+  const [flipTick, setFlipTick] = useState(0)
+
+  /** Flip-to-Solo: both switch positions live-tested plus an engaged path
+   * (coach reply or completed retest excursion) moves on automatically.
+   * Demos and auto runs keep their scripted beats instead. */
+  const armFlipAdvance = useCallback(() => {
+    if (
+      flipArmedRef.current ||
+      stageRef.current !== 'reality-build' ||
+      completeRef.current?.chapter !== 'reality' ||
+      !realityPositionsRef.current.has(true) ||
+      !realityPositionsRef.current.has(false) ||
+      (!realityRepliedRef.current && !excursionDoneRef.current) ||
+      demoRef.current.active ||
+      autoRef.current
+    ) {
+      return
+    }
+    flipArmedRef.current = true
+    cancelAdvance()
+    announceCoach('You have seen the circuit cut and continue. Moving to the Solo challenge.')
+    setAutoPending(true)
+    advanceTimer.current = window.setTimeout(() => {
+      advanceTimer.current = null
+      flipArmedRef.current = false
+      if (stageRef.current === 'reality-build' && completeRef.current?.chapter === 'reality') {
+        handleContinue()
+      } else {
+        setAutoPending(false)
+      }
+    }, 2600)
+  }, [cancelAdvance, announceCoach, handleContinue])
+
+  useEffect(() => {
+    if (flipTick === 0) {
+      return
+    }
+    armFlipAdvance()
+  }, [flipTick, armFlipAdvance])
 
   const handleEvidence = useCallback(
     (chapterId: string, input: TraceInput) => {
@@ -394,9 +443,13 @@ export default function App() {
     (result: SimulateResult, netlist: Netlist) => {
       const bulb = result.components.L1
       realityBulbLit.current = bulb !== undefined && bulb.power > LIT_POWER_W
+      const sw = netlist.components.find((part) => part.type === 'switch')
+      if (sw?.closed !== undefined) {
+        realityPositionsRef.current.add(sw.closed)
+      }
       if (matchesExpected(result, L1.twist.expectedFixed)) {
         let text =
-          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Next, you will try a new circuit on your own in Solo.'
+          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Try flipping the switch off and on — the bench keeps running, so you can watch the bulb cut out and light again without pressing anything. Next, you will try a new circuit on your own in Solo.'
         if (!realityQuestionAsked.current) {
           realityQuestionAsked.current = true
           text += ` ${REALITY_FOLLOWUP_QUESTION}`
@@ -429,6 +482,7 @@ export default function App() {
             : 'I see the bulb stayed dark. Compare that result with your prediction and check the switch before testing again.',
         )
       }
+      setFlipTick((tick) => tick + 1)
     },
     [showGate, advanceDemoBeat, announceCoach],
   )
@@ -469,7 +523,11 @@ export default function App() {
           ? 'The bulb lit, so current flowed. Compare that with your prediction and check that the switch is open for this test.'
           : 'The bulb stayed off with the switch open. Compare that result with your prediction.',
       )
-      cancelAdvance()
+      // A pending flip-to-Solo beat owns the advance timer; the verdict it
+      // waited for must not cancel the move it armed.
+      if (!flipArmedRef.current) {
+        cancelAdvance()
+      }
       setComplete((gate) =>
         gate?.chapter === 'reality'
           ? {
@@ -628,6 +686,11 @@ export default function App() {
     realityR4.current = false
     realityQuestionAsked.current = false
     introAnnounced.current = false
+    realityPositionsRef.current = new Set()
+    realityRepliedRef.current = false
+    retestClosedRef.current = false
+    excursionDoneRef.current = false
+    flipArmedRef.current = false
   }, [cancelAdvance])
 
   const handleStartJourney = useCallback(() => {
@@ -730,6 +793,10 @@ export default function App() {
     transferDone,
   })
 
+  const stageRef = useRef(stage)
+  useEffect(() => {
+    stageRef.current = stage
+  })
   const firstStage = useRef(true)
   useEffect(() => {
     if (firstStage.current) {
@@ -916,10 +983,27 @@ export default function App() {
       if (stage !== 'reality-build' || !realityQuestionAsked.current) {
         return null
       }
+      realityRepliedRef.current = true
+      setFlipTick((tick) => tick + 1)
       return realityReplyFor(transcript)
     },
     [stage],
   )
+
+  /** Retest excursion tracking for flip-to-Solo: close, then reopen.
+   * Arming happens when the reopen run lands (handleRealitySolved), so the
+   * beat starts from visible results, never from the click. */
+  const handleRealityRetest = useCallback((closedAfter: boolean) => {
+    if (stageRef.current !== 'reality-build') {
+      return
+    }
+    if (closedAfter) {
+      retestClosedRef.current = true
+    } else if (retestClosedRef.current) {
+      excursionDoneRef.current = true
+    }
+    setFlipTick((tick) => tick + 1)
+  }, [])
 
   // All three slots, always: skipped chapters render an honest placeholder.
   const finaleChapters: ChapterRecap[] = [
@@ -1237,6 +1321,7 @@ export default function App() {
             onSolved={handleRealitySolved}
             onDirty={handleDirty}
             onVerdict={handleRealityVerdict}
+            onRealityRetest={handleRealityRetest}
             onCoachDone={handleRealityCoached}
             onCoachInteract={handleInteract}
             onEvidence={handleEvidence}

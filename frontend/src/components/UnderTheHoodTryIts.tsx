@@ -3,7 +3,9 @@ import {
   ApiError,
   converseWithCoach,
   proposeCircuit,
+  simulate,
   transcribeAudio,
+  type Netlist,
   type TraceEvent,
 } from '../api/client'
 import { LENS_SAMPLES } from '../lens/samples'
@@ -105,121 +107,123 @@ function TraceRow({ event }: { event: TraceEvent }) {
   )
 }
 
-export default function UnderTheHoodTryIts() {
-  const [busy, setBusy] = useState<string | null>(null)
-  const [results, setResults] = useState<Record<string, TryItResult>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
+export type EngineCommandKind = 'spark' | 'voice' | 'lens' | 'solver'
 
-  const run = async (
-    key: string,
-    action: () => Promise<TryItResult>,
-  ) => {
-    setBusy(key)
-    setErrors((current) => ({ ...current, [key]: '' }))
-    try {
-      const result = await action()
-      setResults((current) => ({ ...current, [key]: result }))
-    } catch (error) {
-      setErrors((current) => ({ ...current, [key]: errorText(error) }))
-    } finally {
-      setBusy(null)
+const COMMANDS: Record<EngineCommandKind, { prompt: string; button: string; busy: string }> = {
+  spark: {
+    prompt: 'try-spark "Why does a bulb light in a complete circuit?"',
+    button: 'Try Spark',
+    busy: 'Asking…',
+  },
+  voice: {
+    prompt: 'record --seconds 5 | transcribe',
+    button: 'Record 5 seconds',
+    busy: 'Recording / transcribing…',
+  },
+  lens: {
+    prompt: 'propose --sample circuit-1',
+    button: 'Try Reality Lens',
+    busy: 'Requesting proposal…',
+  },
+  solver: {
+    prompt: 'measure --loop 6V',
+    button: 'Measure a loop',
+    busy: 'Measuring…',
+  },
+}
+
+const SIX_V_LOOP: Netlist = {
+  components: [
+    { id: 'B1', type: 'battery', volts: 6, a: 'p', b: '0' },
+    { id: 'L1', type: 'bulb', a: 'p', b: '0' },
+  ],
+}
+
+async function runEngine(engine: EngineCommandKind): Promise<TryItResult> {
+  if (engine === 'spark') {
+    const result = await converseWithCoach(
+      'Why does a bulb light in a complete circuit?',
+      'Under-the-hood fixed-question demonstration.',
+    )
+    return { label: result.provider, detail: result.reply, trace: result.trace }
+  }
+  if (engine === 'voice') {
+    const wav = await recordFiveSeconds()
+    const form = new FormData()
+    form.append('audio', wav, 'under-the-hood.wav')
+    const result = await transcribeAudio(form)
+    return { label: result.source, detail: result.transcript, trace: result.trace }
+  }
+  if (engine === 'lens') {
+    const sample = LENS_SAMPLES[0]
+    if (sample === undefined) {
+      throw new Error('No Reality Lens sample is available.')
+    }
+    const image = await sampleAsDataUrl(sample.image)
+    const result = await proposeCircuit(image)
+    return {
+      label: result.provider,
+      detail: `Proposal status: ${result.proposal.status}; ${result.proposal.components.length} components and ${result.proposal.connections.length} connections.`,
+      trace: result.trace,
     }
   }
+  const result = await simulate(SIX_V_LOOP)
+  if (!result.ok) {
+    throw new Error('The solver rejected the 6 V loop.')
+  }
+  const bulb = result.components.L1
+  const condition = result.conditions?.L1 ?? 'intact'
+  return {
+    label: 'verityn-solver (live)',
+    detail: `I = ${(bulb?.current ?? 0).toFixed(2)} A · P = ${(bulb?.power ?? 0).toFixed(2)} W · ${condition.toUpperCase()}`,
+  }
+}
 
-  const sample = LENS_SAMPLES[0]
-
+/** One engine tab's executable line: prompt, run control, and live output. */
+export function EngineCommand({ engine }: { engine: EngineCommandKind }) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<TryItResult | null>(null)
+  const [error, setError] = useState('')
+  const meta = COMMANDS[engine]
   return (
-    <div className="mt-4 grid gap-3 sm:grid-cols-3">
-      <article className="glass-panel flex flex-col items-start gap-3 p-4">
-        <h4 className="font-semibold">Fixed Spark question</h4>
-        <p className="text-sm text-ink-muted">Ask the live coach a fixed question.</p>
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => void run('spark', async () => {
-            const result = await converseWithCoach(
-              'Why does a bulb light in a complete circuit?',
-              'Under-the-hood fixed-question demonstration.',
-            )
-            return {
-              label: result.provider,
-              detail: result.reply,
-              trace: result.trace,
-            }
-          })}
-          className="min-h-11 rounded-lg border border-glass-border px-3 text-sm font-medium disabled:opacity-50"
-        >
-          {busy === 'spark' ? 'Asking…' : 'Try Spark'}
-        </button>
-        {errors.spark && <p className="text-sm text-bad" role="alert">{errors.spark}</p>}
-        {results.spark && (
-          <div className="grid gap-2" aria-live="polite">
-            <p className="text-sm">{results.spark.detail}</p>
-            <p className="text-ink-muted text-xs">Provider: {results.spark.label}</p>
-            {results.spark.trace && <TraceRow event={results.spark.trace} />}
-          </div>
-        )}
-      </article>
-
-      <article className="glass-panel flex flex-col items-start gap-3 p-4">
-        <h4 className="font-semibold">5-second voice recording</h4>
-        <p className="text-sm text-ink-muted">Record five seconds, then transcribe the audio.</p>
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => void run('voice', async () => {
-            const wav = await recordFiveSeconds()
-            const form = new FormData()
-            form.append('audio', wav, 'under-the-hood.wav')
-            const result = await transcribeAudio(form)
-            return {
-              label: result.source,
-              detail: result.transcript,
-              trace: result.trace,
-            }
-          })}
-          className="min-h-11 rounded-lg border border-glass-border px-3 text-sm font-medium disabled:opacity-50"
-        >
-          {busy === 'voice' ? 'Recording / transcribing…' : 'Record 5 seconds'}
-        </button>
-        {errors.voice && <p className="text-sm text-bad" role="alert">{errors.voice}</p>}
-        {results.voice && (
-          <div className="grid gap-2" aria-live="polite">
-            <p className="text-sm">{results.voice.detail}</p>
-            <p className="text-ink-muted text-xs">Provider: {results.voice.label}</p>
-            {results.voice.trace && <TraceRow event={results.voice.trace} />}
-          </div>
-        )}
-      </article>
-
-      <article className="glass-panel flex flex-col items-start gap-3 p-4">
-        <h4 className="font-semibold">Live Reality Lens sample</h4>
-        <p className="text-sm text-ink-muted">{sample.title}: request a live proposal for the sample image.</p>
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => void run('lens', async () => {
-            const image = await sampleAsDataUrl(sample.image)
-            const result = await proposeCircuit(image)
-            return {
-              label: result.provider,
-              detail: `Proposal status: ${result.proposal.status}; ${result.proposal.components.length} components and ${result.proposal.connections.length} connections.`,
-              trace: result.trace,
-            }
-          })}
-          className="min-h-11 rounded-lg border border-glass-border px-3 text-sm font-medium disabled:opacity-50"
-        >
-          {busy === 'lens' ? 'Requesting proposal…' : 'Try Reality Lens'}
-        </button>
-        {errors.lens && <p className="text-sm text-bad" role="alert">{errors.lens}</p>}
-        {results.lens && (
-          <div className="grid gap-2" aria-live="polite">
-            <p className="text-sm">{results.lens.detail}</p>
-            <p className="text-ink-muted text-xs">Provider: {results.lens.label}</p>
-            {results.lens.trace && <TraceRow event={results.lens.trace} />}
-          </div>
-        )}
-      </article>
+    <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+      <p className="break-all">
+        <span className="mr-2 text-flow">$</span>
+        {meta.prompt}
+      </p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true)
+          setError('')
+          void runEngine(engine).then(
+            (next) => {
+              setResult(next)
+              setBusy(false)
+            },
+            (failure: unknown) => {
+              setError(errorText(failure))
+              setBusy(false)
+            },
+          )
+        }}
+        className="mt-2 min-h-11 rounded-lg border border-glass-border px-3 font-sans text-sm font-medium disabled:opacity-50"
+      >
+        {busy ? meta.busy : meta.button}
+      </button>
+      {error !== '' && (
+        <p className="mt-2 font-sans text-sm text-bad" role="alert">
+          {error}
+        </p>
+      )}
+      {result !== null && (
+        <div className="mt-2 grid gap-1" aria-live="polite">
+          <p className="break-words text-ink">{result.detail}</p>
+          <p className="text-ink-muted">Provider: {result.label}</p>
+          {result.trace !== undefined && <TraceRow event={result.trace} />}
+        </div>
+      )}
     </div>
   )
 }

@@ -38,3 +38,5 @@ the Under the hood Smart details section, and the README.
 - Strain headlines: banner/HUD name BULB OVERWORKED with flowing amps; shake doubled; Overwork preset loads hot at 18 V — [banner tests](../frontend/src/canvas/banner.test.ts), smoke strain checks.
 - Time Bomb breathes: 1.4 s strain beat plus a detonation flash frame; exploded nodes hold gap volts with zero amps/watts — smoke `explosion stages a strain beat`.
 - Starter grid refreshed: Polarity Duel (0 V standoff, flip to 12 V), Dim Duo (series split), The Forbidden Wire (short reframe); Overwork loads hot — [preset tests](../frontend/src/experiment/presets.test.ts), smoke duo/duel checks.
+- Reality Check runs live: switch practice removed, flips re-solve automatically, both positions plus a reply or retest excursion advance to Solo — smoke flip auto-advance checks.
+- Hub console runs engine commands inside the tabs (Spark, voice, lens, live solver measure); bento copy trimmed; Built with Meta is a one-line footnote — smoke console/solver/footnote checks.

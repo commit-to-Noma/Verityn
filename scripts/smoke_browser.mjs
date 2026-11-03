@@ -650,7 +650,8 @@ async function drive() {
   const iconBytes = Number(iconRes.headers.get('content-length') ?? '0')
   check('brand icon served and bounded', iconRes.ok && iconBytes > 0 && iconBytes < 100 * 1024, `${iconRes.status} ${iconBytes}B`)
   check('hero headline', await hasText('Imagine it. Test it. Understand it.'))
-  check('Built with Meta disclosures are visible on the hub', await hasText('Built with Meta'))
+  check('Built with Meta disclosures are visible on the hub', await ev(`document.body.innerText.toLowerCase().includes('built with meta')`))
+  check('Built with Meta names the stack', await ev(`document.body.innerText.includes('Meta Muse Spark') && document.body.innerText.includes('Meta SAM 3.1')`))
   check('lab identity', await hasText('Verityn Laboratory'))
   check('first-lab line honest', await hasText('Circuits are our first live Engineering module.'))
   check('hero entries', await hasText('Start your own lab') && await hasText('Watch a walkthrough'))
@@ -793,26 +794,21 @@ async function drive() {
   await assertOneVoice('reality-after')
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
   check('retest button offered', await hasText('Close the switch and test again'))
-  check('switch practice offered', await hasText('Your turn: flip the switch yourself'))
+  check('practice block removed', !(await hasText('Your turn: flip the switch yourself')))
   check('reality evidence row groups prediction and result', await ev(`(() => {
     const row = document.querySelector('[aria-label="Evidence verification"]');
     if (!row || row.offsetParent === null) return false;
     const text = row.innerText;
     return text.includes('Complete loop lights') && text.includes('MEASURED BY THE SOLVER');
   })()`))
-  check('reality action row groups sandbox controls', await ev(`(() => {
+  check('reality action row groups retest and gate', await ev(`(() => {
     const row = document.querySelector('[aria-label="Sandbox actions"]');
     if (!row || row.offsetParent === null) return false;
     const text = row.innerText;
-    return text.includes('Close the switch and test again') && text.includes('Your turn: flip the switch yourself');
+    return text.includes('Close the switch and test again') && text.includes('Start the Solo challenge');
   })()`))
-  await clickButton('Test with the switch closed')
-  await waitFor(() => hasText('Switch closed → Light 1 lit'), 'practice closed reading', 25000)
-  check('practice names the light in plain words', await hasText('Light 1 lit'))
-  await clickButton('Test with the switch open')
-  await waitFor(() => hasText('Switch open → Light 1 stayed dark'), 'practice open reading', 25000)
-  await captureScreenshot('reality-switch-practice', 1440, '[aria-label="Switch practice"]')
   await ev(`[...document.querySelectorAll('[aria-label="Coach dock"] summary')].find((e) => e.textContent.includes('Earlier'))?.click()`)
+  check('coach invites live flipping', await hasText('Try flipping the switch off and on'))
   await captureScreenshot('reality-followup')
   await ensureSummaryOpen('See details', 'section[aria-label="Test result"]')
   await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
@@ -875,14 +871,14 @@ async function drive() {
   await waitFor(() => hasText('Closing the switch completed the loop'), 'retest confirmation', 25000)
   check('retest shows lit reading', await hasText('3.6 W'))
   check('retest skips stuck notice', !(await hasText('The switch is closed, but this challenge uses it open.')))
-  await clickButton('Open the switch and test again')
-  await waitFor(() => hasText('Prediction did not match'), 'retest reopened', 25000)
   check('follow-up asked once', await ev(`document.body.textContent.split('What would you change to make the bulb light?').length - 1 === 1`))
   await captureScreenshot('reality-retest-button', 1440, '[aria-label="Chapter complete"]')
+  await clickButton('Open the switch and test again')
+  await waitFor(() => hasText('Prediction did not match'), 'retest reopened', 25000)
 
   const coachCallsBeforeSolo = askRequestIds.length
-  await clickButtonStarts('Start the Solo challenge')
-  await waitFor(() => hasText('Solo: the second bulb'), 'solo predict')
+  await waitFor(() => hasText('Solo: the second bulb'), 'flip auto-advance', 25000)
+  check('retest excursion auto-advances to solo', !(await hasText('REALITY CHECK · THE OPEN SWITCH')))
   await assertGuidedCanvasFits('Solo prediction')
   check('no coach in solo', !(await hasText('Ask the coach')))
   const soloMic = await ev(`document.querySelector('#predict-why + button')?.getAttribute('aria-label') ?? 'missing'`)
@@ -1475,10 +1471,16 @@ async function drive() {
   await captureScreenshot('hub')
   await ensureSummaryOpen('Smart details')
   check('console logic tab', await hasText('muse-spark · example trace'))
+  check('console logic runs spark', await hasText('Try Spark'))
   await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('Muse Voice'))?.click()`)
   check('console voice tab', await hasText('muse-voice · example trace'))
+  check('console voice runs recorder', await hasText('Record 5 seconds'))
   await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('Verityn Solver'))?.click()`)
   check('console physics tab', await hasText('Current = Voltage / Resistance → 0.60 Amps'))
+  check('console physics runs solver', await hasText('Measure a loop'))
+  await clickButton('Measure a loop')
+  await waitFor(() => hasText('verityn-solver (live)'), 'solver command runs', 20000)
+  check('solver command measures honestly', await hasText('I = 0.60 A · P = 3.60 W · INTACT'))
   await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('SAM samples'))?.click()`)
   await waitFor(() => hasText('Saved Reality Lens segments are tappable'), 'smart details updated', 10000)
   check('smart details mirror tap segments', await hasText('with SAM provenance'))

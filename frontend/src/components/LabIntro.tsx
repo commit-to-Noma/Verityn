@@ -2,7 +2,7 @@ import { Atom, ChevronLeft, ChevronRight, Eye, Lightbulb, MessagesSquare, Mic, P
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
-import UnderTheHoodTryIts from './UnderTheHoodTryIts'
+import { EngineCommand, type EngineCommandKind } from './UnderTheHoodTryIts'
 import { LENS_SAMPLES } from '../lens/samples'
 import { friendlyErrorCode } from '../experiment/history'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
@@ -754,6 +754,16 @@ export default function LabIntro({
             </div>
             <div role="tabpanel" className="flex min-w-0 flex-col gap-3">
               <ConsoleLivePanel tab={consoleTab} />
+              <EngineCommand
+                engine={
+                  (
+                    { logic: 'spark', voice: 'voice', physics: 'solver', vision: 'lens' } satisfies Record<
+                      ConsoleTab,
+                      EngineCommandKind
+                    >
+                  )[consoleTab]
+                }
+              />
               <ul className="grid gap-3 sm:grid-cols-2">
                 {(consoleTab === 'voice'
                   ? VOICE_BEHAVIORS
@@ -777,7 +787,6 @@ export default function LabIntro({
             </div>
           </div>
         </details>
-        <UnderTheHoodTryIts />
       </section>
 
       <section aria-labelledby="impact-heading" className="w-full">
@@ -788,10 +797,9 @@ export default function LabIntro({
           Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="glass-panel flex flex-col gap-3 p-5 lg:col-span-2 lg:row-span-2">
+          <article className="glass-panel flex h-full flex-col gap-3 p-5 lg:col-span-2 lg:row-span-2">
             <p className="font-mono text-xs font-semibold text-light">01</p>
             <h4 className="text-lg font-semibold">{IMPACT_CASES[0].title}</h4>
-            <p className="text-sm leading-6 text-ink-muted">{IMPACT_CASES[0].problem}</p>
             <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
               <span className="mr-1 font-semibold text-flow">Verityn:</span>
               {IMPACT_CASES[0].response}
@@ -810,12 +818,12 @@ export default function LabIntro({
               </div>
             </div>
           </article>
-          <article className="glass-panel flex flex-col gap-3 p-5 sm:col-span-2">
+          <article className="glass-panel flex h-full flex-col gap-3 p-5 sm:col-span-2">
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">02</span>{IMPACT_CASES[1].title}</p>
               <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">03</span>{IMPACT_CASES[2].title}</p>
             </div>
-            <p className="text-sm leading-6 text-ink-muted">{IMPACT_CASES[1].response} {IMPACT_CASES[2].response}</p>
+            <p className="text-sm leading-6 text-ink-muted">Retry safely in the browser, then review and test living diagrams.</p>
             <div aria-hidden="true" className="relative overflow-hidden rounded-xl border border-glass-border bg-black/50 bg-[radial-gradient(circle_at_50%_50%,rgb(51_65_85/0.5)_1px,transparent_1px)] [background-size:14px_14px] p-3">
               <svg viewBox="0 0 220 54" className="h-12 w-full text-flow">
                 <rect x="8" y="14" width="22" height="26" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -828,7 +836,7 @@ export default function LabIntro({
               <span className="absolute right-2 top-2 rounded-full border border-glass-border bg-black/60 px-2 py-0.5 font-mono text-[10px]">0.6 A · Lit</span>
             </div>
           </article>
-          <article className="glass-panel flex flex-col gap-3 p-5">
+          <article className="glass-panel flex h-full flex-col gap-3 p-5">
             <p className="font-mono text-xs font-semibold text-light">04</p>
             <h4 className="text-sm font-semibold">{IMPACT_CASES[3].title}</h4>
             <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
@@ -843,7 +851,7 @@ export default function LabIntro({
               ))}
             </ul>
           </article>
-          <article className="glass-panel flex flex-col gap-3 p-5">
+          <article className="glass-panel flex h-full flex-col gap-3 p-5">
             <p className="font-mono text-xs font-semibold text-light">05</p>
             <h4 className="text-sm font-semibold">{IMPACT_CASES[4].title}</h4>
             <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">

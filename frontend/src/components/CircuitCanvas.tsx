@@ -56,7 +56,6 @@ import PredictionSummary from './PredictionSummary'
 import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
 import GuidedResultCard from './GuidedResultCard'
-import { friendlyComponentName } from './componentNames'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
@@ -912,6 +911,7 @@ function CanvasInner({
   onSolved,
   onDirty,
   onVerdict,
+  onRealityRetest,
   onCoachDone,
   onCoachInteract,
   onEvidence,
@@ -983,6 +983,8 @@ function CanvasInner({
   onDirty?: () => void
   /** Fired when the server verdict for the recorded prediction arrives. */
   onVerdict?: (status: VerdictStatus) => void
+  /** Fired when the reality retest button flips the switch; true = now closed. */
+  onRealityRetest?: (closedAfter: boolean) => void
   /** Fired when the coach answers (reality check only; never in solo). */
   onCoachDone?: (outcome?: CoachTraceOutcome) => void
   /** Fired when the learner starts a coach reflection. */
@@ -1118,8 +1120,6 @@ function CanvasInner({
   const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
   /** Coach-sanctioned Reality Check close: suppresses the stuck notice. */
   const [closeRetest, setCloseRetest] = useState(false)
-  /** Last switch state the learner tested hands-on in switch practice. */
-  const [practiceFlip, setPracticeFlip] = useState<boolean | null>(null)
   const demoObserve = useRef<{ demo: Demonstration; show: boolean } | null>(null)
   const uncertainRef = useRef<string[]>(initialUncertain)
   const requestId = useRef(0)
@@ -1133,6 +1133,8 @@ function CanvasInner({
   onFailedRef.current = onFailed
   const onDirtyRef = useRef(onDirty)
   const onVerdictRef = useRef(onVerdict)
+  const onRealityRetestRef = useRef(onRealityRetest)
+  onRealityRetestRef.current = onRealityRetest
   const onCoachDoneRef = useRef(onCoachDone)
   const onEvidenceRef = useRef(onEvidence)
   const onDemoTakeoverRef = useRef(onDemoTakeover)
@@ -2439,74 +2441,12 @@ function CanvasInner({
           if (switchOpen) {
             setCloseRetest(true)
           }
+          onRealityRetestRef.current?.(switchOpen)
         }}
         className="border-flow/50 min-h-[44px] rounded-[10px] border px-4 text-sm font-medium text-flow"
       >
         {switchOpen ? 'Close the switch and test again' : 'Open the switch and test again'}
       </button>
-    )
-  })()
-  /** Hands-on switch practice: flip it yourself and watch the solver reading. */
-  const switchPractice = (() => {
-    const practiceSwitch = nodes.find((node) => node.data.kind === 'switch')
-    if (
-      proofStage !== 'reality-build' ||
-      runState.phase !== 'done' ||
-      practiceSwitch === undefined
-    ) {
-      return null
-    }
-    const setClosed = (closed: boolean) => {
-      setPracticeFlip(closed)
-      if ((practiceSwitch.data.closed ?? true) !== closed) {
-        toggleSwitch(practiceSwitch.id)
-      }
-    }
-    const bulbId =
-      claim?.type === 'lit'
-        ? claim.component
-        : (nodes.find((node) => node.data.kind === 'bulb')?.id ?? null)
-    const reading =
-      bulbId !== null && runState.result.ok
-        ? runState.result.components[bulbId]
-        : undefined
-    return (
-      <section
-        aria-label="Switch practice"
-        className="glass-panel flex flex-col gap-2 p-4"
-      >
-        <h4 className="text-sm font-semibold">Your turn: flip the switch yourself</h4>
-        <p className="text-ink-muted text-sm">
-          No prediction, no coach — try both positions and compare.
-        </p>
-        <div className="flex flex-row flex-wrap gap-2">
-          <button
-            type="button"
-            aria-pressed={practiceSwitch.data.closed === true}
-            onClick={() => setClosed(true)}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Test with the switch closed
-          </button>
-          <button
-            type="button"
-            aria-pressed={practiceSwitch.data.closed !== true}
-            onClick={() => setClosed(false)}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Test with the switch open
-          </button>
-        </div>
-        {practiceFlip !== null && reading !== undefined && (
-          <p className="text-sm" role="status">
-            Switch {(practiceSwitch.data.closed ?? true) ? 'closed' : 'open'} → {friendlyComponentName(bulbId ?? 'bulb')}{' '}
-            {reading.power > LIT_POWER_W ? 'lit' : 'stayed dark'},{' '}
-            <ReadoutValue value={reading.current} unit="A" />
-            {' · '}
-            <ReadoutValue value={reading.power} unit="W" />
-          </p>
-        )}
-      </section>
     )
   })()
   // The guided canvas remains independent from the right-hand stage content.
@@ -2720,7 +2660,6 @@ function CanvasInner({
                     Actions
                   </p>
                   {retestButton}
-                  {switchPractice}
                   {gate}
                 </section>
               </>
@@ -2734,7 +2673,6 @@ function CanvasInner({
               <>
                 {resultCard}
                 {retestButton}
-                {switchPractice}
                 {gate}
               </>
             ) : !isRealityResult ? (
@@ -2753,7 +2691,6 @@ function CanvasInner({
                 )}
                 {feedbackPane}
                 {retestButton}
-                {switchPractice}
               </>
             ) : null}
           </div>
@@ -2826,6 +2763,7 @@ export default function CircuitCanvas({
   onSolved,
   onDirty,
   onVerdict,
+  onRealityRetest,
   onCoachDone,
   onCoachInteract,
   onEvidence,
@@ -2877,6 +2815,7 @@ export default function CircuitCanvas({
   onSolved?: (result: SimulateResult, netlist: Netlist) => void
   onDirty?: () => void
   onVerdict?: (status: VerdictStatus) => void
+  onRealityRetest?: (closedAfter: boolean) => void
   onCoachDone?: (outcome?: CoachTraceOutcome) => void
   onCoachInteract?: () => void
   onEvidence?: (chapterId: string, input: TraceInput) => void
@@ -2928,6 +2867,7 @@ export default function CircuitCanvas({
         onSolved={onSolved}
         onDirty={onDirty}
         onVerdict={onVerdict}
+        onRealityRetest={onRealityRetest}
         onCoachDone={onCoachDone}
         onCoachInteract={onCoachInteract}
         onEvidence={onEvidence}

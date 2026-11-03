@@ -177,43 +177,43 @@ export default function JourneyShell({
       </main>
       <footer className="flex flex-col gap-4">
         {location === 'hub' && (
-        <section aria-labelledby="built-with-meta-heading" className="glass-panel p-4">
-          <h2 id="built-with-meta-heading" className="text-sm font-semibold">Built with Meta</h2>
-          <ul className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+        <section aria-labelledby="built-with-meta-heading" className="rounded-xl border border-gray-800 bg-white/[0.02] px-4 py-3 opacity-90">
+          <h2 id="built-with-meta-heading" className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">Built with Meta</h2>
+          <ul className="mt-2 flex flex-col gap-1.5 text-[13px] leading-5 lg:flex-row lg:flex-wrap lg:gap-x-6">
             <li>
-              <span className="font-medium">Muse Spark</span>
-              <span className="text-ink-muted"> — R1 conceptual questions and drafted text explanations. </span>
+              <span className="font-bold">Meta Muse Spark</span>
+              <span className="text-ink-muted"> — R1 questions and drafted explanations. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/INTELLIGENCE_LOG.md`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Trace and validation notes
+                Trace notes
               </a>
             </li>
             <li>
-              <span className="font-medium">Muse Voice Transcribe</span>
-              <span className="text-ink-muted"> — 5-second audio recordings into editable text. </span>
+              <span className="font-bold">Meta Muse Voice</span>
+              <span className="text-ink-muted"> — 5-second recordings into editable text. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/ARCHITECTURE.md`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Voice integration notes
+                Voice notes
               </a>
             </li>
             <li>
-              <span className="font-medium">SAM</span>
-              <span className="text-ink-muted"> — sample only; no live SAM inference is used. Tappable segmentation samples utilize saved provenance. </span>
+              <span className="font-bold">Meta SAM 3.1</span>
+              <span className="text-ink-muted"> — sample only; no live inference is used. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Sample probe results
+                Probe results
               </a>
             </li>
           </ul>
