@@ -24,6 +24,7 @@ from verityn import (  # noqa: E402
 )
 
 key = os.environ.get("MODEL_API_KEY", "")
+app = create_app()
 if key:
     app = create_app(
         meta_coach.MetaSparkProvider(api_key=key),
@@ -31,5 +32,3 @@ if key:
         vision_provider=vision.MetaVisionProvider(api_key=key),
         voice_provider=meta_voice.MetaVoiceTranscriber(api_key=key),
     )
-else:
-    app = create_app()
