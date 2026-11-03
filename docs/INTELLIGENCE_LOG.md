@@ -34,3 +34,4 @@ the Under the hood Smart details section, and the README.
 - Fresh explosions strain first: overworked shake paints 600 ms before the blast, skipped under reduced motion — browser smoke `explosion stages a strain beat`.
 - Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch — [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.
 - Reality Check keeps the mandated neutral verdict line; the switch-practice explainer is compressed to one line — browser smoke reality-switch-practice checks.
+- Run failures distinguish transport loss (auto-retry, "is the backend running?") from stale-backend contract mismatches (no retry, "restart the backend") — browser smoke stale-honesty checks; sweep stop notes match the kind.

@@ -57,6 +57,8 @@ const pending = new Map()
 const askRequestIds = []
 const explainRequestIds = []
 let healthAttempts = 0
+let simulateRequests = 0
+let staleSimulateNext = false
 let chrome = null
 let originalViewportWidth = null
 
@@ -549,6 +551,31 @@ async function drive() {
         }
         return
       }
+      if (request.url.includes('/api/simulate')) {
+        simulateRequests += 1
+        if (staleSimulateNext) {
+          staleSimulateNext = false
+          const stale = {
+            ok: true,
+            node_voltages: { p: 6, 0: 0 },
+            components: { L1: { voltage: 6, current: 0.6, power: 3.6 } },
+            error_code: null,
+            error_message: '',
+            component_ids: [],
+            conditions: { L1: 'overloaded' },
+            ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
+          }
+          send('Fetch.fulfillRequest', {
+            requestId,
+            responseCode: 200,
+            responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+            body: Buffer.from(JSON.stringify(stale)).toString('base64'),
+          }).catch(() => {})
+        } else {
+          send('Fetch.continueRequest', { requestId }).catch(() => {})
+        }
+        return
+      }
       if (request.url.includes('/api/coach/ask')) {
         const response = fakeCoachAsk(request.postData)
         send('Fetch.fulfillRequest', {
@@ -586,6 +613,7 @@ async function drive() {
   await send('Network.enable')
   await send('Fetch.enable', {
     patterns: [
+      { urlPattern: '*/api/simulate*' },
       { urlPattern: '*/api/health*' },
       { urlPattern: '*/api/vision/propose*' },
       { urlPattern: '*/api/coach/ask*' },
@@ -1448,6 +1476,23 @@ async function drive() {
   await captureScreenshot('under-the-hood-smart-details', 1440, '#under-the-hood li:last-child')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)
+
+  // ---- Stale-backend honesty: a contract mismatch must not blame reachability. ----
+  await clickButton('Experiment Bay')
+  await waitFor(() => hasText('Start from a working bench'), 'bay stale revisit')
+  await clickPresetButton('Light a bulb', 'Load')
+  await waitFor(() => hasText('Ready to test your circuit.'), 'stale preset ready')
+  const simBefore = simulateRequests
+  staleSimulateNext = true
+  await clickButton('Run experiment')
+  await waitFor(() => hasText('Unexpected response from the simulator'), 'stale toast', 15000)
+  check('stale toast honest copy', !(await hasText('is the backend running')))
+  check('stale toast keeps retry', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Retry')`))
+  await sleep(2000)
+  check('stale mismatch never auto-retries', simulateRequests === simBefore + 1, `requests=${simulateRequests - simBefore}`)
+  await clickButton('Retry')
+  await waitFor(() => hasText('0.6 A'), 'retry recovers', 25000)
+  check('retry runs the real backend', await hasText('Run 1 - Light a bulb'))
 
   console.log(fails.length === 0 ? 'BROWSER SMOKE PASSED' : `FAILURES: ${fails.join(', ')}`)
   ws.close()

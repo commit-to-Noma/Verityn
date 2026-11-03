@@ -4,6 +4,7 @@ import {
   ApiError,
   explainResult,
   providerBadge,
+  type ApiErrorKind,
   type ComponentCondition,
   type Netlist,
   type SimulateResult,
@@ -838,7 +839,7 @@ export default function ExperimentPage({
 
   /** Terminal run failure (retry budget spent): never leave a running
    * sweep locked — stop it with its recorded points and a clear note. */
-  const handleFailed = useCallback(() => {
+  const handleFailed = useCallback((kind?: ApiErrorKind) => {
     setSimDown(true)
     const active = rigRef.current
     if (active.phase !== 'running') {
@@ -851,7 +852,10 @@ export default function ExperimentPage({
       plan: active.plan,
       points: active.points,
       stopped: true,
-      stopNote: 'Sweep stopped: simulator connection lost. Check the backend and run again.',
+      stopNote:
+        kind === 'network' || kind === undefined
+          ? 'Sweep stopped: simulator connection lost. Check the backend and run again.'
+          : 'Sweep stopped: unexpected simulator response. Restart the backend and run again.',
     })
     setMissions((current) => markSweepComplete(current, active.points.length))
   }, [clearRigTimer])

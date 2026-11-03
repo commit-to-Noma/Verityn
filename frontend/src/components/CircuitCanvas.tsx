@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
-import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
+import type { ApiErrorKind, Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import type { HudReading } from '../canvas/banner'
 import { toNetlist } from '../canvas/toNetlist'
@@ -1015,8 +1015,9 @@ function CanvasInner({
   proofStage?: string
   /** Compact result overlay in the canvas corner; null hides it. */
   hud?: HudReading | null
-  /** Fired when a run fails terminally (retry budget spent); rejections excluded. */
-  onFailed?: () => void
+  /** Fired when a run fails terminally (retry budget spent); rejections excluded.
+   * Carries the failure kind when the backend answered but unusable. */
+  onFailed?: (kind?: ApiErrorKind) => void
   /** Lens-only: hover the palette over the canvas top edge; hides the header. */
   dockTools?: 'top'
   /** Lens-only: override for the locked-confirm next-step line. */
@@ -1089,7 +1090,9 @@ function CanvasInner({
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
   /** Transport failures toast instead of blocking: the bench stays editable. */
-  const [toast, setToast] = useState<null | { phase: 'retrying' } | { phase: 'failed' }>(null)
+  const [toast, setToast] = useState<
+    null | { phase: 'retrying' } | { phase: 'failed'; message?: string }
+  >(null)
   const retryTimer = useRef<number | null>(null)
   const attemptRef = useRef(0)
   const retryRunRef = useRef(() => {})
@@ -1596,17 +1599,32 @@ function CanvasInner({
             }
           }
         }
-      } catch {
+      } catch (err) {
         if (requestId.current !== id) {
           return
         }
         if (next.signal.aborted && !timedOut) {
           return
         }
+        setRunState({ phase: 'idle' })
+        // The backend answered but the response is unusable (stale backend,
+        // version skew): deterministic, so no auto-retry, and the copy must
+        // not blame reachability — the backend is up, its shape is wrong.
+        if (err instanceof ApiError && err.kind !== 'network') {
+          attemptRef.current = 1
+          setToast({
+            phase: 'failed',
+            message:
+              err.kind === 'payload'
+                ? 'Unexpected response from the simulator. Restart the backend from the project root, then retry. Your circuit is untouched.'
+                : err.message,
+          })
+          onFailedRef.current?.(err.kind)
+          return
+        }
         // Transport failure (rejections arrive as data): stay editable,
         // toast, and retry once before asking the learner to retry.
         // The server message stays in the backend log; learners get the toast.
-        setRunState({ phase: 'idle' })
         if (attemptRef.current < 1) {
           attemptRef.current += 1
           setToast({ phase: 'retrying' })
@@ -2562,7 +2580,8 @@ function CanvasInner({
           <p className="min-w-0 flex-1 text-sm">
             {toast.phase === 'retrying'
               ? 'Simulator connection lost. Retrying…'
-              : 'Simulator unavailable — is the backend running? Your circuit is untouched.'}
+              : (toast.message ??
+                'Simulator unavailable — is the backend running? Your circuit is untouched.')}
           </p>
           {toast.phase === 'failed' && (
             <button
@@ -2869,7 +2888,7 @@ export default function CircuitCanvas({
   demoAutoUndo?: boolean
   onDemoTakeover?: () => void
   hud?: HudReading | null
-  onFailed?: () => void
+  onFailed?: (kind?: ApiErrorKind) => void
   dockTools?: 'top'
   confirmPrompt?: string
   hideResultBanner?: boolean
