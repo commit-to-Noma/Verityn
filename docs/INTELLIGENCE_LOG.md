@@ -33,3 +33,4 @@ the Under the hood Smart details section, and the README.
 - Bay run deck sits side by side (run button + status pill in one execution row) — browser smoke `execution deck side by side`.
 - Fresh explosions strain first: overworked shake paints 600 ms before the blast, skipped under reduced motion — browser smoke `explosion stages a strain beat`.
 - Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch — [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.
+- Reality Check keeps the mandated neutral verdict line; the switch-practice explainer is compressed to one line — browser smoke reality-switch-practice checks.

@@ -2441,7 +2441,7 @@ function CanvasInner({
       >
         <h4 className="text-sm font-semibold">Your turn: flip the switch yourself</h4>
         <p className="text-ink-muted text-sm">
-          No prediction, no coach — just try both positions and compare what the solver measures.
+          No prediction, no coach — try both positions and compare.
         </p>
         <div className="flex flex-row flex-wrap gap-2">
           <button
