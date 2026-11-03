@@ -40,7 +40,7 @@ export default function SimulationResultView({
   return (
     <>
       {result.ok ? (
-        <div className="glass-panel flex scroll-mt-44 flex-col gap-2 p-4" aria-live="polite" aria-label="Simulation result">
+        <div className="glass-panel flex scroll-mt-44 flex-col gap-2 p-4" role="status" aria-label="Simulation result">
           {Object.entries(result.components)
             .filter(([id]) => dev || !id.startsWith('W'))
             .map(([id, values]) => (

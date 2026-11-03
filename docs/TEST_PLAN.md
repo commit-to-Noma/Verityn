@@ -461,8 +461,8 @@ Phase 6 result acceptance (all in the real browser unless noted):
   pills, run detail, screenshot `bay-history`).
 - A running sweep locks the bench (overlay, disabled controls),
   paces points 400 ms apart, stops on the first rejection with
-  a fix-it note, and always releases on terminal failure — a
-  dead backend yields a stop note, never a zombie lock — with
+  a fix-it note, and always releases on terminal failure - a
+  dead backend yields a stop note, never a zombie lock - with
   a 30 s run watchdog (browser: lock, cancel, short refusal;
   probes: rage-click, dead-backend sweep).
 - Missions live in a slide-out Mission Log drawer (closed by

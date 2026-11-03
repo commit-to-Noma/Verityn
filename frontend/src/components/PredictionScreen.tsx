@@ -220,10 +220,10 @@ export default function PredictionScreen({
             aria-pressed={choice === value}
             title={
               value === 'yes'
-                ? 'Yes — I think the bulb will light'
+                ? 'Yes: I think the bulb will light'
                 : value === 'no'
-                  ? 'No — I think the bulb will stay dark'
-                  : 'Not sure — record my uncertainty and test anyway'
+                  ? 'No: I think the bulb will stay dark'
+                  : 'Not sure: record my uncertainty and test anyway'
             }
             onClick={() => {
               manual()

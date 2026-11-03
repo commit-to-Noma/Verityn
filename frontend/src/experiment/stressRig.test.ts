@@ -117,13 +117,13 @@ describe('summarizeSweep', () => {
     expect(summarizeSweep(points)).toEqual([
       'First glow at 6 V (run 2).',
       'Overworked from 14 V (run 3).',
-      'Blew at 20 V (run 4) — later points stay dark until the bench resets.',
+      'Blew at 20 V (run 4) - later points stay dark until the bench resets.',
     ])
   })
 
   it('says plainly when nothing glowed', () => {
     expect(summarizeSweep([point(1, 2, solved(0.4, 0.2, 'intact'))])).toEqual([
-      'No glow across this sweep — every point stayed dark.',
+      'No glow across this sweep - every point stayed dark.',
     ])
   })
 
@@ -141,7 +141,7 @@ describe('summarizeSweep', () => {
     } as unknown as SimulateResult
     expect(
       summarizeSweep([{ setVolts: 6, run: describeRun(1, 'Rig', result, noBulb) }]),
-    ).toEqual(['No bulbs on the bench — the sweep measured current only.'])
+    ).toEqual(['No bulbs on the bench - the sweep measured current only.'])
     expect(summarizeSweep([])).toEqual([])
   })
 })

@@ -19,7 +19,7 @@ evidence shows.
 
 Why Verityn exists: answers are cheap, understanding is not. The Guided
 Lab protects think-first learning, and the Experiment Bay brings back
-creativity and curiosity — a safe bench for wiring anything, blowing
+creativity and curiosity - a safe bench for wiring anything, blowing
 bulbs, and asking why. Wrong answers are data, never verdicts.
 
 Engineering circuits are the first live module and the current complete
@@ -150,7 +150,7 @@ transcription calls only `/api/voice/transcribe`, never the coach, so Solo
 stays coach-free. Permission denial, unsupported browser, silence, and
 recognition failure retain typed input. Solo shows `Coach off` and no coach
 controls. Finale shows Prediction, Simulator evidence, Independent transfer,
-a personalized learning path narrated from saved predictions, wiring, readings,
+a personal learning path narrated from saved predictions, wiring, readings,
 and demonstrations, and a factual Evidence Trace, never mastery or
 learning-gain claims. A shareable evidence card restates the same saved
 facts (prediction in the learner's words, solver readings, rung reached,

@@ -92,7 +92,7 @@ function errorText(error: unknown): string {
 
 function TraceRow({ event }: { event: TraceEvent }) {
   return (
-    <div className="rounded-lg border border-glass-border bg-glass/40 p-3" aria-label="Trace row">
+    <div className="rounded-lg border border-glass-border bg-glass/40 p-3" role="group" aria-label="Trace row">
       <p className="font-mono text-xs">{event.tool}</p>
       <p className="text-ink-muted mt-1 text-xs">
         {event.input} → {event.output} · {event.ms} ms

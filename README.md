@@ -24,7 +24,7 @@ plan.
 Answers are everywhere; understanding is not. Verityn brings back
 creativity and curiosity to science class: the Guided Lab makes
 learners think first and test against evidence, and the Experiment Bay
-gives them a bench for joyful messing about — wire anything, blow
+gives them a bench for joyful messing about - wire anything, blow
 bulbs safely, watch what the simulator measures, then ask why. Wrong
 answers are data, not verdicts, and every model claim passes grounded
 evidence verification before it reaches the learner.
@@ -196,7 +196,9 @@ source .venv/bin/activate
 python backend/app.py
 ```
 
-Backend listens on http://127.0.0.1:5000.
+Backend listens on http://127.0.0.1:5000. The frontend dev proxy
+points at `VERITYN_API` (default http://127.0.0.1:5001), so if the
+ports differ, pair them (see `.env.example`).
 
 Terminal 2  -  frontend:
 
@@ -220,6 +222,20 @@ python scripts/smoke_live.py   # live judging-path smoke check (venv active)
 # With the backend and a frontend dev server running:
 BASE=http://localhost:5174 node scripts/smoke_browser.mjs   # full browser journey
 ```
+
+## Deploy
+
+Vercel, same origin: the static frontend plus one Python serverless
+function (`api/index.py`, the Flask app). `vercel.json` builds
+`frontend/dist` and rewrites `/api/*` to the function, so the
+deployed app needs no CORS config.
+
+1. Import the repo (root directory = repo root).
+2. Set `MODEL_API_KEY` in Vercel env. Without it the deploy keeps
+   the deterministic fakes. Never copy `.env` to a server.
+3. Deploy. Coach sessions are per-instance memory, so rung order
+   can reset if traffic spans fresh instances; single-user runs
+   are unaffected. Full checklist: `docs/SUBMISSION.md`.
 
 ## Built with Meta
 

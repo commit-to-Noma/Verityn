@@ -17,7 +17,7 @@ export default function ProofChips({ stages }: { stages: string[] }) {
     return null
   }
   return (
-    <div className="flex flex-wrap gap-2" aria-label="Trace chips">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Trace chips">
       {chips.map((event, index) => (
         <span
           key={`${event.t}-${index}`}

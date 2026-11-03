@@ -374,7 +374,7 @@ export default function App() {
 
   /** Flip-to-Solo: watching the circuit cut and continue (close, then
    * reopen) moves on automatically. An engaged reply only unlocks the
-   * gate button — the learner presses it. Demos and auto runs keep
+   * gate button - the learner presses it. Demos and auto runs keep
    * their scripted beats instead. */
   const armFlipAdvance = useCallback(() => {
     if (
@@ -471,7 +471,7 @@ export default function App() {
       }
       if (matchesExpected(result, L1.twist.expectedFixed)) {
         let text =
-          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Try flipping the switch off and on — the bench keeps running, so you can watch the bulb cut out and light again without pressing anything.'
+          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Try flipping the switch off and on. The bench keeps running, so you can watch the bulb cut out and light again without pressing anything.'
         if (!realityQuestionAsked.current) {
           realityQuestionAsked.current = true
           text += ` ${REALITY_FOLLOWUP_QUESTION}`
@@ -1172,7 +1172,7 @@ export default function App() {
                   Reality Lens
                 </h1>
                 <p className="max-w-2xl text-base text-ink-muted">
-                  Drop in a circuit sketch — a textbook loop, a whiteboard photo, a
+                  Drop in a circuit sketch: a textbook loop, a whiteboard photo, a
                   napkin drawing. Spark reads the parts and traces the wires, you
                   check its work, then the solver measures what the circuit would
                   really do.

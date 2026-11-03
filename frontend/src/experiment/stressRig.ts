@@ -118,12 +118,12 @@ export function summarizeSweep(points: SweepPoint[]): string[] {
     return []
   }
   if (points[0].run.bulbCount === 0) {
-    return ['No bulbs on the bench — the sweep measured current only.']
+    return ['No bulbs on the bench - the sweep measured current only.']
   }
   const lines: string[] = []
   const firstGlow = points.find((point) => point.run.valid && point.run.bulbsLit > 0)
   if (firstGlow === undefined) {
-    lines.push('No glow across this sweep — every point stayed dark.')
+    lines.push('No glow across this sweep - every point stayed dark.')
   } else {
     lines.push(`First glow at ${formatSetVolts(firstGlow.setVolts)} V (run ${firstGlow.run.n}).`)
   }
@@ -136,7 +136,7 @@ export function summarizeSweep(points: SweepPoint[]): string[] {
   const firstBlow = points.find((point) => pointState(point) === 'exploded')
   if (firstBlow !== undefined) {
     lines.push(
-      `Blew at ${formatSetVolts(firstBlow.setVolts)} V (run ${firstBlow.run.n}) — later points stay dark until the bench resets.`,
+      `Blew at ${formatSetVolts(firstBlow.setVolts)} V (run ${firstBlow.run.n}) - later points stay dark until the bench resets.`,
     )
   }
   return lines

@@ -37,7 +37,7 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     title: 'Polarity Duel',
     tagline: 'Two batteries push opposite ways → 0 V standoff',
     prompt:
-      'Two batteries, one bulb — and darkness. Double-click a battery to flip its polarity, then run again: 0 V becomes 12 V.',
+      'Two batteries, one bulb, and darkness. Double-click a battery to flip its polarity, then run again: 0 V becomes 12 V.',
     seed: {
       nodes: [
         { id: 'B1', kind: 'battery', volts: 6, x: 80, y: 30 },
@@ -78,7 +78,7 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     title: 'Dim Duo',
     tagline: 'Two bulbs split one battery → both dim',
     prompt:
-      'Each bulb gets half the push. Run it, then add a second battery in series — what changes?',
+      'Each bulb gets half the push. Run it, then add a second battery in series. What changes?',
     seed: {
       nodes: [
         { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },
@@ -98,7 +98,7 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     title: 'The Forbidden Wire',
     tagline: 'Wire a battery straight back to itself → refused',
     prompt:
-      'No bulb, no switch — just a wire across the terminals. Run it and watch the simulator refuse: red glow, zap, and the reason why.',
+      'No bulb, no switch, just a wire across the terminals. Run it and watch the simulator refuse: red glow, zap, and the reason why.',
     seed: {
       nodes: [{ id: 'B1', kind: 'battery', x: 230, y: 160 }],
       edges: [

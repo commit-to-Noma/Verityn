@@ -492,13 +492,13 @@ function StressRigPanel({
                     <tr key={point.run.n} className="border-glass-border border-t">
                       <td className="py-1 pr-3 font-mono">{point.setVolts} V</td>
                       <td className="py-1 pr-3 font-mono">
-                        {point.run.valid ? `${point.run.sourceVolts.toFixed(1)} V` : '—'}
+                        {point.run.valid ? `${point.run.sourceVolts.toFixed(1)} V` : '-'}
                       </td>
                       <td className="py-1 pr-3 font-mono">
-                        {point.run.valid ? `${point.run.amps.toFixed(1)} A` : '—'}
+                        {point.run.valid ? `${point.run.amps.toFixed(1)} A` : '-'}
                       </td>
                       <td className="py-1 pr-3 font-mono">
-                        {point.run.valid && watts !== null ? `${watts.toFixed(1)} W` : '—'}
+                        {point.run.valid && watts !== null ? `${watts.toFixed(1)} W` : '-'}
                       </td>
                       <td className="py-1">{POINT_STATE_LABEL[pointState(point)]}</td>
                     </tr>
@@ -516,7 +516,7 @@ function StressRigPanel({
             </ul>
             {rig.stopped && (
               <p className="text-ink-muted text-sm">
-                {rig.stopNote ?? 'Stopped early — the bench changed during the sweep.'}
+                {rig.stopNote ?? 'Stopped early - the bench changed during the sweep.'}
               </p>
             )}
           </div>
@@ -560,11 +560,11 @@ function RunDetail({ run }: { run: RunRecord }) {
   return (
     <div className="border-glass-border rounded-[10px] border p-3" aria-live="polite">
       <p className="text-sm font-medium">
-        Run {run.n} — {run.label}
+        Run {run.n} - {run.label}
       </p>
       {!run.valid ? (
         <p className="text-ink-muted text-sm">
-          No readings — not testable ({friendlyErrorCode(run.errorCode)}).
+          No readings - not testable ({friendlyErrorCode(run.errorCode)}).
         </p>
       ) : run.bulbs.length === 0 ? (
         <p className="text-ink-muted text-sm">
@@ -734,7 +734,7 @@ export default function ExperimentPage({
             plan: current.plan,
             points: current.points,
             stopped: true,
-            stopNote: 'Sweep cancelled — recorded points kept.',
+            stopNote: 'Sweep cancelled - recorded points kept.',
           }
         : current,
     )
@@ -853,7 +853,7 @@ export default function ExperimentPage({
   }, [])
 
   /** Terminal run failure (retry budget spent): never leave a running
-   * sweep locked — stop it with its recorded points and a clear note. */
+   * sweep locked - stop it with its recorded points and a clear note. */
   const handleFailed = useCallback((kind?: ApiErrorKind) => {
     setSimDown(true)
     const active = rigRef.current
@@ -892,7 +892,7 @@ export default function ExperimentPage({
     controller.current?.abort()
     // Nonce-driven dirties (rig points, Apply edits, replays) keep a
     // running sweep alive; only genuine bench edits abort it. Damage
-    // survives voltage edits — only preset loads and resets clear it.
+    // survives voltage edits - only preset loads and resets clear it.
     const nonceCaused = nonceBumpRef.current > 0
     if (nonceCaused) {
       nonceBumpRef.current -= 1
@@ -1050,7 +1050,7 @@ export default function ExperimentPage({
           </button>
         </div>
         <p className="text-ink-muted text-sm" aria-live="polite">
-          {missions.done.length} of {MISSIONS.length} complete — session challenges, in any order.
+          {missions.done.length} of {MISSIONS.length} complete - session challenges, in any order.
         </p>
         <div className="flex flex-col gap-3">
           {MISSIONS.map((mission) => {
@@ -1104,7 +1104,7 @@ export default function ExperimentPage({
             className="absolute inset-0 z-20 cursor-not-allowed rounded-2xl"
           >
             <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 font-mono text-xs">
-              Sweep running — bench locked
+              Sweep running - bench locked
               {rig.phase === 'running' && (
                 <>
                   {' '}· Point {Math.min(rig.points.length + 1, rig.plan.points.length)} of{' '}
@@ -1213,7 +1213,7 @@ export default function ExperimentPage({
                     The simulator is unreachable, so there is nothing to explain yet. Check that
                     the backend is running, then run the experiment.
                   </p>
-                  <p className="text-ink-muted text-xs">Local notice — no model call.</p>
+                  <p className="text-ink-muted text-xs">Local notice - no model call.</p>
                 </div>
               ) : (
                 <p className="text-ink-muted text-sm">

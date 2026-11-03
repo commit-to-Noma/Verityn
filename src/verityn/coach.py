@@ -13,7 +13,9 @@ canvas.
 
 Sessions live in memory only: a restart clears them, and the design
 assumes a single backend process. Each Flask app instance owns its
-store, so tests stay isolated.
+store, so tests stay isolated. On serverless deploy, a request that
+lands on a fresh instance mints a fresh session instead of
+continuing the old one, so rung order can reset under load.
 """
 
 import json

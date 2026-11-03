@@ -1,0 +1,4 @@
+# Runtime-only pins for the Vercel Python function (mirrors
+# backend/requirements.txt minus the pytest dev stack).
+Flask==3.1.3
+Pillow==13.0.0

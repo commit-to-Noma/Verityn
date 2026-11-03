@@ -104,7 +104,7 @@ export const STEM_FIELDS: STEMField[] = [
     id: 'science',
     title: 'Science',
     description:
-      'Model a natural system, predict what will change, then compare your idea with simulated results. Sneak peek: a 3D chemistry bench — mix test tubes and watch realistic reactions, even the dangerous ones, with Muse Spark coaching your technique.',
+      'Model a natural system, predict what will change, then compare your idea with simulated results. Sneak peek: a 3D chemistry bench. Mix test tubes and watch realistic reactions, even the dangerous ones, with Muse Spark coaching your technique.',
     status: 'future',
   },
   {

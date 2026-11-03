@@ -3,65 +3,66 @@
 This behavior list is mirrored in `frontend/src/content/intelligence.ts`,
 the Under the hood Smart details section, and the README.
 
-- Spoken correction of a choice in Predict, Reality Check, and Solo — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
-- Coach replies use the learner's own words in Coach Dock follow-up — [Meta coach tests](../backend/tests/test_meta_coach.py).
-- Solver-grounded explanations with a number guard in Experiment Bay and Finale — [explanation tests](../backend/tests/test_explain.py).
-- Leak guard and one validation retry for the R1 coach question — [retry trace test](../backend/tests/test_trace.py).
-- Stale-state protection for cancelled or superseded Reality Lens and circuit requests — [API cancellation tests](../frontend/src/api/client.test.ts), with request-id guards in the relevant components.
-- Honest `needs_review` and `unsupported` Reality Lens proposals — [vision validation tests](../backend/tests/test_vision.py).
-- Server-enforced Solo with zero coach calls — [transfer tests](../backend/tests/test_transfer.py).
-- Typed errors with actionable next steps — [error-safety tests](../backend/tests/test_error_safety.py).
-- Prediction lock-in with a short undo window — [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
-- Ranked English browser voice with measured pacing — [coach voice tests](../frontend/src/voice/coachVoice.test.ts).
-- Current flow and bulb glow follow solver measurements — [visual mapping tests](../frontend/src/canvas/visuals.test.ts).
-- Solver readouts count up to the measured value — [readout tests](../frontend/src/components/ReadoutValue.test.ts).
-- Finale circuits reveal in order with reduced motion respected — [Finale motion tests](../frontend/src/journey/finaleMotion.test.ts).
-- Hub health checks retry with visible startup progress — [health status tests](../frontend/src/components/HealthStatus.test.tsx), also exercised by the browser smoke.
-- Voice capture stops after silence and records per-stage timings — [voice timing tests](../frontend/src/voice/voiceTimings.test.ts).
-- Finale handoff reuses the saved circuit in Experiment Bay — [Finale tests](../frontend/src/components/JourneyFinale.test.tsx) and [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx).
-- Lens diagrams upload by drop, paste, picker, or camera — [upload tests](../frontend/src/vision/upload.test.ts).
-- Traced wires overlay the uploaded photo — [review tests](../frontend/src/vision/review.test.ts) and [vision path tests](../backend/tests/test_vision.py).
-- Traced wires snap onto the photo's stroke centerlines in code (polarity-blind, text-rejecting, fail-soft to the model path) — [refinement tests](../backend/tests/test_wire_refine.py).
-- Confirmed Lens circuit opens in Experiment Bay — [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx), also exercised by the browser smoke.
-- Guided verdicts compare predictions with solver readings, kindly — [verdict line tests](../frontend/src/components/PredictionVerdictLine.test.tsx).
-- Batteries report supplied current and power, never negative labels — [canvas node tests](../frontend/src/components/canvas/CircuitNode.test.tsx).
-- Voice transcripts are cleaned for display; raw text stays in Trace — [transcript tests](../frontend/src/voice/displayTranscript.test.ts).
-- Journey progress highlights Recap on the recap page — [stage tests](../frontend/src/journey/stages.test.ts).
-- Saved Reality Lens segments are tappable with SAM 3.1 provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
-- Shell nav holds three primary tabs (Under-the-hood lives on the Hub page only) — [shell nav tests](../frontend/src/journey/stages.test.ts), also exercised by the browser smoke.
-- Guided Lab entry stays on the Hub behind a full-screen swoosh, then lands in the lab — browser smoke `lab entry swoosh` checks; `.stage-enter` uses backwards fill so retained transforms never trap fixed overlays.
-- Bay run deck sits side by side (run button + status pill in one execution row) — browser smoke `execution deck side by side`.
-- Fresh explosions strain first: overworked shake paints 600 ms before the blast, skipped under reduced motion — browser smoke `explosion stages a strain beat`.
-- Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch — [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.
-- Reality Check keeps the mandated neutral verdict line; the switch-practice explainer is compressed to one line — browser smoke reality-switch-practice checks.
-- Run failures distinguish transport loss (auto-retry, "is the backend running?") from stale-backend contract mismatches (no retry, "restart the backend") — browser smoke stale-honesty checks; sweep stop notes match the kind.
-- Strain headlines: banner/HUD name BULB OVERWORKED with flowing amps; shake doubled; Overwork preset loads hot at 18 V — [banner tests](../frontend/src/canvas/banner.test.ts), smoke strain checks.
-- Time Bomb breathes: 1.4 s strain beat plus a detonation flash frame; exploded nodes hold gap volts with zero amps/watts — smoke `explosion stages a strain beat`.
-- Starter grid refreshed: Polarity Duel (0 V standoff, flip to 12 V), Dim Duo (series split), The Forbidden Wire (short reframe); Overwork loads hot — [preset tests](../frontend/src/experiment/presets.test.ts), smoke duo/duel checks.
-- Reality Check runs live: switch practice removed, flips re-solve automatically, both positions plus a reply or retest excursion advance to Solo — smoke flip auto-advance checks.
-- Hub console runs engine commands inside the tabs (Spark, voice, lens, live solver measure); bento copy trimmed; Built with Meta is a one-line footnote — smoke console/solver/footnote checks.
-- Dim bulbs read dim: glow below half nominal renders a dull ember, banner/HUD say DIM — [banner tests](../frontend/src/canvas/banner.test.ts), [node tests](../frontend/src/components/canvas/CircuitNode.test.tsx), smoke duo checks.
-- Polarity Duel names its 0 V standoff: STANDOFF banner/HUD, Opposing badges on both batteries — smoke duel checks.
-- Runs scroll the canvas into view first; Time Bomb strain beat extended to 2.2 s — smoke bomb checks.
-- Stress Rig stops at fracture: a freshly exploded bulb ends the sweep with its point kept and a "fractured at N V" note — [bench tests](../frontend/src/experiment/bench.test.ts), smoke fracture checks.
-- Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh — smoke bomb checks still pass first-run strain.
-- Hub Under-the-hood is a 3-tab diagnostic console: tabs left, one terminal right with trace, executable command, and evidence refs; text wall removed — smoke console checks.
-- Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM 3.1 sample-only wording — smoke footnote checks.
-- STEM orbit backdrop reacts to selection: the picked discipline's asset renders large behind the ring, tinted and glowing in its field color — verified by hero screenshots (gear/math/science).
-- Roadmap disciplines tease their labs with planned Meta tools (chemistry bench, rover coding, function playground) — [homepage tests](../frontend/src/components/LabIntro.test.ts).
+- Spoken correction of a choice in Predict, Reality Check, and Solo - [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
+- Coach replies use the learner's own words in Coach Dock follow-up - [Meta coach tests](../backend/tests/test_meta_coach.py).
+- Solver-grounded explanations with a number guard in Experiment Bay and Finale - [explanation tests](../backend/tests/test_explain.py).
+- Leak guard and one validation retry for the R1 coach question - [retry trace test](../backend/tests/test_trace.py).
+- Stale-state protection for cancelled or superseded Reality Lens and circuit requests - [API cancellation tests](../frontend/src/api/client.test.ts), with request-id guards in the relevant components.
+- Honest `needs_review` and `unsupported` Reality Lens proposals - [vision validation tests](../backend/tests/test_vision.py).
+- Server-enforced Solo with zero coach calls - [transfer tests](../backend/tests/test_transfer.py).
+- Typed errors with actionable next steps - [error-safety tests](../backend/tests/test_error_safety.py).
+- Prediction lock-in with a short undo window - [spoken prediction tests](../frontend/src/voice/spokenPrediction.test.ts).
+- Ranked English browser voice with measured pacing - [coach voice tests](../frontend/src/voice/coachVoice.test.ts).
+- Current flow and bulb glow follow solver measurements - [visual mapping tests](../frontend/src/canvas/visuals.test.ts).
+- Solver readouts count up to the measured value - [readout tests](../frontend/src/components/ReadoutValue.test.ts).
+- Finale circuits reveal in order with reduced motion respected - [Finale motion tests](../frontend/src/journey/finaleMotion.test.ts).
+- Hub health checks retry with visible startup progress - [health status tests](../frontend/src/components/HealthStatus.test.tsx), also exercised by the browser smoke.
+- Voice capture stops after silence and records per-stage timings - [voice timing tests](../frontend/src/voice/voiceTimings.test.ts).
+- Finale handoff reuses the saved circuit in Experiment Bay - [Finale tests](../frontend/src/components/JourneyFinale.test.tsx) and [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx).
+- Lens diagrams upload by drop, paste, picker, or camera - [upload tests](../frontend/src/vision/upload.test.ts).
+- Traced wires overlay the uploaded photo - [review tests](../frontend/src/vision/review.test.ts) and [vision path tests](../backend/tests/test_vision.py).
+- Traced wires snap onto the photo's stroke centerlines in code (polarity-blind, text-rejecting, fail-soft to the model path) - [refinement tests](../backend/tests/test_wire_refine.py).
+- Confirmed Lens circuit opens in Experiment Bay - [Experiment Bay seed tests](../frontend/src/experiment/ExperimentPage.test.tsx), also exercised by the browser smoke.
+- Guided verdicts compare predictions with solver readings, kindly - [verdict line tests](../frontend/src/components/PredictionVerdictLine.test.tsx).
+- Batteries report supplied current and power, never negative labels - [canvas node tests](../frontend/src/components/canvas/CircuitNode.test.tsx).
+- Voice transcripts are cleaned for display; raw text stays in Trace - [transcript tests](../frontend/src/voice/displayTranscript.test.ts).
+- Journey progress highlights Recap on the recap page - [stage tests](../frontend/src/journey/stages.test.ts).
+- Saved Reality Lens segments are tappable with SAM 3.1 provenance - [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
+- Shell nav holds three primary tabs (Under-the-hood lives on the Hub page only) - [shell nav tests](../frontend/src/journey/stages.test.ts), also exercised by the browser smoke.
+- Guided Lab entry stays on the Hub behind a full-screen swoosh, then lands in the lab - browser smoke `lab entry swoosh` checks; `.stage-enter` uses backwards fill so retained transforms never trap fixed overlays.
+- Bay run deck sits side by side (run button + status pill in one execution row) - browser smoke `execution deck side by side`.
+- Fresh explosions strain first: overworked shake paints 600 ms before the blast, skipped under reduced motion - browser smoke `explosion stages a strain beat`.
+- Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch - [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.
+- Reality Check keeps the mandated neutral verdict line; the switch-practice explainer is compressed to one line - browser smoke reality-switch-practice checks.
+- Run failures distinguish transport loss (auto-retry, "is the backend running?") from stale-backend contract mismatches (no retry, "restart the backend") - browser smoke stale-honesty checks; sweep stop notes match the kind.
+- Strain headlines: banner/HUD name BULB OVERWORKED with flowing amps; shake doubled; Overwork preset loads hot at 18 V - [banner tests](../frontend/src/canvas/banner.test.ts), smoke strain checks.
+- Time Bomb breathes: 1.4 s strain beat plus a detonation flash frame; exploded nodes hold gap volts with zero amps/watts - smoke `explosion stages a strain beat`.
+- Starter grid refreshed: Polarity Duel (0 V standoff, flip to 12 V), Dim Duo (series split), The Forbidden Wire (short reframe); Overwork loads hot - [preset tests](../frontend/src/experiment/presets.test.ts), smoke duo/duel checks.
+- Reality Check runs live: switch practice removed, flips re-solve automatically, both positions plus a reply or retest excursion advance to Solo - smoke flip auto-advance checks.
+- Hub console runs engine commands inside the tabs (Spark, voice, lens, live solver measure); bento copy trimmed; Built with Meta is a one-line footnote - smoke console/solver/footnote checks.
+- Dim bulbs read dim: glow below half nominal renders a dull ember, banner/HUD say DIM - [banner tests](../frontend/src/canvas/banner.test.ts), [node tests](../frontend/src/components/canvas/CircuitNode.test.tsx), smoke duo checks.
+- Polarity Duel names its 0 V standoff: STANDOFF banner/HUD, Opposing badges on both batteries - smoke duel checks.
+- Runs scroll the canvas into view first; Time Bomb strain beat extended to 2.2 s - smoke bomb checks.
+- Stress Rig stops at fracture: a freshly exploded bulb ends the sweep with its point kept and a "fractured at N V" note - [bench tests](../frontend/src/experiment/bench.test.ts), smoke fracture checks.
+- Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh - smoke bomb checks still pass first-run strain.
+- Hub Under-the-hood is a 3-tab diagnostic console: tabs left, one terminal right with trace, executable command, and evidence refs; text wall removed - smoke console checks.
+- Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM 3.1 sample-only wording - smoke footnote checks.
+- STEM orbit backdrop reacts to selection: the picked discipline's asset renders large behind the ring, tinted and glowing in its field color - verified by hero screenshots (gear/math/science).
+- Roadmap disciplines tease their labs with planned Meta tools (chemistry bench, rover coding, function playground) - [homepage tests](../frontend/src/components/LabIntro.test.ts).
 - Bento intro names cognitive atrophy: predicting before the AI speaks keeps reasoning with the learner.
-- STEM backdrop hero-centered, 10% bigger, 50% opacity; selection state lifted so the glow lives behind the whole hero — verified by hero screenshots.
-- Why-Verityn back to five problem→solution rows with no widgets — smoke `why matters` checks.
-- Built with Meta footnote removed; SAM 3.1 returns as the console's fourth tab with its sample-only mask and live proposal command — smoke console vision checks.
+- STEM backdrop hero-centered, 10% bigger, 50% opacity; selection state lifted so the glow lives behind the whole hero - verified by hero screenshots.
+- Why-Verityn back to five problem→solution rows with no widgets - smoke `why matters` checks.
+- Built with Meta footnote removed; SAM 3.1 returns as the console's fourth tab with its sample-only mask and live proposal command - smoke console vision checks.
 - Hub sections numbered and divided (01 method, 02 hood, 03 why) so each reads as its own block.
-- Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline — [homepage tests](../frontend/src/components/LabIntro.test.ts).
-- STEM backdrop faded to a true background (25% silhouette, softer hue/glow) so the headline stays readable — verified by hero screenshot.
-- Why-Verityn reasons split 2 + 3 across two columns to fill the section width — smoke five-reasons check.
-- STEM backdrop is a soft blurred silhouette (6px blur, 40%) that keeps its shape without fighting the headline — verified by hero screenshot.
-- Why-Verityn reasons rebuilt as a glowing-node timeline with no boxes, ending the stretched-cell gaps — smoke five-reasons check.
-- STEM backdrop softened to a light-blur, low-intensity silhouette that never fights the headline — verified by hero screenshot.
-- Why-Verityn reasons are divider-separated ledger rows (number, problem, answer), distinct from the method timeline — smoke five-reasons check.
-- Hub locked: backdrop gradient IDs namespaced (no duplicate SVG IDs) and ledger reasons expose screen-reader numbering — verified zero duplicate IDs live.
-- Reality Check reply earns Solo: only a part-naming reply (voice or saved line) unlocks the gate, void replies get a code-written nudge, and only the close-then-reopen excursion auto-advances — [reply tests](../frontend/src/journey/realityReply.test.ts), smoke waiting/unlock/excursion checks; Heard lines are stage-stamped so a Predict transcript never reads as a Reality reply.
-- Vision model named in full everywhere: Segment Anything Model 3.1 (SAM 3.1) in prose and labels, SAM 3.1 in short strings; identifiers, flags, and the `sam-3.1` model id unchanged — frontend evidence/caption tests plus smoke sample/console checks.
-- Reality Check asks in the open: the coach ladder (reply box, demo offer, rung buttons) sits between the result and Actions instead of hiding behind See details; served words stay in the dock only — smoke reply-box visibility plus one-voice checks with the full ladder showing.
+- Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline - [homepage tests](../frontend/src/components/LabIntro.test.ts).
+- STEM backdrop faded to a true background (25% silhouette, softer hue/glow) so the headline stays readable - verified by hero screenshot.
+- Why-Verityn reasons split 2 + 3 across two columns to fill the section width - smoke five-reasons check.
+- STEM backdrop is a soft blurred silhouette (6px blur, 40%) that keeps its shape without fighting the headline - verified by hero screenshot.
+- Why-Verityn reasons rebuilt as a glowing-node timeline with no boxes, ending the stretched-cell gaps - smoke five-reasons check.
+- STEM backdrop softened to a light-blur, low-intensity silhouette that never fights the headline - verified by hero screenshot.
+- Why-Verityn reasons are divider-separated ledger rows (number, problem, answer), distinct from the method timeline - smoke five-reasons check.
+- Hub locked: backdrop gradient IDs namespaced (no duplicate SVG IDs) and ledger reasons expose screen-reader numbering - verified zero duplicate IDs live.
+- Reality Check reply earns Solo: only a part-naming reply (voice or saved line) unlocks the gate, void replies get a code-written nudge, and only the close-then-reopen excursion auto-advances - [reply tests](../frontend/src/journey/realityReply.test.ts), smoke waiting/unlock/excursion checks; Heard lines are stage-stamped so a Predict transcript never reads as a Reality reply.
+- Vision model named in full everywhere: Segment Anything Model 3.1 (SAM 3.1) in prose and labels, SAM 3.1 in short strings; identifiers, flags, and the `sam-3.1` model id unchanged - frontend evidence/caption tests plus smoke sample/console checks.
+- Reality Check asks in the open: the coach ladder (reply box, demo offer, rung buttons) sits between the result and Actions instead of hiding behind See details; served words stay in the dock only - smoke reply-box visibility plus one-voice checks with the full ladder showing.
+- Deploy-ready on Vercel: same-origin static plus one Python function (`vercel.json` rewrites `/api/*`, no CORS), pinned runtimes, `.env.example`, and an honest serverless session note - entry validated with and without a key; em dashes removed from every user-visible string and doc; role-less labelled divs given group/toolbar/status roles.

@@ -1511,7 +1511,7 @@ function CanvasInner({
                   : undefined
               // A blown filament is an open gap: it holds voltage but carries
               // no current and dissipates no power. The raw surge numbers are
-              // the cause of death, shown on the battery — never as flow.
+              // the cause of death, shown on the battery - never as flow.
               const destroyed = appliedCondition === 'exploded'
               const raw = result.ok ? result.components[node.id] : undefined
               const measurement =
@@ -1640,7 +1640,7 @@ function CanvasInner({
         setRunState({ phase: 'idle' })
         // The backend answered but the response is unusable (stale backend,
         // version skew): deterministic, so no auto-retry, and the copy must
-        // not blame reachability — the backend is up, its shape is wrong.
+        // not blame reachability - the backend is up, its shape is wrong.
         if (err instanceof ApiError && err.kind !== 'network') {
           attemptRef.current = 1
           setToast({
@@ -2165,7 +2165,7 @@ function CanvasInner({
    * translucent bar spanning the canvas width instead of floating.
    * Guided Lab keeps the inline palettePane below, untouched. */
   const toolDock = (
-    <div aria-label="Part dock" className="absolute inset-x-0 bottom-0 z-10 flex justify-center border-t border-glass-border bg-black/60 py-2 backdrop-blur-md">
+    <div role="toolbar" aria-label="Part dock" className="absolute inset-x-0 bottom-0 z-10 flex justify-center border-t border-glass-border bg-black/60 py-2 backdrop-blur-md">
       {paletteTools}
     </div>
   )
@@ -2173,7 +2173,7 @@ function CanvasInner({
   /** Lens-only tool rail: the palette buttons hover over the top-center
    * edge of the replica canvas, recovering the header's vertical space. */
   const toolDockTop = (
-    <div aria-label="Part dock" className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2">
+    <div role="toolbar" aria-label="Part dock" className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2">
       <div className="pointer-events-auto rounded-2xl border border-glass-border bg-black/60 px-2 py-1.5 shadow-xl backdrop-blur-md">
         {paletteTools}
       </div>
@@ -2384,7 +2384,7 @@ function CanvasInner({
         </p>
       )}
       {mode === 'experiment' ? (
-        <div className="flex flex-wrap items-center gap-3" aria-label="Execution deck">
+        <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Execution deck">
           {runButton}
           {demoUndoButton}
           {statusBlock}
@@ -2553,7 +2553,7 @@ function CanvasInner({
             {toast.phase === 'retrying'
               ? 'Simulator connection lost. Retrying…'
               : (toast.message ??
-                'Simulator unavailable — is the backend running? Your circuit is untouched.')}
+                'Simulator unavailable. Is the backend running? Your circuit is untouched.')}
           </p>
           {toast.phase === 'failed' && (
             <button

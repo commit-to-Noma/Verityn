@@ -12,8 +12,8 @@ export const REALITY_FOLLOWUP_QUESTION =
 /** Code-written re-prompt for replies that never engage the question. Ends
  * with a statement, never a second question, and names the unlock plainly. */
 export const REALITY_REPLY_NUDGE =
-  'Tell me which part you would change — the switch, the battery, or the ' +
-  'wires — then I will open Solo.'
+  'Name the part you would change (the switch, the battery, or the ' +
+  'wires), then I will open Solo.'
 
 const CLOSE_MATCH = /clos(e|ing|ed)?|switch/i
 const ON_MATCH = /\bon\b/i
@@ -23,7 +23,7 @@ const ENGAGED_MATCH =
 /**
  * True when the reply attempts the follow-up: it names a part or a
  * mechanism (switch, gap, path, battery...). Bare verdicts ("the bulb
- * will light"), shrugs, and empty lines do not count — the coach
+ * will light"), shrugs, and empty lines do not count - the coach
  * re-prompts instead of unlocking Solo for them.
  */
 export function replyEngagesQuestion(transcript: string): boolean {

@@ -93,7 +93,7 @@ function fakeCoachAsk(postData) {
     return {
       eligible: true,
       rung,
-      text: 'Confirmation check — in your own words, why does L1 stay dark? The evidence says S1 is open with 0.0 A.',
+      text: 'Confirmation check: in your own words, why does L1 stay dark? The evidence says S1 is open with 0.0 A.',
       provider: 'deterministic',
       claim: { type: 'lit', component: 'L1', value: true },
       actions: [],
@@ -1358,7 +1358,7 @@ async function drive() {
   await captureScreenshot('bay-missions', 1440, '[aria-label="Missions"]')
   await ev(`[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Close' && b.getAttribute('aria-label') === 'Close mission log')?.click()`)
   await ev(`document.querySelector('[data-run="2"]')?.click()`)
-  await waitFor(() => hasText('Run 2 — Free build'), 'run detail', 10000)
+  await waitFor(() => hasText('Run 2 - Free build'), 'run detail', 10000)
   check('run detail shows params', await hasText('Light 1: 0.0 V'))
   await ev(`document.querySelector('[data-run="2"]')?.click()`)
   await clickButton('Ask Muse Spark about this result')

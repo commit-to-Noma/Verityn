@@ -366,7 +366,7 @@ export default function JourneyFinale({
 
       <section aria-label="Reflection" className="glass-panel flex flex-col gap-3 p-4">
         <h3 className="font-semibold">{REFLECTION_QUESTION}</h3>
-        <div className="flex flex-row flex-wrap gap-2" aria-label="Sentence starters">
+        <div className="flex flex-row flex-wrap gap-2" role="group" aria-label="Sentence starters">
           {['An open switch ...', 'Current needs ...'].map((starter) => (
             <button
               key={starter}
@@ -446,7 +446,7 @@ export default function JourneyFinale({
           Add my reflection to the Evidence card
         </label>
         {includeReflection && reflection.trim() !== '' && (
-          <div className="rounded-xl border border-flow/30 p-3" aria-label="Saved reflection card">
+          <div className="rounded-xl border border-flow/30 p-3" role="group" aria-label="Saved reflection card">
             <p className="text-xs font-semibold uppercase tracking-wide text-flow">My reflection</p>
             <p className="mt-1 break-words text-sm">{reflection.trim()}</p>
           </div>

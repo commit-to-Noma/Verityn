@@ -451,7 +451,7 @@ const VOICE_BEHAVIORS = [
 ] as const
 
 /** Worked-example feed for one tab. Labeled illustrations built from
- * documented numbers — never presented as live output. */
+ * documented numbers - never presented as live output. */
 function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
   if (tab === 'logic') {
     return (
@@ -497,7 +497,7 @@ function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
           <p>Status = INTACT (safe boundaries)</p>
         </div>
         <p className="mt-2 font-sans text-[11px] text-ink-muted">
-          Light a bulb, documented — every live run is measured the same way.
+          Light a bulb, documented: every live run is measured the same way.
         </p>
       </>
     )
@@ -541,7 +541,7 @@ function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
 }
 
 /** One tab's terminal: trace, executable command, and evidence refs in a
- * single window — no floating cards. */
+ * single window - no floating cards. */
 function ConsoleTerminal({ tab }: { tab: ConsoleTab }) {
   const refs = tab === 'voice' ? VOICE_BEHAVIORS : SMART_DETAILS.filter((item) => item.group === tab)
   return (
@@ -556,7 +556,7 @@ function ConsoleTerminal({ tab }: { tab: ConsoleTab }) {
           <a
             key={item.evidence}
             href={`${META_EVIDENCE_BASE}${item.evidence}`}
-            title={`${item.behavior} — seen: ${item.where}`}
+            title={`${item.behavior} - seen: ${item.where}`}
             target="_blank"
             rel="noreferrer"
             className="rounded-md border border-glass-border px-2 py-0.5 font-sans text-[11px] text-ink-muted transition-colors hover:border-flow/60 hover:text-ink"
@@ -789,7 +789,7 @@ export default function LabIntro({
         <div aria-hidden="true" className="mt-3 h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
           Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
-          Predicting before the AI speaks keeps the reasoning with you — Verityn sharpens thinking instead of letting
+          Predicting before the AI speaks keeps the reasoning with you. Verityn sharpens thinking instead of letting
           it atrophy.
         </p>
         <ol className="mt-6 flex flex-col divide-y divide-glass-border/60 border-y border-glass-border/60">

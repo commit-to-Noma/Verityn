@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      // Flask backend in development. The built app is served
-      // from the same origin in later milestones.
+      // Flask backend in development. The deployed build is
+      // same-origin: Vercel rewrites /api/* to the server function.
       '/api': process.env.VERITYN_API ?? 'http://127.0.0.1:5001',
     },
   },

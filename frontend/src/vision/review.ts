@@ -67,9 +67,9 @@ export function canTestProposal(proposal: VisionProposal, confirmed: boolean): b
  */
 export function ambiguousWireNote(traced: boolean): string {
   if (traced) {
-    return 'Ambiguous endpoints, but the wire route is traced on your photo - verify both before confirming.'
+    return 'Ambiguous endpoints, but the wire route is traced on your photo. Verify both before confirming.'
   }
-  return 'Ambiguous: verify these endpoints on the replica before confirming. Wires carry no image region - only the terminal relationship was proposed.'
+  return 'Ambiguous: verify these endpoints on the replica before confirming. Wires carry no image region. Only the terminal relationship was proposed.'
 }
 
 /** Disclaimer under the evidence list, counted from the traced wires. */

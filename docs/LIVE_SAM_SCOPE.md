@@ -1,7 +1,7 @@
 # Live SAM 3.1 Scope
 
 Goal: earn the right to say Reality Lens uses Segment Anything Model 3.1
-(SAM 3.1) on real uploads — behind a measured accuracy gate, with an honest
+(SAM 3.1) on real uploads - behind a measured accuracy gate, with an honest
 fallback. Until the gate passes, every claim stays exactly as it is today:
 SAM 3.1 sample-only.
 
@@ -12,7 +12,7 @@ SAM 3.1 sample-only.
 - `scripts/sam_spike.py`: the ONLY live caller. One request per
   (image, prompt) over `tests/fixtures/sam_spike/` (10 images: hand,
   textbook, digital), recording found/not-found per component.
-- `docs/sam-spike-results.json`: last run verdict **FAIL — 2 of 10**
+- `docs/sam-spike-results.json`: last run verdict **FAIL - 2 of 10**
   battery-and-bulb against a 7-of-10 threshold.
 - Frontend: sample diagrams carry `sam-sample` provenance only when their
   source image came from the spike set; tap-to-segment selects stored
@@ -56,14 +56,14 @@ The gate stays a script, not a feeling. Extend `scripts/sam_spike.py`:
 - New flag `VERITYN_SAM_LIVE=1`, separate from the spike flag. The
   propose path (`src/verityn/vision.py`) calls SAM 3.1 only when live is on;
   any failure (timeout, parse, low confidence) falls back to the
-  current Spark-only path — never a red error, never a silent fake.
+  current Spark-only path - never a red error, never a silent fake.
 - Timeouts and budgets: keep the 60 s client timeout; cap live calls
   per upload (propose-time boxes + user taps only, no polling).
 - Provenance in the UI: review shows `SAM 3.1 assist` with per-box
   confidence when live boxes were used, `Spark only` otherwise. Trace
   keeps the raw boxes; sample `sam-sample` labels stay as they are.
 - Privacy: uploads already travel to the vision endpoint for
-  proposals; SAM 3.1 sees the same bytes under the same handling — mask
+  proposals; SAM 3.1 sees the same bytes under the same handling - mask
   payloads validated structurally and dropped, as today.
 
 ## Rollout steps

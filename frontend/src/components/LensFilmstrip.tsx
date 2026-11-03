@@ -21,7 +21,7 @@ export default function LensFilmstrip({
   onSelectUpload: () => void
 }) {
   return (
-    <div aria-label="Diagram filmstrip" className="flex flex-col gap-2">
+    <div role="group" aria-label="Diagram filmstrip" className="flex flex-col gap-2">
       <p className="text-ink-muted text-xs font-semibold uppercase tracking-[0.18em]">
         Diagrams
       </p>

@@ -42,10 +42,10 @@ export function initialMissionProgress(): MissionProgress {
 
 function thresholdHint(progress: MissionProgress): string {
   if (progress.darkSeen && !progress.litSeen) {
-    return 'Dark run logged — now log a lit one.'
+    return 'Dark run logged. Now log a lit one.'
   }
   if (progress.litSeen && !progress.darkSeen) {
-    return 'Lit run logged — now log a dark one.'
+    return 'Lit run logged. Now log a dark one.'
   }
   return 'Log one dark run and one lit run; find where glow begins.'
 }
@@ -54,7 +54,7 @@ function redlineHint(progress: MissionProgress): string {
   if (!progress.redlineSeen) {
     return 'Push a bulb past its safe limit (Overworked).'
   }
-  return 'Overworked logged — bring a bulb back to Intact.'
+  return 'Overworked logged. Bring a bulb back to Intact.'
 }
 
 export const MISSIONS: Mission[] = [

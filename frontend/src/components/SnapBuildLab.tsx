@@ -512,7 +512,7 @@ function ReviewPanels({
                 </div>
               )}
             </div>
-            <div aria-label="Detected evidence summary" className="flex flex-col gap-1.5">
+            <div role="group" aria-label="Detected evidence summary" className="flex flex-col gap-1.5">
               <p className="text-ink-muted text-xs">
                 Detected {health.partsLine.charAt(0).toLowerCase() + health.partsLine.slice(1)} ·{' '}
                 {tracedWires.length} of {proposal.connections.length} wires traced
@@ -527,7 +527,7 @@ function ReviewPanels({
                         type="button"
                         onClick={() => toggleSelection(component.id)}
                         aria-pressed={selection === component.id}
-                        title={`${component.id} · ${REVIEW_STATUS_LABELS[status]} — inspect`}
+                        title={`${component.id} · ${REVIEW_STATUS_LABELS[status]} - inspect`}
                         className={`flex min-h-[32px] items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] ${
                           selection === component.id
                             ? 'border-ok/60 text-ink'
@@ -703,7 +703,7 @@ function ReviewPanels({
                 Model confirmed{corrected ? ' with your corrections' : ''}.
               </p>
               <p className="text-ink-muted text-sm">
-                These numbers are a starting point — change one part at a time to see what moves them.
+                These numbers are a starting point. Change one part at a time to see what moves them.
               </p>
               <button
                 type="button"
@@ -946,7 +946,7 @@ export default function SnapBuildLab({
     >
       <div>
         <p className="text-ink-muted mb-2 text-sm">
-          From a photo to a measured circuit in three steps —{' '}
+          From a photo to a measured circuit in three steps:{' '}
           <strong className="text-ink font-semibold">
             {steps.every((step) => step === 'done')
               ? 'all done.'
@@ -1275,12 +1275,13 @@ export default function SnapBuildLab({
             <p className="text-flow text-xs font-semibold tracking-[0.18em]">Practice gallery</p>
             <h3 className="mt-1 text-base font-semibold">Sample diagrams</h3>
             <p className="text-ink-muted mt-1 text-sm">
-              Rehearse the full loop on a curated circuit — review, confirm, measure. No upload needed.
+              Rehearse the full loop on a sample circuit: review, confirm, measure. No upload needed.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div
               className="text-ink-muted flex items-center gap-3 text-xs"
+              role="group"
               aria-label={`${LENS_SAMPLES.length} samples across Starter and Challenge levels`}
             >
               <span aria-hidden="true">{LENS_SAMPLES.length} diagrams</span>
@@ -1309,12 +1310,12 @@ export default function SnapBuildLab({
             {compareSamples.length === 0
               ? 'Pick two diagrams to set them side by side.'
               : compareSamples.length === 1
-                ? `One picked — ${compareSamples[0]?.title}. Pick one more.`
-                : 'Two picked — study the pair, or open either one.'}
+                ? `One picked: ${compareSamples[0]?.title}. Pick one more.`
+                : 'Two picked: study the pair, or open either one.'}
           </p>
         )}
         {comparing && compareSamples.length === 2 && (
-          <div aria-label="Sample comparison" className="grid gap-3 sm:grid-cols-2">
+          <div role="group" aria-label="Sample comparison" className="grid gap-3 sm:grid-cols-2">
             {compareSamples.map((sample) => (
               <div key={sample.id} className="glass-panel flex flex-col gap-2 p-4">
                 <img
