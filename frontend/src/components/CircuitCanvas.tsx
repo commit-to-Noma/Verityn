@@ -942,6 +942,9 @@ function CanvasInner({
   onDemoTakeover,
   hud = null,
   onFailed,
+  dockTools,
+  confirmPrompt,
+  hideResultBanner = false,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -1014,6 +1017,12 @@ function CanvasInner({
   hud?: HudReading | null
   /** Fired when a run fails terminally (retry budget spent); rejections excluded. */
   onFailed?: () => void
+  /** Lens-only: hover the palette over the canvas top edge; hides the header. */
+  dockTools?: 'top'
+  /** Lens-only: override for the locked-confirm next-step line. */
+  confirmPrompt?: string
+  /** Lens-only: skip the result banner; the HUD already shows the metrics. */
+  hideResultBanner?: boolean
 }) {
   const initialSeed = importRequest?.seed ?? seed
   const initialUncertain = importRequest?.uncertainIds ?? []
@@ -1648,7 +1657,8 @@ function CanvasInner({
               )
               : loopClosed
                 ? simulateLocked !== null
-                  ? 'All parts are connected. Confirm the proposal before testing it.'
+                  ? (confirmPrompt ??
+                    'All parts are connected. Confirm the proposal before testing it.')
                   : 'All parts are connected. The circuit is ready when you are.'
                 : 'The dots are connected, but the parts do not form one loop. Check the connections.'
 
@@ -2086,6 +2096,16 @@ function CanvasInner({
     </div>
   )
 
+  /** Lens-only tool rail: the palette buttons hover over the top-center
+   * edge of the replica canvas, recovering the header's vertical space. */
+  const toolDockTop = (
+    <div aria-label="Part dock" className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-2">
+      <div className="pointer-events-auto rounded-2xl border border-glass-border bg-black/60 px-2 py-1.5 shadow-xl backdrop-blur-md">
+        {paletteTools}
+      </div>
+    </div>
+  )
+
   const paletteExtras = (
     <>
       {challenge === undefined && importRequest == null && (
@@ -2220,6 +2240,7 @@ function CanvasInner({
           </div>
         )}
         {mode === 'experiment' && toolDock}
+        {dockTools === 'top' && toolDockTop}
       </div>
     </>
   )
@@ -2293,7 +2314,7 @@ function CanvasInner({
   )
   const feedbackPane = (
     <>
-      {runState.phase === 'done' && runState.result.ok && (
+      {!hideResultBanner && runState.phase === 'done' && runState.result.ok && (
         <div className="evidence-reveal">
           <ResultBanner result={runState.result} netlist={runState.netlist} />
         </div>
@@ -2413,7 +2434,7 @@ function CanvasInner({
   // Keep the original full workbench composition for non-guided canvases.
   const experimentPane = (
     <>
-      {mode === 'experiment' ? paletteExtras : palettePane}
+      {mode === 'experiment' || dockTools === 'top' ? paletteExtras : palettePane}
       {canvasPane}
       {actionPane}
       {feedbackPane}
@@ -2536,6 +2557,44 @@ function CanvasInner({
     </>
   )
 
+  /** Shared right-column blocks, extracted so the Reality Check result can
+   * regroup them into evidence/action rows without duplicating markup. */
+  const predictionBlock =
+    prediction && challenge ? (
+      <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
+        <PredictionSummary
+          prediction={prediction}
+          hint={challenge.fix.hint}
+          hideHint={solo}
+          compact={completed}
+          question={challenge.question}
+        />
+      </div>
+    ) : null
+  const resultCard =
+    completed && runState.phase === 'done' ? (
+      <GuidedResultCard
+        result={runState.result}
+        coachOff={solo}
+        choice={choice}
+        claimComponent={claim?.component}
+        netlist={runState.netlist}
+        onDetailsOpen={() => {
+          window.requestAnimationFrame(() => {
+            void fitView({
+              padding: window.innerWidth <= 640 ? MOBILE_FIT_VIEW_PADDING : 0.2,
+              minZoom: window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5,
+              maxZoom: 1.25,
+            })
+          })
+        }}
+      >
+        {insightPane}
+      </GuidedResultCard>
+    ) : null
+  const isRealityResult =
+    proofStage === 'reality-build' && completed && runState.phase === 'done'
+
   return (
     <section aria-labelledby="canvas-heading" className="scroll-mt-44">
       {layout === 'split' ? (
@@ -2560,43 +2619,45 @@ function CanvasInner({
             {canvasPane}
           </div>
           <div className="order-1 flex h-full min-w-0 flex-col gap-4">
-            {prediction && challenge && (
-              <div className="lg:rounded-2xl lg:bg-[rgb(10_14_28/0.96)] lg:shadow-xl">
-                <PredictionSummary
-                  prediction={prediction}
-                  hint={challenge.fix.hint}
-                  hideHint={solo}
-                  compact={completed}
-                  question={challenge.question}
-                />
-              </div>
-            )}
-            {coachDock}
-            {completed && runState.phase === 'done' ? (
+            {isRealityResult ? (
               <>
-                <GuidedResultCard
-                  result={runState.result}
-                  coachOff={solo}
-                  choice={choice}
-                  claimComponent={claim?.component}
-                  netlist={runState.netlist}
-                  onDetailsOpen={() => {
-                    window.requestAnimationFrame(() => {
-                      void fitView({
-                        padding: window.innerWidth <= 640 ? MOBILE_FIT_VIEW_PADDING : 0.2,
-                        minZoom: window.innerWidth <= 640 ? MOBILE_MIN_ZOOM : 0.5,
-                        maxZoom: 1.25,
-                      })
-                    })
-                  }}
+                <section
+                  aria-label="Evidence verification"
+                  className="glass-panel flex flex-col gap-4 p-4"
                 >
-                  {insightPane}
-                </GuidedResultCard>
+                  <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">
+                    Evidence
+                  </p>
+                  {predictionBlock}
+                  {coachDock}
+                  {resultCard}
+                </section>
+                <section
+                  aria-label="Sandbox actions"
+                  className="glass-panel flex flex-col gap-3 p-4"
+                >
+                  <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">
+                    Actions
+                  </p>
+                  {retestButton}
+                  {switchPractice}
+                  {gate}
+                </section>
+              </>
+            ) : (
+              <>
+                {predictionBlock}
+                {coachDock}
+              </>
+            )}
+            {!isRealityResult && completed && runState.phase === 'done' ? (
+              <>
+                {resultCard}
                 {retestButton}
                 {switchPractice}
                 {gate}
               </>
-            ) : (
+            ) : !isRealityResult ? (
               <>
                 {palettePane}
                 {runState.phase === 'done' ? (
@@ -2614,12 +2675,15 @@ function CanvasInner({
                 {retestButton}
                 {switchPractice}
               </>
-            )}
+            ) : null}
           </div>
         </div>
         </div>
       ) : (
         <>
+          {dockTools === 'top' ? (
+            <h2 id="canvas-heading" className="sr-only">{title}</h2>
+          ) : (
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-flow mb-1 text-xs font-semibold uppercase tracking-[0.18em]">{eyebrow}</p>
@@ -2635,6 +2699,7 @@ function CanvasInner({
               </span>
             )}
           </div>
+          )}
           {coachDock}
           {experimentPane}
           {prediction && challenge && (
@@ -2714,6 +2779,9 @@ export default function CircuitCanvas({
   onDemoTakeover,
   hud,
   onFailed,
+  dockTools,
+  confirmPrompt,
+  hideResultBanner,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -2759,6 +2827,9 @@ export default function CircuitCanvas({
   onDemoTakeover?: () => void
   hud?: HudReading | null
   onFailed?: () => void
+  dockTools?: 'top'
+  confirmPrompt?: string
+  hideResultBanner?: boolean
 }) {
   return (
     <ReactFlowProvider>
@@ -2807,6 +2878,9 @@ export default function CircuitCanvas({
         onDemoTakeover={onDemoTakeover}
         hud={hud}
         onFailed={onFailed}
+        dockTools={dockTools}
+        confirmPrompt={confirmPrompt}
+        hideResultBanner={hideResultBanner}
       />
     </ReactFlowProvider>
   )

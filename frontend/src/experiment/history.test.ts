@@ -42,6 +42,16 @@ describe('describeRun', () => {
     expect(record).toMatchObject({ valid: true, amps: 0, bulbsLit: 0 })
   })
 
+  it('records exploded runs as dark with zero headline amps despite the surge', () => {
+    const record = describeRun(
+      4,
+      'Time Bomb',
+      { ...solved(57.6, 2.4), conditions: { L1: 'exploded' } } as unknown as SimulateResult,
+      LOOP,
+    )
+    expect(record).toMatchObject({ valid: true, amps: 0, bulbsLit: 0 })
+  })
+
   it('records rejections with their solver code and no invented numbers', () => {
     const record = describeRun(3, 'Shorted battery', REJECTED, LOOP)
     expect(record).toMatchObject({ valid: false, amps: 0, bulbsLit: 0, errorCode: 'SHORTED_BATTERY' })

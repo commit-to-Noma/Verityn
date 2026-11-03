@@ -76,4 +76,35 @@ describe('bannerModel', () => {
     )
     expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'NO BULBS', lit: false })
   })
+
+  it('reports an exploded bulb as exploded, never lit, with zero headline amps', () => {
+    const result = solved({ L1: { voltage: 24, current: 2.4, power: 57.6 } })
+    result.conditions = { L1: 'exploded' }
+    const model = bannerModel(
+      result,
+      netlist([
+        { id: 'B1', type: 'battery' },
+        { id: 'S1', type: 'switch', closed: true },
+        { id: 'L1', type: 'bulb' },
+      ]),
+    )
+    expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'BULB EXPLODED', lit: false })
+  })
+
+  it('still celebrates the lit sibling of an exploded bulb', () => {
+    const result = solved({
+      L1: { voltage: 24, current: 2.4, power: 57.6 },
+      L2: { voltage: 6, current: 0.6, power: 3.6 },
+    })
+    result.conditions = { L1: 'exploded', L2: 'intact' }
+    const model = bannerModel(
+      result,
+      netlist([
+        { id: 'B1', type: 'battery' },
+        { id: 'L1', type: 'bulb' },
+        { id: 'L2', type: 'bulb' },
+      ]),
+    )
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: 'BULB LIT', lit: true })
+  })
 })

@@ -1,4 +1,4 @@
-import { Atom, ChevronLeft, ChevronRight, Eye, Lightbulb, MessagesSquare, Play } from 'lucide-react'
+import { Atom, ChevronLeft, ChevronRight, Eye, Lightbulb, MessagesSquare, Mic, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
@@ -47,12 +47,6 @@ const IMPACT_CASES = [
     response:
       'The Experiment Bay brings back messing about on purpose: wire anything, blow bulbs safely, then ask why.',
   },
-] as const
-
-const SMART_GROUPS = [
-  { id: 'vision', label: 'Vision', tagline: 'Lens diagrams become testable circuits', icon: Eye },
-  { id: 'logic', label: 'Logic', tagline: 'Coach and voice stay grounded', icon: MessagesSquare },
-  { id: 'physics', label: 'Physics', tagline: 'Measured readings reach the screen', icon: Atom },
 ] as const
 
 const FIELD_ANGLES: Record<STEMFieldId, number> = {
@@ -407,67 +401,127 @@ function STEMOrbit() {
   )
 }
 
-/** Live output side of the diagnostic console: one honest panel per system. */
-function ConsoleLivePanel({ tab }: { tab: 'vision' | 'logic' | 'physics' }) {
-  if (tab === 'vision') {
-    const sample = LENS_SAMPLES[0]
-    if (sample === undefined) {
-      return null
-    }
-    return (
-      <div className="grid items-center gap-3 rounded-xl border border-glass-border bg-black/30 p-3 sm:grid-cols-2">
-        <div className="relative overflow-hidden rounded-lg">
-          <img src={sample.image} alt="" aria-hidden="true" className="block h-auto w-full" />
-          <svg
-            viewBox={`0 0 ${sample.width} ${sample.height}`}
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full"
-          >
-            {[sample.boxes.battery, sample.boxes.bulb].map((box, index) => (
-              <rect
-                key={index}
-                x={box.left}
-                y={box.top}
-                width={box.right - box.left}
-                height={box.bottom - box.top}
-                rx={6}
-                fill="none"
-                stroke="var(--color-flow)"
-                strokeWidth={3}
-              />
-            ))}
-          </svg>
-        </div>
-        <div>
-          <p className="font-mono text-xs font-semibold text-flow">vision · saved mask</p>
-          <p className="mt-1 text-xs leading-5 text-ink-muted">
-            {sample.title}: detected regions stay on the sample. Taps select saved boxes with SAM
-            provenance; no live inference runs here.
-          </p>
-        </div>
-      </div>
-    )
-  }
+type ConsoleTab = 'logic' | 'voice' | 'physics' | 'vision'
+
+const CONSOLE_TABS: ReadonlyArray<{
+  id: ConsoleTab
+  card: string
+  sub: string
+  icon: typeof MessagesSquare
+}> = [
+  { id: 'logic', card: 'Muse Spark', sub: 'Reasoning & logic', icon: MessagesSquare },
+  { id: 'voice', card: 'Muse Voice', sub: 'Audio processing', icon: Mic },
+  { id: 'physics', card: 'Verityn Solver', sub: 'Mathematical truth', icon: Atom },
+  { id: 'vision', card: 'SAM samples', sub: 'Saved masks only', icon: Eye },
+]
+
+const VOICE_BEHAVIORS = [
+  {
+    title: '5-second captures',
+    behavior: 'Recording stops by itself after about 1.5 s of silence.',
+    where: 'Predict, Reality Check, and Solo',
+    evidence: 'frontend/src/voice/audio.test.ts',
+  },
+  {
+    title: 'Editable transcripts',
+    behavior: 'Speech becomes Why text you can fix before continuing.',
+    where: 'Prediction recap',
+    evidence: 'frontend/src/voice/spokenPrediction.test.ts',
+  },
+  {
+    title: 'Honest playback',
+    behavior: 'Display drops fillers; the raw transcript stays in Trace.',
+    where: 'Journey and result cards',
+    evidence: 'frontend/src/voice/displayTranscript.test.ts',
+  },
+] as const
+
+/** Live terminal side of the console. Feeds are labeled worked examples built
+ * from documented numbers — never presented as live output. */
+function ConsoleLivePanel({ tab }: { tab: ConsoleTab }) {
   if (tab === 'logic') {
     return (
-      <div className="rounded-xl border border-glass-border bg-black/30 p-3">
-        <p className="font-mono text-xs font-semibold text-flow">logic · fallback ladder</p>
-        <ol className="mt-2 flex list-decimal flex-col gap-1 pl-5 font-mono text-[11px] leading-5 text-ink-muted">
-          <li>Draft must end in a statement and pass the leak and number guards.</li>
-          <li>On a question ending, drop the last sentence or retry once with the error fed back.</li>
-          <li>Final fallback shows a neutral line, never red; provider chip tells the truth.</li>
-        </ol>
+      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+        <p className="text-xs font-semibold text-flow">muse-spark · example trace</p>
+        <div className="mt-2 flex flex-col gap-1 text-ink-muted">
+          <p><span className="text-flow">[check]</span> Evaluating circuit…</p>
+          <p><span className="text-flow">[input]</span> Battery 24 V, bulb 10 Ω (12 V rated)</p>
+          <p><span className="text-flow">[spark]</span> Surge past the 18 V blow point.</p>
+          <p className="text-ink">[output] “Light 1 exploded and no longer completes the circuit: 2.4 A and 57.6 W.”</p>
+        </div>
+        <p className="mt-2 font-sans text-[11px] text-ink-muted">
+          Illustrated from the documented Time Bomb run; drafts must still pass the leak and number guards.
+        </p>
       </div>
     )
   }
+  if (tab === 'voice') {
+    return (
+      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+        <p className="text-xs font-semibold text-flow">muse-voice · example trace</p>
+        <div className="mt-2 flex flex-col gap-1 text-ink-muted">
+          <p><span className="text-flow">[audio]</span> 5-second buffer · speech detected █▄█▅</p>
+          <p><span className="text-flow">[transcribe]</span> Converting speech to text…</p>
+          <p className="text-ink">[output] “Will it light once the loose ends are connected?”</p>
+        </div>
+        <p className="mt-2 font-sans text-[11px] text-ink-muted">
+          Illustrated transcript; display drops fillers while the raw text stays in Trace.
+        </p>
+      </div>
+    )
+  }
+  if (tab === 'physics') {
+    return (
+      <div className="rounded-xl border border-flow/30 bg-black p-3 font-mono text-[11px] leading-5 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)]">
+        <p className="text-xs font-semibold text-flow">solver · worked example</p>
+        <div className="mt-2 flex flex-col gap-1 text-ink">
+          <p>% Ohm&apos;s Law Evaluation Node</p>
+          <p>Resistance = 10.00 Ohms</p>
+          <p>Voltage = 6.00 Volts</p>
+          <p>Current = Voltage / Resistance → 0.60 Amps</p>
+          <p>Power = Voltage × Current → 3.60 Watts</p>
+          <p>Status = INTACT (safe boundaries)</p>
+        </div>
+        <p className="mt-2 font-sans text-[11px] text-ink-muted">
+          Light a bulb, documented — every live run is measured the same way.
+        </p>
+      </div>
+    )
+  }
+  const sample = LENS_SAMPLES[0]
+  if (sample === undefined) {
+    return null
+  }
   return (
-    <div className="rounded-xl border border-glass-border bg-black/30 p-3 font-mono text-[11px] leading-5">
-      <p className="font-mono text-xs font-semibold text-flow">physics · worked example</p>
-      <p className="mt-2 text-ink">I = V/R = 6.0 V / 10 Ω = 0.6 A</p>
-      <p className="text-ink">P = V·I = 6.0 V × 0.6 A = 3.6 W</p>
-      <p className="mt-1 font-sans text-[11px] text-ink-muted">
-        Light a bulb, documented — the solver measures every live run the same way.
-      </p>
+    <div className="grid items-center gap-3 rounded-xl border border-flow/30 bg-black p-3 shadow-[inset_0_0_24px_rgb(56_214_233/0.06)] sm:grid-cols-2">
+      <div className="relative overflow-hidden rounded-lg">
+        <img src={sample.image} alt="" aria-hidden="true" className="block h-auto w-full" />
+        <svg
+          viewBox={`0 0 ${sample.width} ${sample.height}`}
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full"
+        >
+          {[sample.boxes.battery, sample.boxes.bulb].map((box, index) => (
+            <rect
+              key={index}
+              x={box.left}
+              y={box.top}
+              width={box.right - box.left}
+              height={box.bottom - box.top}
+              rx={6}
+              fill="none"
+              stroke="var(--color-flow)"
+              strokeWidth={3}
+            />
+          ))}
+        </svg>
+      </div>
+      <div>
+        <p className="font-mono text-xs font-semibold text-flow">sam · saved mask</p>
+        <p className="mt-1 font-sans text-xs leading-5 text-ink-muted">
+          {sample.title}: taps select saved boxes with SAM provenance; no live inference runs here.
+        </p>
+      </div>
     </div>
   )
 }
@@ -507,7 +561,7 @@ export default function LabIntro({
     }
   }
   const [loopStop, setLoopStop] = useState(0)
-  const [consoleTab, setConsoleTab] = useState<'vision' | 'logic' | 'physics'>('vision')
+  const [consoleTab, setConsoleTab] = useState<ConsoleTab>('logic')
   const [sandboxLit, setSandboxLit] = useState(false)
 
   return (
@@ -664,27 +718,35 @@ export default function LabIntro({
           <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
             Smart details
           </summary>
-          <div className="mt-4 grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <div role="tablist" aria-label="Systems" className="flex gap-2 lg:flex-col">
-              {SMART_GROUPS.map((group) => {
-                const Icon = group.icon
-                const count = SMART_DETAILS.filter((item) => item.group === group.id).length
-                const selected = consoleTab === group.id
+          <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <div role="tablist" aria-label="Engines" className="flex gap-2 sm:grid sm:grid-cols-2 lg:flex lg:flex-col">
+              {CONSOLE_TABS.map((tab) => {
+                const Icon = tab.icon
+                const selected = consoleTab === tab.id
                 return (
                   <button
-                    key={group.id}
+                    key={tab.id}
                     type="button"
                     role="tab"
                     aria-selected={selected}
-                    onClick={() => setConsoleTab(group.id)}
-                    className={`flex min-h-[44px] flex-1 items-center gap-2 rounded-[10px] border px-3 text-left text-sm font-medium lg:flex-none ${
-                      selected ? 'border-flow/60 bg-flow/5 text-ink' : 'border-glass-border text-ink-muted'
+                    onClick={() => setConsoleTab(tab.id)}
+                    className={`flex min-h-[56px] flex-1 items-center gap-3 rounded-[10px] border p-3 text-left lg:flex-none ${
+                      selected
+                        ? 'border-flow/60 bg-flow/5 shadow-[0_0_16px_-4px_var(--color-flow)]'
+                        : 'border-glass-border'
                     }`}
                   >
-                    <Icon className="h-4 w-4 shrink-0 text-flow" aria-hidden="true" />
-                    {group.label}
-                    <span className="ml-auto rounded-full border border-glass-border px-2 py-px text-[11px] text-ink-muted">
-                      {count}
+                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] border border-glass-border bg-black/40">
+                      <Icon className="h-4 w-4 text-flow" aria-hidden="true" />
+                      {selected && (
+                        <span aria-hidden="true" className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-flow shadow-[0_0_8px_var(--color-flow)]" />
+                      )}
+                    </span>
+                    <span>
+                      <span className={`block text-sm font-semibold ${selected ? 'text-ink' : 'text-ink-muted'}`}>
+                        {tab.card}
+                      </span>
+                      <span className="block text-[11px] text-ink-muted">{tab.sub}</span>
                     </span>
                   </button>
                 )
@@ -693,7 +755,10 @@ export default function LabIntro({
             <div role="tabpanel" className="flex min-w-0 flex-col gap-3">
               <ConsoleLivePanel tab={consoleTab} />
               <ul className="grid gap-3 sm:grid-cols-2">
-                {SMART_DETAILS.filter((item) => item.group === consoleTab).map((item) => (
+                {(consoleTab === 'voice'
+                  ? VOICE_BEHAVIORS
+                  : SMART_DETAILS.filter((item) => item.group === consoleTab)
+                ).map((item) => (
                   <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
                     <p className="text-sm font-semibold">{item.title}</p>
                     <p className="mt-0.5 text-xs text-ink-muted">{item.behavior}</p>

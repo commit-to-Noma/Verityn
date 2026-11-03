@@ -1084,8 +1084,15 @@ export default function ExperimentPage({
             aria-label="Sweep running, bench locked"
             className="absolute inset-0 z-20 cursor-not-allowed rounded-2xl"
           >
-            <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 text-xs">
+            <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 font-mono text-xs">
               Sweep running — bench locked
+              {rig.phase === 'running' && (
+                <>
+                  {' '}· Point {Math.min(rig.points.length + 1, rig.plan.points.length)} of{' '}
+                  {rig.plan.points.length} · {rig.plan.batteryId} at{' '}
+                  {rig.plan.points[Math.min(rig.points.length, rig.plan.points.length - 1)]} V
+                </>
+              )}
             </p>
           </div>
         )}

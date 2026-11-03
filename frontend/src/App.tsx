@@ -116,6 +116,8 @@ const COACH_INTRODUCTION =
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
   const [entered, setEntered] = useState(false)
+  const [gateway, setGateway] = useState(false)
+  const gatewayShown = useRef(false)
   const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(false)
   const [learnerReply, setLearnerReply] = useState('')
   const [predictionTranscript, setPredictionTranscript] = useState<{
@@ -705,6 +707,28 @@ export default function App() {
     setTraceStage(lensPage ? 'lens' : experimentPage ? 'experiment' : stage)
   }, [lensPage, experimentPage, stage])
 
+  /** Gateway transition: once per session, first guided entry gets a 3 s
+   * mount screen. Skipped for demos, auto runs, and reduced motion. */
+  useEffect(() => {
+    if (
+      stage === 'intro' ||
+      lensPage ||
+      experimentPage ||
+      gatewayShown.current ||
+      auto ||
+      demo.active
+    ) {
+      return
+    }
+    gatewayShown.current = true
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return
+    }
+    setGateway(true)
+    const timer = window.setTimeout(() => setGateway(false), 3000)
+    return () => window.clearTimeout(timer)
+  }, [stage, lensPage, experimentPage, auto, demo.active])
+
   /** Reality Lens is a first-class workspace, not a footer tool. Leaving the
    * journey unmounts the canvases, so any latched gate is cleared: builds must
    * be re-verified on return, while recorded predictions stand. */
@@ -1270,6 +1294,32 @@ export default function App() {
         </Suspense>
       )}
       {STAGE_CONTENT[stage] /* exhaustiveness: every stage renders above */}
+      {gateway && (
+        <div
+          role="dialog"
+          aria-label="Mounting Engineering Workspace"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        >
+          <div className="flex w-full max-w-md flex-col items-center rounded-2xl border border-glass-border bg-[rgb(10_14_28/0.95)] p-8 text-center shadow-2xl">
+            <div aria-hidden="true" className="relative mb-6 flex h-24 w-24 items-center justify-center">
+              <div className="absolute inset-0 animate-ping rounded-full border-2 border-flow/30 motion-reduce:animate-none" />
+              <div className="absolute inset-2 animate-spin rounded-full border border-dashed border-light/50 [animation-duration:4s] motion-reduce:animate-none" />
+              <span className="font-mono text-lg font-bold text-flow">01</span>
+            </div>
+            <h2 className="text-xl font-semibold tracking-wide">Mounting Engineering Workspace</h2>
+            <p className="mt-1 animate-pulse font-mono text-sm text-flow motion-reduce:animate-none">
+              Initializing Module 1: Live Circuit Physics…
+            </p>
+            <button
+              type="button"
+              onClick={() => setGateway(false)}
+              className="border-glass-border mt-6 min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
     </JourneyShell>
   )
 }

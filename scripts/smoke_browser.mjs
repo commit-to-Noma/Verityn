@@ -689,6 +689,10 @@ async function drive() {
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
+  await waitFor(() => hasText('Mounting Engineering Workspace'), 'gateway shows', 5000)
+  check('guided gateway mounts the workspace', await hasText('Initializing Module 1'))
+  await clickButton('Skip')
+  await waitFor(async () => !(await hasText('Mounting Engineering Workspace')), 'gateway skipped', 5000)
   check('Built with Meta disclosures are hidden in the Guided Lab', !(await hasText('Built with Meta')))
   check(
     'guided lab opens with the task',
@@ -762,6 +766,18 @@ async function drive() {
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
   check('retest button offered', await hasText('Close the switch and test again'))
   check('switch practice offered', await hasText('Your turn: flip the switch yourself'))
+  check('reality evidence row groups prediction and result', await ev(`(() => {
+    const row = document.querySelector('[aria-label="Evidence verification"]');
+    if (!row || row.offsetParent === null) return false;
+    const text = row.innerText;
+    return text.includes('Complete loop lights') && text.includes('MEASURED BY THE SOLVER');
+  })()`))
+  check('reality action row groups sandbox controls', await ev(`(() => {
+    const row = document.querySelector('[aria-label="Sandbox actions"]');
+    if (!row || row.offsetParent === null) return false;
+    const text = row.innerText;
+    return text.includes('Close the switch and test again') && text.includes('Your turn: flip the switch yourself');
+  })()`))
   await clickButton('Test with the switch closed')
   await waitFor(() => hasText('Switch closed → Light 1 lit'), 'practice closed reading', 25000)
   check('practice names the light in plain words', await hasText('Light 1 lit'))
@@ -1023,12 +1039,18 @@ async function drive() {
   await captureScreenshot('lens-review', 1440, '[aria-label="Review inspector"]')
   // The replica (and its lock notice) mounts on the reveal beat after the panels.
   await waitFor(() => hasText('Confirm the model in the inspector before testing'), 'lens lock', 20000)
-  check('lens replica keeps inline palette', await ev(`!![...document.querySelectorAll('[aria-label="Palette"]')].find((el) => el.offsetParent !== null && !el.closest('[aria-label="Part dock"]'))`))
-  check('no dock in lens review', await ev(`![...document.querySelectorAll('[aria-label="Part dock"]')].some((el) => el.offsetParent !== null)`))
+  check('lens replica docks tools on canvas', await ev(`!!document.querySelector('.canvas-recessed [aria-label="Part dock"] [aria-label="Palette"]')`))
+  check('lens dock rides the top edge', await ev(`(() => {
+    const dock = document.querySelector('.canvas-recessed [aria-label="Part dock"]');
+    const canvas = document.querySelector('.canvas-recessed');
+    if (!dock || !canvas) return false;
+    return dock.getBoundingClientRect().top - canvas.getBoundingClientRect().top < 40;
+  })()`))
   check('confirm gate visible', await hasText('Confirm the model in the inspector before testing it against the simulator.'))
+  check('lens confirm micro-copy', await hasText('AI Verification Complete'))
   check('no proof before confirm', !(await hasText('Confirmed circuit tested')))
-  check('confirm lives in inspector', await ev(`document.querySelector('[aria-label="Review inspector"]')?.innerText.includes('Confirm model') ?? false`))
-  await clickButton('Confirm model')
+  check('confirm lives in inspector', await ev(`document.querySelector('[aria-label="Review inspector"]')?.innerText.includes('Confirm & Measure Circuit') ?? false`))
+  await clickButton('Confirm & Measure Circuit')
   await waitFor(() => hasText('Verityn Solver will test'), 'lens confirmed')
   await waitFor(() => hasText('Confirmed circuit tested'), 'lens proof', 25000)
   check('replica shows result HUD', await ev(`!!document.querySelector('section[aria-label="Diagram upload and review"] [aria-label="Result heads-up display"]')`))
@@ -1036,7 +1058,7 @@ async function drive() {
   await waitFor(() => hasText('Tap a highlighted point'), 'filmstrip sample', 20000)
   check('filmstrip keeps upload slot', await ev(`!!document.querySelector('[data-filmstrip="upload"]')`))
   await ev(`document.querySelector('[data-filmstrip="upload"]')?.click()`)
-  await waitFor(() => hasText('Verityn Solver will test'), 'filmstrip upload restored', 20000)
+  await waitFor(() => hasText('Model confirmed'), 'filmstrip upload restored', 20000)
   check('review continuity after switch', await hasText('Confirmed circuit tested'))
   check('proof cites open-switch reading', await waitFor(() => hasText('Bulb dark') && hasText('0.0 A'), 'proof reading restored', 10000))
   check('proof attribution', await hasText("Computed by Verityn's solver."))
@@ -1045,7 +1067,7 @@ async function drive() {
   check('post-test usefulness line', await hasText('These numbers are a starting point'))
   await captureScreenshot('lens-tested', 1440, '[aria-label="Confirmed upload: photo, reading, and measurement"]')
   check('photo readings measured', await hasText('dark ·'))
-  await clickButton('Test this in the Experiment Bay')
+  await clickButton('Export to Free Bench Sandbox')
   await waitFor(() => hasText('FREE BENCH'), 'lens handoff')
   await waitFor(() => hasText('Start from a working bench'), 'handoff workbench chunk')
   await clickButton('Run experiment')
@@ -1079,7 +1101,7 @@ async function drive() {
   await uploadLensFile(switchImage)
   await waitFor(() => hasText('Original diagram'), 'lens invalid review', 20000)
   await waitFor(() => hasText('Confirm the model in the inspector before testing'), 'lens invalid lock', 20000)
-  await clickButton('Confirm model')
+  await clickButton('Confirm & Measure Circuit')
   await waitFor(() => hasText('Verityn Solver will test'), 'lens invalid confirmed')
   await clickButton('Test circuit')
   await waitFor(() => hasText('DANGLING_TERMINAL'), 'lens invalid code', 25000)
@@ -1375,11 +1397,13 @@ async function drive() {
   await clickButton('Run sweep')
   await waitFor(() => ev(`!!document.querySelector('[aria-label="Sweep running, bench locked"]')`), 'sweep lock', 10000)
   check('sweep locks bench', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Test' && b.disabled)`))
+  check('sweep pill shows live point', await ev(`/Point \\d+ of \\d+ · B1 at/.test(document.querySelector('[aria-label="Sweep running, bench locked"]')?.innerText ?? '')`))
   await clickButton('Cancel sweep')
   await waitFor(() => hasText('Sweep cancelled'), 'sweep cancel', 10000)
   await clickPresetButton('Time Bomb', 'Test')
   await waitFor(() => ev(`document.querySelector('[aria-label="Latest result"]')?.innerText.includes('Exploded') ?? false`), 'bomb blows', 25000)
   check('time bomb explodes first run', await ev(`document.querySelector('[aria-label="Latest result"]')?.innerText.includes('Exploded') ?? false`))
+  check('bomb banner reads exploded, never lit', await hasText('BULB EXPLODED') && !(await hasText('BULB LIT')))
   await clickPresetButton('Parallel Power', 'Test')
   await waitFor(() => ev(`[...document.querySelectorAll('[aria-label="Run history"] [data-run]')].at(-1)?.textContent.includes('Parallel Power') ?? false`), 'trio run', 25000)
   await ev(`[...document.querySelectorAll('[aria-label="Run history"] [data-run]')].at(-1)?.click()`)
@@ -1395,12 +1419,14 @@ async function drive() {
   await waitFor(() => hasText('Start your own lab'), 'hub final')
   await captureScreenshot('hub')
   await ensureSummaryOpen('Smart details')
+  check('console logic tab', await hasText('muse-spark · example trace'))
+  await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('Muse Voice'))?.click()`)
+  check('console voice tab', await hasText('muse-voice · example trace'))
+  await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('Verityn Solver'))?.click()`)
+  check('console physics tab', await hasText('Current = Voltage / Resistance → 0.60 Amps'))
+  await ev(`[...document.querySelectorAll('[aria-label="Engines"] [role="tab"]')].find((b) => b.textContent.includes('SAM samples'))?.click()`)
   await waitFor(() => hasText('Saved Reality Lens segments are tappable'), 'smart details updated', 10000)
   check('smart details mirror tap segments', await hasText('with SAM provenance'))
-  await ev(`[...document.querySelectorAll('[role="tab"]')].find((b) => b.textContent.includes('Logic'))?.click()`)
-  check('console logic tab', await hasText('fallback ladder'))
-  await ev(`[...document.querySelectorAll('[role="tab"]')].find((b) => b.textContent.includes('Physics'))?.click()`)
-  check('console physics tab', await hasText('I = V/R = 6.0 V / 10 Ω = 0.6 A'))
   await captureScreenshot('under-the-hood-smart-details', 1440, '#under-the-hood li:last-child')
   await clickButton('Reality Lens')
   await waitFor(() => hasText('Choose an image'), 'lens still works', 20000)

@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { ShellLocation, Stage } from '../journey/stages'
 import { SHELL_NAV, progressIndex } from '../journey/stages'
 import HealthStatus from './HealthStatus'
@@ -37,7 +37,33 @@ export default function JourneyShell({
   wide?: boolean
 }) {
   const mobileMenu = useRef<HTMLDetailsElement>(null)
+  const rowNav = useRef<HTMLElement>(null)
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null)
   const proof = useProofMode()
+
+  /** Lava-lamp trail: one pill follows the active tab's measured rect. */
+  useLayoutEffect(() => {
+    const measure = () => {
+      const nav = rowNav.current
+      const active =
+        nav?.querySelector<HTMLElement>(':scope > [aria-current="page"]') ??
+        nav?.querySelector<HTMLElement>('[aria-current="page"]')
+      if (nav === null || nav === undefined || active === null || active === undefined) {
+        setPill(null)
+        return
+      }
+      const frame = nav.getBoundingClientRect()
+      const box = active.getBoundingClientRect()
+      if (box.width === 0) {
+        setPill(null)
+        return
+      }
+      setPill({ left: box.left - frame.left, width: box.width })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [location])
   const renderNavButton = (item: (typeof SHELL_NAV)[number]) => (
     <button
       key={item.id}
@@ -50,7 +76,7 @@ export default function JourneyShell({
         mobileMenu.current?.removeAttribute('open')
         onNavigate(item.destination)
       }}
-      className={`flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
+      className={`relative z-10 flex min-h-[44px] items-center gap-2 rounded-[10px] px-4 text-sm font-medium ${
         item.primary && location === item.destination
           ? 'bg-glass-strong text-ink'
           : item.disabled === true
@@ -71,7 +97,7 @@ export default function JourneyShell({
     <>
       {SHELL_NAV.filter((item) => item.primary).map(renderNavButton)}
       <details className={layout === 'row' ? 'relative' : undefined}>
-        <summary className="text-ink-muted hover:text-ink flex min-h-[44px] cursor-pointer list-none items-center rounded-[10px] px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        <summary className="text-ink-muted hover:text-ink relative z-10 flex min-h-[44px] cursor-pointer list-none items-center rounded-[10px] px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
           Under the hood
         </summary>
         <div
@@ -123,9 +149,17 @@ export default function JourneyShell({
             </nav>
           </details>
           <nav
+            ref={rowNav}
             aria-label="Laboratory"
-            className="hidden items-center gap-1 xl:ml-auto xl:flex"
+            className="relative hidden items-center gap-1 rounded-xl border border-glass-border bg-gray-900/60 p-1.5 backdrop-blur-md xl:ml-auto xl:flex"
           >
+            {pill !== null && (
+              <div
+                aria-hidden="true"
+                className="absolute top-[6px] bottom-[6px] rounded-lg border border-flow/40 bg-gradient-to-r from-flow/20 to-light/20 shadow-[0_0_15px_rgb(6_182_212/0.15)] transition-all duration-500 ease-out motion-reduce:transition-none"
+                style={{ left: pill.left - 3, width: pill.width + 6 }}
+              />
+            )}
             {renderNavigationItems('row')}
           </nav>
           <div className="xl:ml-2">
@@ -160,7 +194,7 @@ export default function JourneyShell({
           <ul className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
             <li>
               <span className="font-medium">Muse Spark</span>
-              <span className="text-ink-muted"> — R1 questions, explanations, and Reality Lens vision. </span>
+              <span className="text-ink-muted"> — R1 conceptual questions and drafted text explanations. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/INTELLIGENCE_LOG.md`}
@@ -172,7 +206,7 @@ export default function JourneyShell({
             </li>
             <li>
               <span className="font-medium">Muse Voice Transcribe</span>
-              <span className="text-ink-muted"> — speech-to-text for Predict, Reality Check, and Solo. </span>
+              <span className="text-ink-muted"> — 5-second audio recordings into editable text. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/ARCHITECTURE.md`}
@@ -184,7 +218,7 @@ export default function JourneyShell({
             </li>
             <li>
               <span className="font-medium">SAM</span>
-              <span className="text-ink-muted"> — sample only; no live inference. </span>
+              <span className="text-ink-muted"> — sample only; no live SAM inference is used. Tappable segmentation samples utilize saved provenance. </span>
               <a
                 className="text-flow underline underline-offset-2"
                 href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}

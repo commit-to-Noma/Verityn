@@ -115,7 +115,7 @@ export function describeRun(
     }
   }
   const banner = bannerModel(result, netlist)
-  const lit = bulbs.filter((bulb) => bulb.watts > LIT_POWER_W)
+  const lit = bulbs.filter((bulb) => bulb.condition !== 'exploded' && bulb.watts > LIT_POWER_W)
   return {
     n,
     label,

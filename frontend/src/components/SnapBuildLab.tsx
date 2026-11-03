@@ -536,7 +536,7 @@ function ReviewPanels({
                       >
                         <span
                           aria-hidden="true"
-                          className={`h-1.5 w-1.5 rounded-full ${needsWork ? 'bg-bad' : 'bg-ok'}`}
+                          className={`h-1.5 w-1.5 rounded-full ${needsWork ? 'bg-light' : 'bg-ok'}`}
                         />
                         {component.id}
                       </button>
@@ -594,6 +594,9 @@ function ReviewPanels({
                 onDirty={() => setCorrected(true)}
                 onSolved={(result, netlist) => onTested(result, netlist)}
                 hud={hud}
+                dockTools="top"
+                confirmPrompt="✓ AI Verification Complete. Confirm this blueprint matches your drawing to unlock live sandbox measurements."
+                hideResultBanner
               />
             )}
           </div>
@@ -691,31 +694,50 @@ function ReviewPanels({
               }}
               className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
             >
-              Confirm model
+              Confirm &amp; Measure Circuit
             </button>
           )}
-          {loadable && !confirmed && (
-            <button
-              type="button"
-              onClick={editModel}
-              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Edit model
-            </button>
+          {confirmed && testedResult?.ok === true && onTryExperiment !== undefined && (
+            <>
+              <p className="text-ink-muted text-sm" role="status">
+                Model confirmed{corrected ? ' with your corrections' : ''}.
+              </p>
+              <p className="text-ink-muted text-sm">
+                These numbers are a starting point — change one part at a time to see what moves them.
+              </p>
+              <button
+                type="button"
+                onClick={() => onTryExperiment(seed, 'Reality Lens import')}
+                className="bg-coach text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+              >
+                Export to Free Bench Sandbox
+              </button>
+            </>
           )}
-          {confirmed && (
+          {confirmed && !(testedResult?.ok === true && onTryExperiment !== undefined) && (
             <p className="text-ink-muted text-sm" role="status">
               Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
               the circuit you approved.
             </p>
           )}
-          <button
-            type="button"
-            onClick={onReset}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Try another image
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {loadable && !confirmed && (
+              <button
+                type="button"
+                onClick={editModel}
+                className="border-glass-border text-ink-muted min-h-[40px] rounded-[10px] border px-3 text-xs font-medium"
+              >
+                Edit model
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onReset}
+              className="border-glass-border text-ink-muted min-h-[40px] rounded-[10px] border px-3 text-xs font-medium"
+            >
+              Try another image
+            </button>
+          </div>
         </div>
       </aside>
       </div>
@@ -729,22 +751,6 @@ function ReviewPanels({
             .map((component) => component.id)}
         />
       )}
-      {showTriptych(confirmed, testedResult) &&
-        testedResult?.ok === true &&
-        onTryExperiment !== undefined && (
-          <div className="flex flex-col gap-2">
-            <p className="text-ink-muted text-sm">
-              These numbers are a starting point — change one part at a time to see what moves them.
-            </p>
-            <button
-              type="button"
-              onClick={() => onTryExperiment(seed, 'Reality Lens import')}
-              className="border-glass-border min-h-[44px] self-start rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Test this in the Experiment Bay
-            </button>
-          </div>
-        )}
     </div>
   )
 }

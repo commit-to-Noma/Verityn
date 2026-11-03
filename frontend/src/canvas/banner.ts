@@ -26,11 +26,18 @@ export function bannerModel(result: SimulateResult, netlist: Netlist): BannerMod
   const bulbIds = netlist.components
     .filter((component) => component.type === 'bulb')
     .map((component) => component.id)
+  const conditions = result.conditions ?? {}
+  // Exploded bulbs report the surge that destroyed them, not flowing current:
+  // they never count as lit and contribute no headline amps.
+  const exploded = bulbIds.filter((id) => conditions[id] === 'exploded')
   const litBulbs = bulbIds.filter(
-    (id) => (result.components[id]?.power ?? 0) > LIT_POWER_W,
+    (id) => conditions[id] !== 'exploded' && (result.components[id]?.power ?? 0) > LIT_POWER_W,
   )
   const amps = bulbIds.reduce(
-    (peak, id) => Math.max(peak, Math.abs(result.components[id]?.current ?? 0)),
+    (peak, id) =>
+      conditions[id] === 'exploded'
+        ? peak
+        : Math.max(peak, Math.abs(result.components[id]?.current ?? 0)),
     0,
   )
   const hasOpenSwitch = netlist.components.some(
@@ -40,13 +47,17 @@ export function bannerModel(result: SimulateResult, netlist: Netlist): BannerMod
     state: litBulbs.length > 0 ? 'CLOSED LOOP' : hasOpenSwitch ? 'LOOP OPEN' : 'NO GLOW',
     amps,
     outcome:
-      litBulbs.length === 0
-        ? bulbIds.length === 0
-          ? 'NO BULBS'
-          : 'BULB DARK'
-        : litBulbs.length === 1
+      litBulbs.length > 0
+        ? litBulbs.length === 1
           ? 'BULB LIT'
-          : `${litBulbs.length} BULBS LIT`,
+          : `${litBulbs.length} BULBS LIT`
+        : exploded.length > 0
+          ? exploded.length === 1
+            ? 'BULB EXPLODED'
+            : `${exploded.length} BULBS EXPLODED`
+          : bulbIds.length === 0
+            ? 'NO BULBS'
+            : 'BULB DARK',
     lit: litBulbs.length > 0,
   }
 }
