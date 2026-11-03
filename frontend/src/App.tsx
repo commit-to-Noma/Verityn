@@ -904,7 +904,10 @@ export default function App() {
 
   const developerTools = (
     <div className="flex flex-col gap-4">
-      <label className="flex cursor-pointer items-center gap-3 text-sm">
+      <label
+        className="flex cursor-pointer items-center gap-3 text-sm"
+        title="Presenters can also open the app with ?auto=1"
+      >
         <input
           type="checkbox"
           checked={auto}
@@ -913,7 +916,7 @@ export default function App() {
         />
         <span>
           Auto-advance chapters
-          <span className="text-ink-muted">  -  demo mode (also `?auto=1`)</span>
+          <span className="text-ink-muted">  -  demo mode</span>
         </span>
       </label>
       <p className="text-ink-muted text-sm">

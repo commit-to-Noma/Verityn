@@ -76,4 +76,14 @@ describe('homepage copy', () => {
       expect(detail.evidence).toMatch(/(test|trace)[^/]*\.(tsx?|py)$/)
     }
   })
+
+  it('files every smart behavior under Vision, Logic, or Physics with a short title', () => {
+    for (const detail of SMART_DETAILS) {
+      expect(['vision', 'logic', 'physics']).toContain(detail.group)
+      expect(detail.title.length).toBeGreaterThan(0)
+      expect(detail.title.length).toBeLessThanOrEqual(24)
+    }
+    const groups = new Set(SMART_DETAILS.map((detail) => detail.group))
+    expect(groups).toEqual(new Set(['vision', 'logic', 'physics']))
+  })
 })

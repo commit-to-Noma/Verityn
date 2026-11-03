@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { Atom, ChevronLeft, ChevronRight, Eye, MessagesSquare, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
@@ -45,6 +45,12 @@ const IMPACT_CASES = [
     response:
       'The Experiment Bay brings back messing about on purpose: wire anything, blow bulbs safely, then ask why.',
   },
+] as const
+
+const SMART_GROUPS = [
+  { id: 'vision', label: 'Vision', tagline: 'Lens diagrams become testable circuits', icon: Eye },
+  { id: 'logic', label: 'Logic', tagline: 'Coach and voice stay grounded', icon: MessagesSquare },
+  { id: 'physics', label: 'Physics', tagline: 'Measured readings reach the screen', icon: Atom },
 ] as const
 
 const FIELD_ANGLES: Record<STEMFieldId, number> = {
@@ -338,6 +344,7 @@ function STEMOrbit() {
             <ellipse cx="250" cy="250" rx="176" ry="126" fill="none" stroke="rgb(56 214 233 / 0.18)" strokeWidth="10" />
             <ellipse cx="250" cy="250" rx="176" ry="126" fill="none" stroke="rgb(56 214 233 / 0.78)" strokeWidth="2.5" />
             <ellipse className="stem-orbit-flow" cx="250" cy="250" rx="176" ry="126" fill="none" stroke="#63e8f4" strokeWidth="4" strokeDasharray="2 20" strokeLinecap="round" />
+            <ellipse className="stem-orbit-pulse" cx="250" cy="250" rx="188" ry="138" fill="none" stroke="#63e8f4" strokeWidth="1.5" />
             <ellipse cx="250" cy="250" rx="164" ry="114" fill="none" stroke="rgb(139 114 220 / 0.48)" strokeWidth="1.5" strokeDasharray="34 16 4 16" />
             <path d="M250 124V52h24m-24 324v72h-24M74 250H52v-22m396 22h22v22" fill="none" stroke="rgb(56 214 233 / 0.78)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <circle cx="274" cy="52" r="4" fill="#63e8f4" />
@@ -557,22 +564,39 @@ export default function LabIntro({
           <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
             Smart details
           </summary>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-            {SMART_DETAILS.map((item) => (
-              <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
-                <p className="text-sm font-medium">{item.behavior}</p>
-                <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
-                <a
-                  className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
-                  href={`${META_EVIDENCE_BASE}${item.evidence}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Test or trace
-                </a>
-              </li>
-            ))}
-          </ul>
+          {SMART_GROUPS.map((group) => {
+            const items = SMART_DETAILS.filter((item) => item.group === group.id)
+            const Icon = group.icon
+            return (
+              <div key={group.id} className="mt-4">
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 shrink-0 text-flow" aria-hidden="true" />
+                  <h4 className="text-sm font-semibold">{group.label}</h4>
+                  <p className="text-xs text-ink-muted">{group.tagline}</p>
+                  <span className="ml-auto rounded-full border border-glass-border px-2 py-px text-[11px] text-ink-muted">
+                    {items.length}
+                  </span>
+                </div>
+                <ul className="mt-2 grid gap-3 sm:grid-cols-2">
+                  {items.map((item) => (
+                    <li key={item.behavior} className="rounded-lg border border-glass-border p-3">
+                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="mt-0.5 text-xs text-ink-muted">{item.behavior}</p>
+                      <p className="mt-1 text-xs text-ink-muted">Where: {item.where}</p>
+                      <a
+                        className="mt-2 inline-block text-xs text-flow underline underline-offset-2"
+                        href={`${META_EVIDENCE_BASE}${item.evidence}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Test or trace
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          })}
         </details>
         <UnderTheHoodTryIts />
       </section>
@@ -581,7 +605,8 @@ export default function LabIntro({
         <div className="flex flex-col justify-between gap-6 border-b border-flow/20 p-6 lg:border-b-0 lg:border-r lg:p-8">
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Why Verityn matters</p>
-            <h3 id="impact-heading" className="max-w-md text-2xl font-semibold leading-tight">Answers are everywhere. Understanding is not.</h3>
+            <h3 id="impact-heading" className="max-w-md text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Answers are everywhere. Understanding is not.</h3>
+            <div aria-hidden="true" className="h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
             <p className="max-w-md text-sm leading-6 text-ink-muted">
               Verityn is built for the moment a learner needs to think, test, and understand, not simply look up a result.
             </p>

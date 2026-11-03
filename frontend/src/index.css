@@ -255,6 +255,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .stem-orbit-flow,
+  .stem-orbit-pulse,
   .stem-field-button:hover .stem-icon-scale > svg,
   .stem-field-button:focus-visible .stem-icon-scale > svg,
   .stem-icon-jiggle .stem-icon-scale > svg {
@@ -667,6 +668,20 @@ body {
 
 .stem-orbit-flow {
   animation: stem-orbit-flow 2.4s linear infinite;
+}
+
+@keyframes stem-orbit-pulse {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.stem-orbit-pulse {
+  animation: stem-orbit-pulse 4s ease-in-out infinite;
 }
 
 .stem-icon-scale {
