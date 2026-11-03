@@ -816,7 +816,7 @@ body {
     rgb(242 181 68 / 0.14) 58%,
     transparent
   );
-  animation: lab-swoosh-pan 1.35s cubic-bezier(0.6, 0, 0.3, 1) both;
+  animation: lab-swoosh-pan 4.9s cubic-bezier(0.6, 0, 0.3, 1) both;
 }
 
 @keyframes lab-swoosh-pan {
@@ -844,7 +844,7 @@ body {
 }
 
 .lab-swoosh-fill {
-  animation: lab-swoosh-fill 1.3s linear both;
+  animation: lab-swoosh-fill 4.8s linear both;
 }
 
 @keyframes lab-swoosh-fill {

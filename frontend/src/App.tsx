@@ -565,7 +565,7 @@ export default function App() {
       swooshTimer.current = null
       setLabSwoosh(false)
       enter()
-    }, 1400)
+    }, 5000)
   }, [])
 
   useEffect(

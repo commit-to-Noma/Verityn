@@ -717,7 +717,9 @@ async function drive() {
   await captureScreenshot('hub-start')
   await clickButton('Start your own lab')
 
+  const swooshStart = Date.now()
   await waitFor(() => hasText('loose ends'), 'l1 predict')
+  check('swoosh runs five seconds', Date.now() - swooshStart >= 4500)
   check('swoosh settles into the lab', !(await hasText('Mounting Engineering Workspace')))
   check('Built with Meta disclosures are hidden in the Guided Lab', !(await hasText('Built with Meta')))
   check(
