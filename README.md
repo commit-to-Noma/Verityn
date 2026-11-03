@@ -59,11 +59,12 @@ evidence verification before it reaches the learner.
 - Experiment bench: free-form canvas with five starter presets,
   explicit runs, session-local history with current-vs-previous
   comparison, and an optional solver-first explanation.
-- Overload physics (simplified classroom model): rated bulbs
-  (6 V / 6 W defaults), assessed intact/overloaded/damaged
+- Overwork physics (simplified classroom model): rated bulbs
+  (12 V / 14.4 W defaults), assessed intact/overworked/exploded
   conditions, per-battery voltage controls, and a session
-  damage latch  -  12 V measures 1.2 A / 14.4 W overloaded, the
-  next run latches damaged at 0.0 A, reset restores intact.
+  explosion latch  -  12 V stays intact, 18 V measures 1.8 A /
+  32.4 W overworked, past 18 V explodes at 0.0 A on the run
+  itself, reset restores intact.
 - Guided demo: `Play the guided demo` performs the whole
   journey through the real UI in ~40 seconds (pause, resume,
   skip, exit, replay, manual takeover). This is the recording

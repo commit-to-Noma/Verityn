@@ -85,15 +85,15 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
   },
   {
     id: 'overload-bulb',
-    title: 'Overload the bulb',
-    tagline: 'Add a second battery → watch the bulb exceed its safe limit',
+    title: 'Overwork the bulb',
+    tagline: 'Stack batteries → find where intact ends and the bulb blows',
     prompt:
-      'Run it with one battery first. Then place a second battery in series and run again  -  what happens to Light 1?',
+      'Run it with one battery first. Add a second in series and run again  -  still intact at 12 V. Add a third for 18 V, then a fourth: what happens past 18 V?',
     seed: {
       nodes: [
         { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },
         { id: 'S1', kind: 'switch', closed: true, x: 40, y: 160 },
-        { id: 'L1', kind: 'bulb', ratedVolts: 6, maxSafeWatts: 6, x: 230, y: 290 },
+        { id: 'L1', kind: 'bulb', x: 230, y: 290 },
       ],
       edges: [
         { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
@@ -101,6 +101,6 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
         { id: 'W3', source: 'B1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
       ],
     },
-    expected: 'L1 0.6 A, 3.6 W, intact; a second 6 V battery in series measures 1.2 A, 14.4 W, overloaded',
+    expected: 'L1 0.6 A, 3.6 W, intact; 12 V intact; 18 V overworked; past 18 V exploded',
   },
 ]

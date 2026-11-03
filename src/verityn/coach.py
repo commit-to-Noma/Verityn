@@ -290,7 +290,7 @@ def _batteries_oppose(result, parts, source_volts):
     if any(part.get("type") == "switch" and part.get("closed") is False
            for part in parts.values()):
         return False
-    if any(value == "damaged" for value in (result.conditions or {}).values()):
+    if any(value == "exploded" for value in (result.conditions or {}).values()):
         return False
     total = sum(abs(reading["voltage"]) for reading in readings)
     return total - abs(source_volts) > 1e-6

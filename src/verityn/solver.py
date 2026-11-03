@@ -11,21 +11,23 @@ Component types: battery{volts}, resistor{ohms}, bulb{}, switch{closed: bool},
 wire{}. Every component has a unique string id and two terminal nodes a and b.
 For a battery, a is the + terminal and b is the - terminal. A bulb may
 carry optional safety metadata: rated_volts, max_safe_watts (both
-positive finite numbers), and condition ('intact' or 'damaged').
+positive finite numbers), and condition ('intact' or 'exploded').
 
 Model (ideal, steady DC): wires and closed switches are 0 ohm; an open switch
 carries 0 A; every bulb is the same fixed 10 ohm resistor (TEST_PLAN 3.3:
-a 6 V battery across one bulb gives 0.6 A and 3.6 W). A damaged bulb is
+a 6 V battery across one bulb gives 0.6 A and 3.6 W). An exploded bulb is
 an open branch: it carries 0 A like an open switch, but its terminals
 stay wired (never a dangling error).
 
 Assessment (deterministic, from the same measurement): every solved bulb
-is reported 'intact', 'overloaded', or 'damaged'. A bulb is overloaded
+is reported 'intact', 'overworked', or 'exploded'. A bulb is overworked
 when |voltage| exceeds its rated volts or power exceeds its max safe
-watts; unrated bulbs use the classroom defaults of 6 V and 6 W. The
-solver never latches damage itself: callers pass condition 'damaged'
-for bulbs that failed in an earlier run. Overload is a warning on a
-valid measurement, never a rejection; no new error codes exist.
+watts, and exploded when |voltage| exceeds the 18 V blow point;
+unrated bulbs use the classroom defaults of 12 V and 14.4 W (12 V
+across 10 ohms). The solver never latches failure itself: callers pass
+condition 'exploded' for bulbs that failed in an earlier run. Overwork
+is a warning on a valid measurement, never a rejection; no new error
+codes exist.
 
 Conventions: voltage = V(a) - V(b); current flows a -> b through the
 component; power = voltage * current (absorbed). A battery delivering power
@@ -61,11 +63,14 @@ CONFLICTING_SOURCES = "CONFLICTING_SOURCES"
 UNSOLVABLE = "UNSOLVABLE"
 
 BULB_OHMS = 10.0
-#: Classroom bulb defaults: the guided lessons run 6 V / 3.6 W, intact.
-BULB_RATED_VOLTS = 6.0
-BULB_MAX_SAFE_WATTS = 6.0
-#: Component condition vocabulary: intact, overloaded, damaged. Nothing else.
-CONDITIONS = ("intact", "overloaded", "damaged")
+#: Classroom bulb defaults: intact through 12 V (14.4 W at 10 ohms);
+#: the guided lessons run 6 V / 3.6 W, intact.
+BULB_RATED_VOLTS = 12.0
+BULB_MAX_SAFE_WATTS = 14.4
+#: Voltage past which a bulb explodes. Fixed classroom constant.
+BULB_BLOW_VOLTS = 18.0
+#: Component condition vocabulary: intact, overworked, exploded. Nothing else.
+CONDITIONS = ("intact", "overworked", "exploded")
 TYPES = ("battery", "resistor", "bulb", "switch", "wire")
 
 
@@ -146,9 +151,9 @@ def _structural_error(comps):
                     return (MALFORMED_NETLIST, [cid],
                             f"Bulb '{cid}' needs a numeric '{field}'.")
             if "condition" in item \
-                    and item.get("condition") not in ("intact", "damaged"):
+                    and item.get("condition") not in ("intact", "exploded"):
                 return (MALFORMED_NETLIST, [cid],
-                        f"Bulb '{cid}' needs 'intact' or 'damaged'.")
+                        f"Bulb '{cid}' needs 'intact' or 'exploded'.")
     return None
 
 
@@ -293,7 +298,7 @@ def validate(netlist):
 
 
 def _is_damaged(comp):
-    return comp["type"] == "bulb" and comp.get("condition") == "damaged"
+    return comp["type"] == "bulb" and comp.get("condition") == "exploded"
 
 
 def _resistance(comp):
@@ -415,11 +420,14 @@ def solve(netlist):
             limit = float(comp.get("max_safe_watts", BULB_MAX_SAFE_WATTS))
             ratings[comp["id"]] = {"rated_volts": rated,
                                    "max_safe_watts": limit}
+            magnitude = abs(out[comp["id"]]["voltage"])
+            watts = out[comp["id"]]["power"]
             if damaged:
-                conditions[comp["id"]] = "damaged"
-            elif (abs(out[comp["id"]]["voltage"]) > rated
-                    or out[comp["id"]]["power"] > limit):
-                conditions[comp["id"]] = "overloaded"
+                conditions[comp["id"]] = "exploded"
+            elif magnitude > BULB_BLOW_VOLTS:
+                conditions[comp["id"]] = "exploded"
+            elif magnitude > rated or watts > limit:
+                conditions[comp["id"]] = "overworked"
             else:
                 conditions[comp["id"]] = "intact"
     return SolveResult(ok=True, node_voltages=volts, components=out,

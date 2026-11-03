@@ -47,10 +47,10 @@ describe('flowForCurrent', () => {
 
 describe('bulbVisualState', () => {
   it.each([
-    ['damaged', 3.6, 'exploded'],
-    ['damaged', 0, 'exploded'],
-    ['overloaded', 14.4, 'overworked'],
-    ['overloaded', 0, 'overworked'],
+    ['exploded', 3.6, 'exploded'],
+    ['exploded', 0, 'exploded'],
+    ['overworked', 14.4, 'overworked'],
+    ['overworked', 0, 'overworked'],
     ['intact', 3.6, 'intact'],
     ['intact', 0, 'dark'],
     [undefined, 3.6, 'intact'],

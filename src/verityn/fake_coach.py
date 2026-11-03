@@ -51,8 +51,9 @@ def route_template(choice, why):
     return pool["default"]
 
 
-#: Bulb power at or below this floor reads as dark (matches the solver).
-DARK_POWER_W = 1e-9
+#: Bulb power at or below this floor reads as dark: 2.4 V across the
+#: 10 ohm classroom bulb. Mirrors the frontend LIT_POWER_W.
+DARK_POWER_W = 0.576
 
 
 def grounded_question(facts):
@@ -131,7 +132,7 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
     """Deterministic experiment explanation from server-side facts only.
 
     Numbers come from the solver facts; invalid circuits get the
-    code-owned hint; overloaded and damaged bulbs get their measured
+    code-owned hint; overworked and exploded bulbs get their measured
     verdict; the closing suggestion names only parts that exist.
     Never calls a model.
     """
@@ -141,27 +142,27 @@ def explain_experiment(*, facts, valid, error_code, switches, bulbs,
             "The simulator could not test this circuit. Fix the wiring "
             "and run again.")
     conditions = conditions or {}
-    damaged = [bid for bid in bulbs if conditions.get(bid) == "damaged"]
-    if damaged:
-        bid = damaged[0]
+    exploded = [bid for bid in bulbs if conditions.get(bid) == "exploded"]
+    if exploded:
+        bid = exploded[0]
         amps = (facts or {}).get(f"{bid}.current_A", 0.0)
         watts = (facts or {}).get(f"{bid}.power_W", 0.0)
         amps = amps if _finite(amps) else 0.0
         watts = watts if _finite(watts) else 0.0
-        return (f"{friendly_name(bid)} is damaged and no longer completes "
+        return (f"{friendly_name(bid)} exploded and no longer completes "
                 f"the circuit: {amps:.1f} A and {watts:.1f} W. Reset the "
                 "bench to restore an intact bulb.")
-    overloaded = [bid for bid in bulbs
-                  if conditions.get(bid) == "overloaded"]
-    if overloaded:
-        bid = overloaded[0]
+    overworked = [bid for bid in bulbs
+                  if conditions.get(bid) == "overworked"]
+    if overworked:
+        bid = overworked[0]
         watts = (facts or {}).get(f"{bid}.power_W")
         limit = (facts or {}).get(f"{bid}.limit_W")
         if _finite(watts) and _finite(limit):
             return (f"{friendly_name(bid)} drew {watts:.1f} W, past its "
-                    f"{limit:.1f} W safe limit  -  the extra voltage "
-                    "overloaded it. Run again to see the failed state, or "
-                    "reset the bench.")
+                    f"{limit:.1f} W safe limit  -  the extra voltage is "
+                    "overworking it. Lower a battery voltage to recover it, "
+                    "or push past 18 V to blow it.")
     lit = [bid for bid in bulbs
            if _finite((facts or {}).get(f"{bid}.power_W"))
            and facts[f"{bid}.power_W"] > DARK_POWER_W]

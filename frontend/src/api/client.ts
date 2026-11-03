@@ -55,7 +55,7 @@ export interface ApiComponent {
   closed?: boolean
   rated_volts?: number
   max_safe_watts?: number
-  condition?: 'intact' | 'damaged'
+  condition?: 'intact' | 'exploded'
 }
 
 export interface Netlist {
@@ -72,7 +72,7 @@ export interface ComponentResult {
   power: number
 }
 
-export type ComponentCondition = 'intact' | 'overloaded' | 'damaged'
+export type ComponentCondition = 'intact' | 'overworked' | 'exploded'
 
 export interface BulbRating {
   rated_volts: number
@@ -141,7 +141,7 @@ function isComponentResult(value: unknown): value is ComponentResult {
 }
 
 function isCondition(value: unknown): value is ComponentCondition {
-  return value === 'intact' || value === 'overloaded' || value === 'damaged'
+  return value === 'intact' || value === 'overworked' || value === 'exploded'
 }
 
 function isRating(value: unknown): value is BulbRating {

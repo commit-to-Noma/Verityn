@@ -107,21 +107,31 @@ function fakeCoachAsk(postData) {
 }
 
 function fakeCoachExplain(postData) {
-  // Content-aware like the ask stub: a damaged bulb in the submitted
+  // Content-aware like the ask stub: an exploded bulb in the submitted
   // netlist is an open filament, so it reads 0.0 A and 0.0 W. Wording
   // matches the deterministic fallback; its text is covered by backend
   // explanation unit tests, while the smoke proves the UI renders it.
-  let damaged = null
+  let exploded = null
   try {
     const components = JSON.parse(postData ?? '{}').netlist?.components ?? []
-    damaged = components.find((part) => part.type === 'bulb' && part.condition === 'damaged')?.id ?? null
+    exploded = components.find((part) => part.type === 'bulb' && part.condition === 'exploded')?.id ?? null
+    if (exploded === null) {
+      // Mirror the solver's blow point: past 18 V a bulb explodes on the run
+      // itself, before any latch exists in the submitted netlist.
+      const totalVolts = components
+        .filter((part) => part.type === 'battery')
+        .reduce((sum, part) => sum + (Number(part.volts) || 0), 0)
+      if (totalVolts > 18) {
+        exploded = components.find((part) => part.type === 'bulb')?.id ?? null
+      }
+    }
   } catch {
-    damaged = null
+    exploded = null
   }
   return {
     eligible: true,
-    text: damaged !== null
-      ? `${damaged} is damaged and no longer completes the circuit: 0.0 A and 0.0 W. Reset the bench to restore an intact bulb.`
+    text: exploded !== null
+      ? `Light 1 exploded and no longer completes the circuit: 0.0 A and 0.0 W. Reset the bench to restore an intact bulb.`
       : 'The open switch breaks the loop, so the bulb reads 0.0 A and 0.0 W.',
     provider: 'prototype-fake',
     valid: true,
@@ -1192,35 +1202,39 @@ async function drive() {
   await clickPresetButton('Shorted battery', 'Test')
   await waitFor(() => hasText('Run 3 - Shorted battery'), 'history run 3', 25000)
   check('short rejected honestly', await hasText('SHORTED_BATTERY') || await hasText('straight back to itself'))
-  await clickPresetButton('Overload the bulb', 'Test')
-  await waitFor(() => hasText('Run 4 - Overload the bulb'), 'overload run 1', 25000)
-  check('overload starts intact', await hasText('Intact'))
-  check('overload limit shown', await hasText('Safe limit: 6.0 W'))
-  await fillInput('battery-B1-volts', '12')
+  await clickPresetButton('Overwork the bulb', 'Test')
+  await waitFor(() => hasText('Run 4 - Overwork the bulb'), 'overwork run 1', 25000)
+  check('overwork starts intact', await hasText('Intact'))
+  check('overwork limit shown', await hasText('Safe limit: 14.4 W'))
+  await fillInput('battery-B1-volts', '18')
   await clickButton('Apply')
   await waitFor(() => hasText('Circuit changed - run the experiment again.'), 'voltage stale')
-  check('voltage label updates', await hasText('Battery · 12 V'))
+  check('voltage label updates', await hasText('Battery · 18 V'))
   await clickButton('Run experiment')
-  await waitFor(() => hasText('Run 5 - Free build'), 'overload run 2', 25000)
-  check('overloaded measured', await hasText('14.4 W'))
-  check('overload badge shown', await hasText('Overloaded'))
-  check('diagnostics card', await hasText('took 14.4 W against a 6.0 W safe limit'))
+  await waitFor(() => hasText('Run 5 - Free build'), 'overwork run 2', 25000)
+  check('overworked measured', await hasText('32.4 W'))
+  check('overwork badge shown', await hasText('Overworked'))
+  check('diagnostics card', await hasText('took 32.4 W against a 14.4 W safe limit'))
   await ev(`[...document.querySelectorAll('summary')].find((e) => e.textContent.trim() === 'Why?')?.click()`)
-  check('why formula', await hasText('I = V/R = 12.0 V / 10 Ω = 1.2 A'))
-  check('power ratio shown', await hasText('4.0×'))
+  check('why formula', await hasText('I = V/R = 18.0 V / 10 Ω = 1.8 A'))
+  check('power ratio shown', await hasText('9.0×'))
+  await fillInput('battery-B1-volts', '19')
+  await clickButton('Apply')
+  await waitFor(() => hasText('Circuit changed - run the experiment again.'), 'blow stale')
   await clickButton('Run experiment')
-  await waitFor(() => hasText('Run 6 - Free build'), 'damaged run', 25000)
-  check('damaged latched', await hasText('Damaged'))
-  check('damaged reads dark', await hasText('0.0 A'))
+  await waitFor(() => hasText('Run 6 - Free build'), 'exploded run', 25000)
+  check('exploded latched', await hasText('Exploded'))
+  check('exploded reads dark', await hasText('0.0 A'))
+  await captureScreenshot('bay-exploded', 1440, '[aria-label="Latest result"]')
   await clickButton('Ask Muse Spark about this result')
-  await waitFor(() => hasText('is damaged and no longer completes the circuit'), 'damaged explain', 20000)
+  await waitFor(() => hasText('exploded and no longer completes the circuit'), 'exploded explain', 20000)
   await clickButton('Reset to blank')
   await waitFor(() => hasText('Drag a battery into the workspace to begin.'), 'blank bench')
   check('sound toggle offered', await hasText('Sound on'))
   check('history survives reset', await hasText('Run 1 - Light a bulb'))
-  await clickPresetButton('Overload the bulb', 'Test')
-  await waitFor(() => hasText('Run 7 - Overload the bulb'), 'overload after reset', 25000)
-  check('reset restores intact', await hasText('Intact') && !(await hasText('Damaged')))
+  await clickPresetButton('Overwork the bulb', 'Test')
+  await waitFor(() => hasText('Run 7 - Overwork the bulb'), 'overwork after reset', 25000)
+  check('reset restores intact', await hasText('Intact') && !(await hasText('Exploded')))
   await clickButton('Guided Lab')
   await waitFor(() => hasText('Continue to fix it'), 'guided clean')
   check('guided starts clean', !(await hasText('Build something.')) && await hasText('Continue to fix it'))

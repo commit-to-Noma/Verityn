@@ -170,14 +170,14 @@ the solver accepts resistors but the canvas cannot place them).
 `Run experiment` is explicit  -  never auto-run  -  and any edit returns
 the bench to `Circuit changed  -  run the experiment again.` Five
 presets (closed loop, open switch, series pair, shorted battery,
-overload the bulb) load real seeds through the shared converter;
+overwork the bulb) load real seeds through the shared converter;
 `Test` runs through the normal solver path. `Ask Muse Spark about
 this result` unlocks only for a fresh run, posts only the netlist,
 and the server solves before explaining; failures leave the bench
 usable. Run history is session-local with current-vs-previous
-comparison. The overload bench adds rated bulbs (6 V / 6 W
+comparison. The overwork bench adds rated bulbs (12 V / 14.4 W
 defaults), per-battery voltage controls, an assessed
-intact/overloaded/damaged condition per bulb, a session damage
+intact/overworked/exploded condition per bulb, a session explosion
 latch (reset restores intact), and a latest-result card with
 measured V/A/W against the safe limit.
 
@@ -426,39 +426,40 @@ its own instructions. Resistor stays out: the solver accepts
 entry, or converter support. One transient `lens lock` smoke
 timeout appeared mid-HMR and passed on the immediate re-run.
 
-### Phase 6  -  Solver-backed overload physics (implemented, uncommitted)
+### Phase 6  -  Solver-backed overwork physics (implemented)
 
 - [x] Bulbs carry optional safety metadata (`rated_volts`,
-  `max_safe_watts`; defaults 6 V / 6 W) and an input-only
-  `condition` (`intact`/`damaged`; `overloaded` is output-only
+  `max_safe_watts`; defaults 12 V / 14.4 W) and an input-only
+  `condition` (`intact`/`exploded`; `overworked` is output-only
   and rejected on input). Unrated bulbs solve exactly as before.
 - [x] The solver assesses every solved bulb as
-  `intact`/`overloaded`/`damaged` from measured volts and watts
-  against the rating; overload is a measurement with a warning,
-  never a rejection and never a new error code. A damaged bulb
-  is an open branch: valid, 0 A, full voltage across it.
+  `intact`/`overworked`/`exploded` from measured volts and watts
+  against the rating, with a fixed 18 V blow point; overwork is
+  a measurement with a warning, never a rejection and never a
+  new error code. An exploded bulb is an open branch: valid,
+  0 A, full voltage across it.
 - [x] `POST /api/simulate` returns additive `conditions` and
   `ratings` maps; old-shape payloads still parse (absent maps
   read as empty). Guided lessons send no ratings, so their
   numbers are unchanged.
-- [x] The `Overload the bulb` preset starts at 0.6 A / 3.6 W
-  intact; a second series battery (or a 12 V edit) measures
-  1.2 A / 14.4 W overloaded; the next run latches damaged and
+- [x] The `Overwork the bulb` preset starts at 0.6 A / 3.6 W
+  intact; 12 V stays intact, 18 V measures 1.8 A / 32.4 W
+  overworked, and past 18 V explodes on the run itself and
   reads 0.0 A. Probe-verified against the live solver.
-- [x] The bench owns a session damage latch (overloaded at run
-  N fails at run N+1); preset loads and `Reset to blank` clear
-  it. Edits invalidate results; moving parts never clears damage.
+- [x] The bench owns a session explosion latch (exploded stays
+  exploded until reset); preset loads and `Reset to blank` clear
+  it. Edits invalidate results; moving parts never clears it.
 - [x] Per-battery voltage controls accept finite positive volts
   only; applying invalidates the stale result. The canvas Clear
   button is hidden in experiment mode (the bench Reset owns it).
 - [x] The latest-result card shows per-bulb V/A/W against the
   safe limit plus the delta from the previous run; history
-  names overload/damage events and reports battery and
+  names overwork/explosion events and reports battery and
   bulb-power changes computed from the two real runs.
 - [x] Explanations stay solver-first: the server adds bulb
   limits, battery count/total, conditions, and per-battery
-  volts to the grounded facts; the fake coach names overload
-  and damage from those facts; Meta output citing the limit
+  volts to the grounded facts; the fake coach names overwork
+  and explosion from those facts; Meta output citing the limit
   validates, invented numbers still reject.
 - [x] Full gates + smoke re-run and green; no live Meta calls;
   screenshots `21-overload.png`, `22-damaged.png`, and

@@ -9,7 +9,7 @@ import {
   type SimulateResult,
 } from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
-import { latchedDamage, validateBatteryVolts } from './bench'
+import { latchedExplosion, validateBatteryVolts } from './bench'
 import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 import { friendlyComponentName } from '../components/componentNames'
@@ -98,14 +98,14 @@ function BatteryRow({
 
 const CONDITION_LABEL: Record<ComponentCondition, string> = {
   intact: 'Intact',
-  overloaded: 'Overloaded',
-  damaged: 'Damaged',
+  overworked: 'Overworked',
+  exploded: 'Exploded',
 }
 
 const CONDITION_CLASS: Record<ComponentCondition, string> = {
   intact: 'text-ok',
-  overloaded: 'text-light',
-  damaged: 'text-bad',
+  overworked: 'text-light',
+  exploded: 'text-bad',
 }
 
 /** Latest fresh run, per bulb: measured V/A/W against the safe limit,
@@ -130,7 +130,7 @@ function LatestResult({
   }
   const bulbs = netlist.components.filter((part) => part.type === 'bulb')
   const conditions = result.conditions ?? {}
-  const anyOverloaded = bulbs.some((bulb) => conditions[bulb.id] === 'overloaded')
+  const anyOverworked = bulbs.some((bulb) => conditions[bulb.id] === 'overworked')
   const sourceVolts = measuredSourceVolts(result, netlist)
   const opposingSources = batteriesOppose(result, netlist)
   return (
@@ -180,7 +180,7 @@ function LatestResult({
                       Why?
                     </summary>
                     <p className="text-ink-muted mt-1 font-mono text-sm">
-                      {condition === 'damaged'
+                      {condition === 'exploded'
                         ? `Filament broken: no current flows (bulb reads ${measured.voltage.toFixed(1)} V, 0.0 A).`
                         : `I = V/R = ${measured.voltage.toFixed(1)} V / ${BULB_OHMS} Ω = ${(measured.voltage / BULB_OHMS).toFixed(1)} A (measured ${measured.current.toFixed(1)} A).`}
                     </p>
@@ -191,8 +191,8 @@ function LatestResult({
           })}
         </ul>
       )}
-      {anyOverloaded && (
-        <p className="text-sm">Overloaded bulbs fail on the next run. Reset the bench to restore them.</p>
+      {anyOverworked && (
+        <p className="text-sm">Overworked bulbs recover when the voltage drops. Past 18 V they explode, and only a reset restores them.</p>
       )}
       <p className="text-ink-muted text-xs">Measured by Verityn Solver.</p>
     </section>
@@ -244,8 +244,8 @@ export default function ExperimentPage({
   const [runs, setRuns] = useState<RunRecord[]>([])
   const [fresh, setFresh] = useState<{ result: SimulateResult; netlist: Netlist } | null>(null)
   const [ask, setAsk] = useState<AskState>({ phase: 'idle' })
-  /** Session damage latch: overloaded bulbs fail on the next run. */
-  const [benchConditions, setBenchConditions] = useState<Record<string, 'damaged'>>({})
+  /** Session explosion latch: exploded bulbs stay exploded until reset. */
+  const [benchConditions, setBenchConditions] = useState<Record<string, 'exploded'>>({})
   const [batteryVolts, setBatteryVolts] = useState<Record<string, number>>({})
   const [benchNonce, setBenchNonce] = useState(0)
   const [parts, setParts] = useState<{ id: string; kind: string; volts?: number }[]>([])
@@ -285,7 +285,7 @@ export default function ExperimentPage({
       setRuns((current) => [...current, describeRun(current.length + 1, bench.label, result, netlist)])
       setFresh({ result, netlist })
       setAsk({ phase: 'idle' })
-      const latched = latchedDamage(result.conditions)
+      const latched = latchedExplosion(result.conditions)
       if (Object.keys(latched).length > 0) {
         setBenchConditions((current) => ({ ...current, ...latched }))
       }

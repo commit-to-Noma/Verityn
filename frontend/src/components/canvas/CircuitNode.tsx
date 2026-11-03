@@ -199,20 +199,20 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
           <span
             role="status"
             aria-label={
-              data.condition === 'damaged' ? 'Bulb damaged' : `Bulb ${data.condition}`
+              data.condition === 'exploded' ? 'Bulb exploded' : `Bulb ${data.condition}`
             }
             className={`rounded-full border px-2 py-px text-[10px] font-medium ${
-              data.condition === 'damaged'
+              data.condition === 'exploded'
                 ? 'border-bad/60 text-bad'
-                : data.condition === 'overloaded'
+                : data.condition === 'overworked'
                   ? 'border-light/60 text-light'
                   : 'border-ok/60 text-ok'
             }`}
           >
-            {data.condition === 'damaged'
-              ? 'Damaged'
-              : data.condition === 'overloaded'
-                ? 'Overloaded'
+            {data.condition === 'exploded'
+              ? 'Exploded'
+              : data.condition === 'overworked'
+                ? 'Overworked'
                 : 'Intact'}
           </span>
         )}

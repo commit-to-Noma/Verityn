@@ -996,7 +996,7 @@ function CanvasInner({
   /** Canvas heading; lessons keep the default prediction framing. */
   title?: string
   /** Session damage latch (experiment only), stamped into runs, never drawn. */
-  benchConditions?: Record<string, 'damaged'>
+  benchConditions?: Record<string, 'exploded'>
   /** Bench battery voltages by id (experiment only); validated by the parent. */
   batteryVolts?: Record<string, number>
   /** A change applies batteryVolts and invalidates (damage clears only). */
@@ -1406,10 +1406,10 @@ function CanvasInner({
       })),
     })
     if (mode === 'experiment') {
-      const damaged = benchConditionsRef.current ?? {}
+      const exploded = benchConditionsRef.current ?? {}
       for (const part of netlist.components) {
-        if (part.type === 'bulb' && damaged[part.id] === 'damaged') {
-          part.condition = 'damaged'
+        if (part.type === 'bulb' && exploded[part.id] === 'exploded') {
+          part.condition = 'exploded'
         }
       }
     }
@@ -1422,7 +1422,7 @@ function CanvasInner({
         const offenders = new Set(result.component_ids)
         const stressedBulbs = new Set(
           Object.entries(result.conditions ?? {})
-            .filter(([, condition]) => condition === 'overloaded')
+            .filter(([, condition]) => condition === 'overworked')
             .map(([id]) => id),
         )
         setNodes((current) =>
@@ -1474,9 +1474,9 @@ function CanvasInner({
         if (mode === 'experiment' && result.ok) {
           const blown = Object.entries(result.conditions ?? {}).some(
             ([partId, condition]) =>
-              condition === 'damaged' &&
+              condition === 'exploded' &&
               nodes.some(
-                (node) => node.id === partId && node.data.condition !== 'damaged',
+                (node) => node.id === partId && node.data.condition !== 'exploded',
               ),
           )
           if (blown) {
@@ -2635,7 +2635,7 @@ export default function CircuitCanvas({
   mode?: 'lesson' | 'experiment'
   runRequest?: number
   title?: string
-  benchConditions?: Record<string, 'damaged'>
+  benchConditions?: Record<string, 'exploded'>
   batteryVolts?: Record<string, number>
   benchNonce?: number
   onParts?: (parts: { id: string; kind: string; volts?: number }[]) => void

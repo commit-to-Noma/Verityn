@@ -29,15 +29,16 @@ SHORTED = {"components": [
     {"id": "W1", "type": "wire", "a": "p", "b": "0"},
 ]}
 
-OVERLOAD_LOOP = {"components": [
+OVERWORK_LOOP = {"components": [
     {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "m"},
-    {"id": "B2", "type": "battery", "volts": 6, "a": "m", "b": "0"},
+    {"id": "B2", "type": "battery", "volts": 6, "a": "m", "b": "n"},
+    {"id": "B3", "type": "battery", "volts": 6, "a": "n", "b": "0"},
     {"id": "L1", "type": "bulb", "a": "p", "b": "0"},
 ]}
 
-DAMAGED_LOOP = {"components": [
+EXPLODED_LOOP = {"components": [
     {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
-    {"id": "L1", "type": "bulb", "condition": "damaged", "a": "p", "b": "0"},
+    {"id": "L1", "type": "bulb", "condition": "exploded", "a": "p", "b": "0"},
 ]}
 
 
@@ -307,15 +308,15 @@ def test_explain_passes_conditions_batteries_and_limits():
             seen.update(call)
             return "seen"
 
-    out = coach.explain_result(OVERLOAD_LOOP, SpyProvider())
+    out = coach.explain_result(OVERWORK_LOOP, SpyProvider())
     assert out["provider"] == "spy"
     assert seen["valid"] is True
-    assert seen["conditions"] == {"L1": "overloaded"}
-    assert seen["batteries"] == {"B1": 6, "B2": 6}
-    assert seen["facts"]["L1.power_W"] == pytest.approx(14.4)
-    assert seen["facts"]["L1.limit_W"] == 6
-    assert seen["facts"]["L1.rated_V"] == 6
-    assert seen["facts"]["source.net_V"] == 12.0
+    assert seen["conditions"] == {"L1": "overworked"}
+    assert seen["batteries"] == {"B1": 6, "B2": 6, "B3": 6}
+    assert seen["facts"]["L1.power_W"] == pytest.approx(32.4)
+    assert seen["facts"]["L1.limit_W"] == 14.4
+    assert seen["facts"]["L1.rated_V"] == 12
+    assert seen["facts"]["source.net_V"] == 18.0
 
 
 def test_explain_rejected_passes_empty_conditions():
@@ -334,17 +335,17 @@ def test_explain_rejected_passes_empty_conditions():
     assert seen["batteries"] == {}
 
 
-def test_explain_fake_overload_cites_measured_watts_and_limit():
+def test_explain_fake_overwork_cites_measured_watts_and_limit():
     text = coach.explain_result(
-        OVERLOAD_LOOP, fake_coach.FakeCoachProvider())["text"]
-    assert "Light 1 drew 14.4 W, past its 6.0 W safe limit" in text
-    assert "overloaded" in text
+        OVERWORK_LOOP, fake_coach.FakeCoachProvider())["text"]
+    assert "Light 1 drew 32.4 W, past its 14.4 W safe limit" in text
+    assert "overworking it" in text
 
 
-def test_explain_fake_damaged_names_the_open_bulb():
+def test_explain_fake_exploded_names_the_open_bulb():
     text = coach.explain_result(
-        DAMAGED_LOOP, fake_coach.FakeCoachProvider())["text"]
-    assert "Light 1 is damaged and no longer completes the circuit" in text
+        EXPLODED_LOOP, fake_coach.FakeCoachProvider())["text"]
+    assert "Light 1 exploded and no longer completes the circuit" in text
     assert "0.0 A and 0.0 W" in text
 
 

@@ -60,7 +60,7 @@ describe('EXPERIMENT_PRESETS', () => {
     expect(short).toMatchObject({ type: 'wire', a: 'B1.a', b: 'B1.b' })
   })
 
-  it('seeds the overload bench with a rated bulb and a 6 V battery', () => {
+  it('seeds the overwork bench with an unrated bulb and a 6 V battery', () => {
     const netlist = toNetlist({
       nodes: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.nodes ?? [],
       edges: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.edges ?? [],
@@ -68,11 +68,10 @@ describe('EXPERIMENT_PRESETS', () => {
     const byId = new Map(netlist.components.map((part) => [part.id, part]))
     expect(byId.get('B1')).toMatchObject({ type: 'battery', volts: 6 })
     expect(byId.get('S1')).toMatchObject({ type: 'switch', closed: true })
-    expect(byId.get('L1')).toMatchObject({
-      type: 'bulb',
-      rated_volts: 6,
-      max_safe_watts: 6,
-    })
+    // No per-bulb ratings: the classroom 12 V / 14.4 W defaults apply.
+    expect(byId.get('L1')).toMatchObject({ type: 'bulb' })
+    expect(byId.get('L1')).not.toHaveProperty('rated_volts')
+    expect(byId.get('L1')).not.toHaveProperty('max_safe_watts')
   })
 
   it('uses stable unique ids within each seed', () => {

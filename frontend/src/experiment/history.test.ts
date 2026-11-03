@@ -50,11 +50,11 @@ describe('describeRun', () => {
   it('records per-bulb conditions and solver-measured source volts', () => {
     const result = {
       ...solved(14.4, 1.2),
-      conditions: { L1: 'overloaded' },
+      conditions: { L1: 'overworked' },
     } as unknown as SimulateResult
     const record = describeRun(2, 'Overload the bulb', result, LOOP)
     expect(record.bulbs).toEqual([
-      { id: 'L1', volts: 6, amps: 1.2, watts: 14.4, condition: 'overloaded' },
+      { id: 'L1', volts: 6, amps: 1.2, watts: 14.4, condition: 'overworked' },
     ])
     expect(record.sourceVolts).toBe(6)
   })
@@ -71,7 +71,7 @@ describe('diagnoseRun', () => {
   function overloaded(): SimulateResult {
     return {
       ...solved(14.4, 1.2),
-      conditions: { L1: 'overloaded' },
+      conditions: { L1: 'overworked' },
       ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
     } as unknown as SimulateResult
   }
@@ -88,26 +88,26 @@ describe('diagnoseRun', () => {
     ])
   })
 
-  it('cites the previous run when a bulb is damaged', () => {
+  it('cites the previous run when a bulb explodes', () => {
     const damaged = {
       ...solved(0, 0),
-      conditions: { L1: 'damaged' },
+      conditions: { L1: 'exploded' },
       ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
     } as unknown as SimulateResult
     const before = describeRun(5, 'Overload the bulb', overloaded(), LOOP)
     expect(diagnoseRun(damaged, LOOP, before)).toEqual([
-      'Light 1 is damaged and passes no current. Run 5 pushed it to 14.4 W. Reset the bench to restore it.',
+      'Light 1 exploded and passes no current. Run 5 pushed it to 14.4 W. Reset the bench to restore it.',
     ])
   })
 
   it('falls back to the limit when no previous run exists', () => {
     const damaged = {
       ...solved(0, 0),
-      conditions: { L1: 'damaged' },
+      conditions: { L1: 'exploded' },
       ratings: { L1: { rated_volts: 6, max_safe_watts: 6 } },
     } as unknown as SimulateResult
     expect(diagnoseRun(damaged, LOOP, null)).toEqual([
-      'Light 1 is damaged and passes no current. It blew past its 6.0 W limit. Reset the bench to restore it.',
+      'Light 1 exploded and passes no current. It blew past its 6.0 W limit. Reset the bench to restore it.',
     ])
   })
 })
@@ -128,24 +128,24 @@ describe('summarizeRun', () => {
     )
   })
 
-  it('names overloaded and damaged bulbs', () => {
+  it('names overworked and exploded bulbs', () => {
     const overloaded = describeRun(
       2,
       'Overload the bulb',
-      { ...solved(14.4, 1.2), conditions: { L1: 'overloaded' } } as unknown as SimulateResult,
+      { ...solved(14.4, 1.2), conditions: { L1: 'overworked' } } as unknown as SimulateResult,
       LOOP,
     )
     expect(summarizeRun(overloaded)).toBe(
-      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  Light 1 overloaded',
+      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  Light 1 overworked',
     )
     const damaged = describeRun(
       3,
       'Overload the bulb',
-      { ...solved(0, 0), conditions: { L1: 'damaged' } } as unknown as SimulateResult,
+      { ...solved(0, 0), conditions: { L1: 'exploded' } } as unknown as SimulateResult,
       LOOP,
     )
     expect(summarizeRun(damaged)).toBe(
-      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  Light 1 damaged',
+      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  Light 1 exploded',
     )
   })
 })
@@ -186,7 +186,7 @@ describe('compareRuns', () => {
     const curr = describeRun(
       2,
       'Overload the bulb',
-      { ...solved(14.4, 1.2), conditions: { L1: 'overloaded' } } as unknown as SimulateResult,
+      { ...solved(14.4, 1.2), conditions: { L1: 'overworked' } } as unknown as SimulateResult,
       doubled,
     )
     expect(compareRuns(prev, curr)).toBe(

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { latchedDamage, validateBatteryVolts } from './bench'
+import { latchedExplosion, validateBatteryVolts } from './bench'
 
 describe('validateBatteryVolts', () => {
   it('accepts positive finite voltages', () => {
@@ -18,17 +18,16 @@ describe('validateBatteryVolts', () => {
   })
 })
 
-describe('latchedDamage', () => {
-  it('latches overloaded and damaged bulbs, nothing else', () => {
-    expect(latchedDamage({ L1: 'overloaded', L2: 'intact', L3: 'damaged' })).toEqual({
-      L1: 'damaged',
-      L3: 'damaged',
+describe('latchedExplosion', () => {
+  it('latches exploded bulbs; overworked ones recover', () => {
+    expect(latchedExplosion({ L1: 'overworked', L2: 'intact', L3: 'exploded' })).toEqual({
+      L3: 'exploded',
     })
   })
 
   it('returns an empty latch for intact or missing conditions', () => {
-    expect(latchedDamage({ L1: 'intact' })).toEqual({})
-    expect(latchedDamage({})).toEqual({})
-    expect(latchedDamage(undefined)).toEqual({})
+    expect(latchedExplosion({ L1: 'intact' })).toEqual({})
+    expect(latchedExplosion({})).toEqual({})
+    expect(latchedExplosion(undefined)).toEqual({})
   })
 })

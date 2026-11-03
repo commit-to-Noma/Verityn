@@ -14,18 +14,18 @@ export const NOMINAL_BULB_W = 3.6
 export type BulbVisualState = 'dark' | 'intact' | 'overworked' | 'exploded'
 
 /**
- * Bulb stage visual from the solver's own verdict: damaged reads
- * exploded, overloaded reads overworked, anything lit reads intact.
+ * Bulb stage visual from the solver's own verdict: exploded reads
+ * exploded, overworked reads overworked, anything lit reads intact.
  * No physics here  -  condition and power both come from the result.
  */
 export function bulbVisualState(
   condition: ComponentCondition | undefined,
   powerW: number,
 ): BulbVisualState {
-  if (condition === 'damaged') {
+  if (condition === 'exploded') {
     return 'exploded'
   }
-  if (condition === 'overloaded') {
+  if (condition === 'overworked') {
     return 'overworked'
   }
   return glowIntensity(powerW) > 0 ? 'intact' : 'dark'

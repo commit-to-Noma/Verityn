@@ -411,18 +411,19 @@ Phase 6 result acceptance (all in the real browser unless noted):
 
 - Default bulbs still measure 0.6 A / 3.6 W intact; rated
   metadata is optional and additive (unit: solver defaults,
-  overvoltage, overpower, boundary-intact, damaged-open,
+  overvoltage, overpower, boundary-intact, exploded-open,
   determinism, input-rule rejections).
-- Overload is a valid measurement with `conditions`/`ratings`,
+- Overwork is a valid measurement with `conditions`/`ratings`,
   never a rejection; no new error codes. Shorts, conflicts,
   dangling, and open switches behave exactly as before.
-- The overload preset converts through the shared converter
-  with volts/ratings intact and matches probe-verified solver
-  outcomes (0.6/3.6 intact → 1.2/14.4 overloaded → latched
-  damaged 0.0 A); second-battery and 12 V-edit paths agree.
-- The damage latch fires on the next run only, survives no
+- The overwork preset converts through the shared converter
+  and matches probe-verified solver outcomes on the voltage
+  table (6 V intact → 12 V intact → 18 V overworked →
+  past-18 V exploded 0.0 A); battery-stack and voltage-edit
+  paths agree.
+- The explosion latch fires on the exploded run itself, survives no
   longer than the bench (preset load and reset clear it),
-  and never wipes the overload result that caused it; moving
+  and never wipes the overwork result that caused it; moving
   parts never clears damage.
 - Voltage controls accept finite positive volts only, show
   inline errors otherwise, and applying invalidates the stale
@@ -433,11 +434,11 @@ Phase 6 result acceptance (all in the real browser unless noted):
   the two runs, never invented ratios.
 - Explanations unlock for fresh runs only; the server adds
   limits, battery count/total, conditions, and volts to the
-  grounded facts (unit: spy payload, fake overload/damage
+  grounded facts (unit: spy payload, fake overwork/exploded
   text, mocked limit citation, invented-number rejection).
 - Guided Lab, demo, Reality Lens, Solo zero-coach, and
-  finale still pass the same smoke; overload coverage adds
-  intact, voltage-stale, overload, damage, explain, reset,
+  finale still pass the same smoke; overwork coverage adds
+  intact, voltage-stale, overwork, explosion, explain, reset,
   and return-leg checks.
 - 1440px, 1180px, 390px: zero horizontal overflow; badges,
   card, battery rows, and history stack cleanly; controls
@@ -468,6 +469,6 @@ Phase 7A result acceptance (all in the real browser unless noted):
 - Mobile 390px: single station, compact prev/next, wrapping
   tabs, zero horizontal overflow.
 - Guided Lab, demo, Reality Lens, Solo zero-coach, finale,
-  and Experiment/overload still pass the same smoke.
+  and Experiment/overwork still pass the same smoke.
 - Screenshots `24–25` recaptured, `27–28` added in
   `docs/demo/` on this tree.

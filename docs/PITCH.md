@@ -76,7 +76,7 @@ No mastery score, no dependency score  -  what happened, honestly stated.
 ## Slide 7  -  Honest scope + close (2:55–3:10)
 
 Working now: guided circuit lab (Engineering Module 1), Reality Lens
-review flow, free Experiment Bay with solver-measured overload
+review flow, free Experiment Bay with solver-measured overwork
 physics, optional voice, 564 + 337 tests, full browser smoke. Planned,
 not claimed: full Science, Technology, and Mathematics subject labs,
 plus engineering systems beyond circuits.
@@ -95,6 +95,6 @@ plus engineering systems beyond circuits.
   about which provider served.
 - **Is the physics real?** A simplified classroom MNA model  - 
   honest about being idealised, exact about every number shown.
-- **Overload?** Rated bulbs (6 V / 6 W): 12 V measures 1.2 A /
-  14.4 W overloaded, then latches damaged at 0.0 A. A solver
+- **Overwork?** Rated bulbs (12 V / 14.4 W): 18 V measures 1.8 A /
+  32.4 W overworked, and past 18 V explodes at 0.0 A. A solver
   measurement, not an animation.

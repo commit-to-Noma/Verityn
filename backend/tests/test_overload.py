@@ -1,8 +1,11 @@
-"""Overload physics: ratings, assessment, and damaged-bulb behavior.
+"""Overwork physics: ratings, assessment, and exploded-bulb behavior.
 
 The solver measures first and assesses from the same numbers. Ratings
 and conditions are optional inputs; assessment is additive output.
 Existing unrated circuits keep their exact measurements.
+
+Classroom voltage table: intact through 12 V, overworked from 12 V
+to 18 V, exploded past 18 V.
 """
 
 import copy
@@ -24,6 +27,21 @@ TWO_BATTERIES = {"components": [
     {"id": "L1", "type": "bulb", "a": "p", "b": "0"},
 ]}
 
+THREE_BATTERIES = {"components": [
+    {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "n1"},
+    {"id": "B2", "type": "battery", "volts": 6, "a": "n1", "b": "n2"},
+    {"id": "B3", "type": "battery", "volts": 6, "a": "n2", "b": "0"},
+    {"id": "L1", "type": "bulb", "a": "p", "b": "0"},
+]}
+
+FOUR_BATTERIES = {"components": [
+    {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "n1"},
+    {"id": "B2", "type": "battery", "volts": 6, "a": "n1", "b": "n2"},
+    {"id": "B3", "type": "battery", "volts": 6, "a": "n2", "b": "n3"},
+    {"id": "B4", "type": "battery", "volts": 6, "a": "n3", "b": "0"},
+    {"id": "L1", "type": "bulb", "a": "p", "b": "0"},
+]}
+
 
 def close(a, b):
     return abs(a - b) < 1e-9
@@ -35,32 +53,43 @@ def test_default_bulb_keeps_classic_numbers_and_reports_intact():
     assert close(result.components["L1"]["current"], 0.6)
     assert close(result.components["L1"]["power"], 3.6)
     assert result.conditions == {"L1": "intact"}
-    assert result.ratings == {"L1": {"rated_volts": 6.0,
-                                    "max_safe_watts": 6.0}}
+    assert result.ratings == {"L1": {"rated_volts": 12.0,
+                                    "max_safe_watts": 14.4}}
 
 
 def test_assessment_is_deterministic():
-    first = solver.solve(TWO_BATTERIES)
-    second = solver.solve(TWO_BATTERIES)
-    assert first.conditions == second.conditions == {"L1": "overloaded"}
+    first = solver.solve(THREE_BATTERIES)
+    second = solver.solve(THREE_BATTERIES)
+    assert first.conditions == second.conditions == {"L1": "overworked"}
     assert first.components == second.components
 
 
-def test_two_batteries_series_measure_and_overload():
+def test_two_batteries_series_measure_and_stay_intact():
     result = solver.solve(TWO_BATTERIES)
     assert result.ok is True
     assert result.error_code is None
     assert close(result.components["L1"]["voltage"], 12.0)
     assert close(result.components["L1"]["current"], 1.2)
     assert close(result.components["L1"]["power"], 14.4)
-    assert result.conditions == {"L1": "overloaded"}
+    assert result.conditions == {"L1": "intact"}
 
 
-def test_overload_is_a_warning_not_a_rejection():
-    result = solver.solve(TWO_BATTERIES)
+def test_three_batteries_overwork_and_four_explode():
+    three = solver.solve(THREE_BATTERIES)
+    assert three.ok is True
+    assert close(three.components["L1"]["voltage"], 18.0)
+    assert three.conditions == {"L1": "overworked"}
+    four = solver.solve(FOUR_BATTERIES)
+    assert four.ok is True
+    assert close(four.components["L1"]["voltage"], 24.0)
+    assert four.conditions == {"L1": "exploded"}
+
+
+def test_overwork_is_a_warning_not_a_rejection():
+    result = solver.solve(THREE_BATTERIES)
     assert result.ok is True
     assert result.error_code is None
-    assert result.conditions["L1"] == "overloaded"
+    assert result.conditions["L1"] == "overworked"
 
 
 def test_overvoltage_alone_triggers():
@@ -69,7 +98,7 @@ def test_overvoltage_alone_triggers():
     loop["components"][2]["max_safe_watts"] = 100
     result = solver.solve(loop)
     assert result.ok is True
-    assert result.conditions == {"L1": "overloaded"}
+    assert result.conditions == {"L1": "overworked"}
     assert result.ratings["L1"] == {"rated_volts": 3.0,
                                     "max_safe_watts": 100.0}
 
@@ -79,7 +108,13 @@ def test_overpower_alone_triggers():
     loop["components"][2]["rated_volts"] = 12
     loop["components"][2]["max_safe_watts"] = 1
     result = solver.solve(loop)
-    assert result.conditions == {"L1": "overloaded"}
+    assert result.conditions == {"L1": "overworked"}
+
+
+def test_exactly_at_blow_point_stays_overworked():
+    result = solver.solve(THREE_BATTERIES)
+    assert close(result.components["L1"]["voltage"], 18.0)
+    assert result.conditions == {"L1": "overworked"}
 
 
 def test_exactly_at_rating_stays_intact():
@@ -100,34 +135,34 @@ def test_rated_bulb_keeps_measurements():
     assert result.conditions == {"L1": "intact"}
 
 
-def test_damaged_bulb_is_open_but_stays_wired():
+def test_exploded_bulb_is_open_but_stays_wired():
     loop = copy.deepcopy(LOOP)
-    loop["components"][2]["condition"] = "damaged"
+    loop["components"][2]["condition"] = "exploded"
     result = solver.solve(loop)
     assert result.ok is True
     assert result.components["L1"]["current"] == 0.0
     assert result.components["L1"]["power"] == 0.0
-    assert result.conditions == {"L1": "damaged"}
+    assert result.conditions == {"L1": "exploded"}
 
 
-def test_damaged_bulb_is_deterministic():
+def test_exploded_bulb_is_deterministic():
     loop = copy.deepcopy(TWO_BATTERIES)
-    loop["components"][2]["condition"] = "damaged"
+    loop["components"][2]["condition"] = "exploded"
     first = solver.solve(loop)
     second = solver.solve(loop)
     assert first.components == second.components
-    assert first.conditions == {"L1": "damaged"}
+    assert first.conditions == {"L1": "exploded"}
     assert first.components["L1"]["current"] == 0.0
 
 
-def test_damaged_bulb_voltage_is_still_reported():
+def test_exploded_bulb_voltage_is_still_reported():
     loop = copy.deepcopy(LOOP)
-    loop["components"][2]["condition"] = "damaged"
+    loop["components"][2]["condition"] = "exploded"
     result = solver.solve(loop)
     assert close(result.components["L1"]["voltage"], 6.0)
 
 
-def test_open_switch_never_overloads():
+def test_open_switch_never_overworks():
     loop = copy.deepcopy(LOOP)
     loop["components"][1]["closed"] = False
     result = solver.solve(loop)
@@ -135,9 +170,9 @@ def test_open_switch_never_overloads():
     assert result.conditions == {"L1": "intact"}
 
 
-def test_damaged_bulb_does_not_short_or_dangle():
+def test_exploded_bulb_does_not_short_or_dangle():
     loop = copy.deepcopy(LOOP)
-    loop["components"][2]["condition"] = "damaged"
+    loop["components"][2]["condition"] = "exploded"
     result = solver.solve(loop)
     assert result.error_code is None
 
@@ -164,7 +199,7 @@ def test_bad_ratings_rejected(field, value):
     assert "L1" in result.component_ids
 
 
-@pytest.mark.parametrize("condition", ["burning", "overloaded", "", None, 7])
+@pytest.mark.parametrize("condition", ["burning", "overworked", "", None, 7])
 def test_unknown_input_condition_rejected(condition):
     loop = copy.deepcopy(LOOP)
     loop["components"][2]["condition"] = condition

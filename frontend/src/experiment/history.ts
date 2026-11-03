@@ -1,6 +1,7 @@
 import type { ComponentCondition, Netlist, SimulateResult } from '../api/client'
 import { bannerModel } from '../canvas/banner'
 import { friendlyComponentName } from '../components/componentNames'
+import { LIT_POWER_W } from '../lessons/lesson'
 
 /** One bulb's measured outcome in a run; condition is null when the
  * solver reported none (old-shape results and rejected runs). */
@@ -72,7 +73,7 @@ export function batteriesOppose(result: SimulateResult, netlist: Netlist): boole
     return false
   }
   if (netlist.components.some((part) => part.type === 'switch' && !part.closed) ||
-      Object.values(result.conditions ?? {}).some((condition) => condition === 'damaged')) {
+      Object.values(result.conditions ?? {}).some((condition) => condition === 'exploded')) {
     return false
   }
   const totalBatteryVolts = batteries.reduce((sum, reading) => sum + Math.abs(reading.voltage), 0)
@@ -105,7 +106,7 @@ export function describeRun(
     }
   }
   const banner = bannerModel(result, netlist)
-  const lit = bulbs.filter((bulb) => bulb.watts > 1e-9)
+  const lit = bulbs.filter((bulb) => bulb.watts > LIT_POWER_W)
   return {
     n,
     label,
@@ -137,7 +138,7 @@ export function summarizeRun(record: RunRecord): string {
   }
   const base = `Run ${record.n}  -  ${record.label}  -  ${record.sourceVolts.toFixed(1)} V net source  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
   const events = record.bulbs
-    .filter((bulb) => bulb.condition === 'overloaded' || bulb.condition === 'damaged')
+    .filter((bulb) => bulb.condition === 'overworked' || bulb.condition === 'exploded')
     .map((bulb) => `${friendlyComponentName(bulb.id)} ${bulb.condition}`)
   return events.length === 0 ? base : `${base}  -  ${events.join(', ')}`
 }
@@ -177,10 +178,10 @@ export function compareRuns(previous: RunRecord | null, current: RunRecord): str
       continue
     }
     const eventful =
-      bulb.condition === 'overloaded' ||
-      bulb.condition === 'damaged' ||
-      before.condition === 'overloaded' ||
-      before.condition === 'damaged'
+      bulb.condition === 'overworked' ||
+      bulb.condition === 'exploded' ||
+      before.condition === 'overworked' ||
+      before.condition === 'exploded'
     if (!eventful || Math.abs(bulb.watts - before.watts) < 0.05) {
       continue
     }
@@ -199,7 +200,7 @@ export const BULB_OHMS = 10
 
 /**
  * Bench diagnostics: code-written failure lines from the solver's own
- * numbers (no model call). One line per overloaded or damaged bulb.
+ * numbers (no model call). One line per overworked or exploded bulb.
  */
 export function diagnoseRun(
   result: SimulateResult,
@@ -214,13 +215,13 @@ export function diagnoseRun(
     const condition = result.conditions?.[bulb.id]
     const measured = result.components[bulb.id]
     const limit = result.ratings?.[bulb.id]?.max_safe_watts
-    if (condition === 'overloaded' && measured !== undefined && limit !== undefined) {
+    if (condition === 'overworked' && measured !== undefined && limit !== undefined) {
       lines.push(
         `${friendlyComponentName(bulb.id)} took ${measured.power.toFixed(1)} W against a ${limit.toFixed(1)} W safe limit ` +
           `(${measured.voltage.toFixed(1)} V, ${measured.current.toFixed(1)} A). ` +
           'Lower a battery voltage or add another bulb to share the load.',
       )
-    } else if (condition === 'damaged') {
+    } else if (condition === 'exploded') {
       const before = previous?.bulbs.find((entry) => entry.id === bulb.id) ?? null
       const blew =
         before !== null && previous !== null && before.watts > 0
@@ -229,7 +230,7 @@ export function diagnoseRun(
             ? ' It blew past its safe limit.'
             : ` It blew past its ${limit.toFixed(1)} W limit.`
       lines.push(
-        `${friendlyComponentName(bulb.id)} is damaged and passes no current.${blew} Reset the bench to restore it.`,
+        `${friendlyComponentName(bulb.id)} exploded and passes no current.${blew} Reset the bench to restore it.`,
       )
     }
   }

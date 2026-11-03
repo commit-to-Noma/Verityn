@@ -131,7 +131,7 @@ def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
             f"Bulb conditions: {json.dumps(conditions, sort_keys=True)}. "
             f"Signed battery voltage contributions (from solver current direction): {json.dumps(batteries, sort_keys=True)}.\n"
             "Explain the measured result in two to three sentences. "
-            "Name an overloaded or damaged bulb only when the "
+            "Name an overworked or exploded bulb only when the "
             "conditions say so."
         )
     return (

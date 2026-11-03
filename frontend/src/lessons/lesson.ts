@@ -5,8 +5,9 @@
 
 import type { Claim, Netlist, SimulateResult, VerdictStatus } from '../api/client'
 
-/** Bulb lit threshold, shared with the evaluator's noise floor (watts). */
-export const LIT_POWER_W = 1e-9
+/** Bulb lit threshold in watts: 2.4 V across the 10 ohm classroom bulb.
+ * Below this the bulb reads dark, matching the voltage table. */
+export const LIT_POWER_W = 0.576
 
 export type Choice = 'yes' | 'no' | 'not_sure'
 
