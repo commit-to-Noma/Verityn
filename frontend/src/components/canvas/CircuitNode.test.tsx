@@ -49,3 +49,25 @@ describe('CircuitNode measurement', () => {
     expect(markup).toContain('3.6 W')
   })
 })
+
+describe('CircuitNode dim and opposed', () => {
+  it('renders a starved bulb with the dim ember class', () => {
+    const dim = markupFor('L1', { ...data('bulb', { voltage: 3, current: 0.3, power: 0.9 }), glow: 0.25 })
+
+    expect(dim).toContain('is-lit is-dim')
+  })
+
+  it('renders a full-power bulb without the dim class', () => {
+    const bright = markupFor('L1', { ...data('bulb', { voltage: 6, current: 0.6, power: 3.6 }), glow: 1 })
+
+    expect(bright).toContain('is-lit')
+    expect(bright).not.toContain('is-dim')
+  })
+
+  it('badges an opposing battery with the standoff cue', () => {
+    const markup = markupFor('B1', { ...data('battery'), opposed: true })
+
+    expect(markup).toContain('battery-opposed')
+    expect(markup).toContain('Battery opposing')
+  })
+})

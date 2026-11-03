@@ -86,11 +86,18 @@ function formatVolts(value: number): string {
 
 /** Heads-up reading for the canvas overlay; null unless the run solved. */
 export function hudReading(result: SimulateResult, netlist: Netlist): HudReading | null {
-  const banner = bannerModel(result, netlist)
+  const banner = bannerModel(result, netlist, batteriesOppose(result, netlist))
   if (banner === null) {
     return null
   }
-  return { sourceVolts: measuredSourceVolts(result, netlist), amps: banner.amps, lit: banner.lit, strain: banner.strain }
+  return {
+    sourceVolts: measuredSourceVolts(result, netlist),
+    amps: banner.amps,
+    lit: banner.lit,
+    strain: banner.strain,
+    dim: banner.dim,
+    standoff: banner.standoff,
+  }
 }
 
 /** Describe a fresh solver run; invalid runs keep their rejection code. */

@@ -259,7 +259,7 @@ describe('compareRuns', () => {
 
 describe('hudReading', () => {
   it('reads net source volts, headline amps, and the lit word', () => {
-    expect(hudReading(solved(3.6, 0.6), LOOP)).toEqual({ sourceVolts: 6, amps: 0.6, lit: true, strain: false })
+    expect(hudReading(solved(3.6, 0.6), LOOP)).toEqual({ sourceVolts: 6, amps: 0.6, lit: true, strain: false, dim: false, standoff: false })
   })
 
   it('flags straining runs for the overworked word', () => {
@@ -271,7 +271,7 @@ describe('hudReading', () => {
       },
       conditions: { L1: 'overworked' },
     } as unknown as SimulateResult
-    expect(hudReading(strained, LOOP)).toEqual({ sourceVolts: 18, amps: 1.8, lit: true, strain: true })
+    expect(hudReading(strained, LOOP)).toEqual({ sourceVolts: 18, amps: 1.8, lit: true, strain: true, dim: false, standoff: false })
   })
 
   it('reads dark runs with zero amps', () => {
@@ -282,7 +282,38 @@ describe('hudReading', () => {
         L1: { voltage: 0, current: 0, power: 0 },
       },
     } as unknown as SimulateResult
-    expect(hudReading(dark, LOOP)).toEqual({ sourceVolts: 0, amps: 0, lit: false, strain: false })
+    expect(hudReading(dark, LOOP)).toEqual({ sourceVolts: 0, amps: 0, lit: false, strain: false, dim: false, standoff: false })
+  })
+
+  it('flags the dim word when the bulb glows below half nominal', () => {
+    const dim = {
+      ...solved(0.9, 0.3),
+      components: {
+        B1: { voltage: 6, current: -0.3, power: -1.8 },
+        L1: { voltage: 3, current: 0.3, power: 0.9 },
+      },
+    } as unknown as SimulateResult
+    expect(hudReading(dim, LOOP)).toEqual({ sourceVolts: 6, amps: 0.3, lit: true, strain: false, dim: true, standoff: false })
+  })
+
+  it('flags the standoff word when opposing batteries cancel dark', () => {
+    const opposing: Netlist = {
+      components: [
+        { id: 'B1', type: 'battery', volts: 6, a: 'n1', b: 'n0' },
+        { id: 'B2', type: 'battery', volts: 6, a: 'n1', b: 'n2' },
+        { id: 'L1', type: 'bulb', a: 'n2', b: 'n0' },
+      ],
+    }
+    const result = {
+      ...solved(0, 0),
+      components: {
+        B1: { voltage: 6, current: 0, power: 0 },
+        B2: { voltage: 6, current: 0, power: 0 },
+        L1: { voltage: 0, current: 0, power: 0 },
+      },
+      conditions: { L1: 'intact' },
+    } as unknown as SimulateResult
+    expect(hudReading(result, opposing)).toEqual({ sourceVolts: 0, amps: 0, lit: false, strain: false, dim: false, standoff: true })
   })
 
   it('returns null for rejections', () => {

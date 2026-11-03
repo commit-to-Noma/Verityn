@@ -40,3 +40,6 @@ the Under the hood Smart details section, and the README.
 - Starter grid refreshed: Polarity Duel (0 V standoff, flip to 12 V), Dim Duo (series split), The Forbidden Wire (short reframe); Overwork loads hot — [preset tests](../frontend/src/experiment/presets.test.ts), smoke duo/duel checks.
 - Reality Check runs live: switch practice removed, flips re-solve automatically, both positions plus a reply or retest excursion advance to Solo — smoke flip auto-advance checks.
 - Hub console runs engine commands inside the tabs (Spark, voice, lens, live solver measure); bento copy trimmed; Built with Meta is a one-line footnote — smoke console/solver/footnote checks.
+- Dim bulbs read dim: glow below half nominal renders a dull ember, banner/HUD say DIM — [banner tests](../frontend/src/canvas/banner.test.ts), [node tests](../frontend/src/components/canvas/CircuitNode.test.tsx), smoke duo checks.
+- Polarity Duel names its 0 V standoff: STANDOFF banner/HUD, Opposing badges on both batteries — smoke duel checks.
+- Runs scroll the canvas into view first; Time Bomb strain beat extended to 2.2 s — smoke bomb checks.

@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import { ToggleLeft, ToggleRight } from 'lucide-react'
 import type { ComponentCondition } from '../../api/client'
-import { batteryChargeBand, bulbVisualState, NOMINAL_BULB_W } from '../../canvas/visuals'
+import { batteryChargeBand, bulbVisualState, isDimGlow, NOMINAL_BULB_W } from '../../canvas/visuals'
 import { useBatteryFlip } from './batteryFlip'
 import { useSwitchToggle } from './switchToggle'
 
@@ -41,6 +41,8 @@ export type CircuitNodeData = {
   flipped?: boolean
   /** One-shot switch arc-flash key; cleared shortly after the toggle. */
   arcFlash?: number
+  /** Battery faces an opposing battery; the pair cancels out. Cleared on edit. */
+  opposed?: boolean
 }
 
 export type CircuitNodeType = Node<CircuitNodeData, 'circuit'>
@@ -98,7 +100,7 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
         data.demonstrated === true ? 'component-demo' : ''
       } ${bulbState === 'overworked' ? 'bulb-overworked' : ''} ${
         bulbState === 'exploded' ? 'bulb-damaged' : ''
-      }`}
+      } ${data.kind === 'battery' && data.opposed === true ? 'battery-opposed' : ''}`}
     >
       <Handle id="a" type="source" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Left connection dot" />
       <Handle id="a" type="target" position={Position.Left} className={`terminal-handle${data.loose?.includes('a') ? ' terminal-loose' : ''}`} aria-label="Connect to the left dot" />
@@ -150,7 +152,7 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
               />
             )}
             <span className="relative inline-flex">
-              <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
+              <svg className={`component-illustration bulb-illustration ${data.glow > 0 ? 'is-lit' : ''}${isDimGlow(data.glow) ? ' is-dim' : ''}`} viewBox="0 0 70 54" aria-hidden="true">
               <path d="M35 5c-10 0-17 7-17 16 0 7 4 11 8 15v4h18v-4c4-4 8-8 8-15 0-9-7-16-17-16Z" />
               <path d="M27 40h16M28 45h14M31 49h8" className="bulb-base" />
               <path d="M28 20l7 7 7-7" className="bulb-filament" />
@@ -195,6 +197,15 @@ export default function CircuitNode({ id, data }: NodeProps<CircuitNodeType>) {
               ? `Bulb · ${data.label}`
               : `Switch · ${data.label}`}
         </span>
+        {data.kind === 'battery' && data.opposed === true && (
+          <span
+            role="status"
+            aria-label="Battery opposing"
+            className="rounded-full border border-light/60 px-2 py-px text-[10px] font-medium text-light"
+          >
+            Opposing
+          </span>
+        )}
         {data.kind === 'bulb' && data.condition !== undefined && (
           <span
             role="status"

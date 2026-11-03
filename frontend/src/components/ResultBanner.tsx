@@ -1,5 +1,6 @@
 import type { Netlist, SimulateResult } from '../api/client'
 import { bannerModel } from '../canvas/banner'
+import { batteriesOppose } from '../experiment/history'
 import AnimatedReadout from './AnimatedReadout'
 
 /** Compact hero banner for the physical result: loop → current → outcome. */
@@ -10,7 +11,7 @@ export default function ResultBanner({
   result: SimulateResult
   netlist: Netlist
 }) {
-  const model = bannerModel(result, netlist)
+  const model = bannerModel(result, netlist, batteriesOppose(result, netlist))
   if (!model) {
     return null
   }

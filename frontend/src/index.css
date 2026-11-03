@@ -192,6 +192,33 @@ body {
   stroke: #fff3c4;
 }
 
+/* Dim ember: lit but starved — dull amber body, faint halo. */
+.bulb-illustration.is-lit.is-dim {
+  fill: #7a5c22;
+  stroke: #c9a254;
+  filter: drop-shadow(0 0 3px rgb(242 181 68 / 0.45));
+}
+
+.bulb-illustration.is-lit.is-dim .bulb-base,
+.bulb-illustration.is-lit.is-dim .bulb-filament {
+  stroke: #d9b96a;
+}
+
+/* Opposing battery: the pair cancels, so the standoff pulses amber. */
+.battery-opposed .battery-illustration {
+  animation: battery-oppose-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes battery-oppose-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgb(242 181 68 / 0.35));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgb(242 181 68 / 0.8));
+  }
+}
+
 .bulb-glow {
   position: absolute;
   top: 44%;
@@ -281,6 +308,7 @@ body {
   .bulb-overwork-glow,
   .bulb-overworked .bulb-illustration,
   .battery-vent,
+  .battery-opposed .battery-illustration,
   .arc-flash,
   .react-flow__edge.wire-connect-pulse path,
   .react-flow__edge.wire-stress {

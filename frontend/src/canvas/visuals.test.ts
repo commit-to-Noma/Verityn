@@ -5,6 +5,7 @@ import {
   flowDurationForCurrent,
   flowForCurrent,
   glowIntensity,
+  isDimGlow,
   shouldBurstGlow,
 } from './visuals'
 
@@ -27,6 +28,15 @@ describe('glowIntensity', () => {
       expect(shouldBurstGlow(0, 3.6)).toBe(true)
       expect(shouldBurstGlow(0.5, 3.6)).toBe(false)
       expect(shouldBurstGlow(0, 0)).toBe(false)
+    })
+  })
+
+  describe('isDimGlow', () => {
+    it('reads a starved glow as dim and full glow as bright', () => {
+      expect(isDimGlow(0)).toBe(false)
+      expect(isDimGlow(glowIntensity(0.9))).toBe(true)
+      expect(isDimGlow(glowIntensity(3.6))).toBe(false)
+      expect(isDimGlow(1)).toBe(false)
     })
   })
 })

@@ -60,6 +60,14 @@ export function shouldBurstGlow(previousGlow: number, powerW: number): boolean {
   return previousGlow <= 0 && glowIntensity(powerW) > 0
 }
 
+/** Glow below this reads as a dim ember rather than a fully lit bulb. */
+export const DIM_GLOW_MAX = 0.5
+
+/** True when the bulb glows but below half the nominal brightness. */
+export function isDimGlow(glow: number): boolean {
+  return glow > 0 && glow < DIM_GLOW_MAX
+}
+
 export type CurrentFlow = 'forward' | 'reverse' | 'still'
 
 /** Flow direction along the drawn edge from solver branch current. */

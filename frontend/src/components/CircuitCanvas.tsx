@@ -20,6 +20,7 @@ import type { CSSProperties } from 'react'
 import type { ApiErrorKind, Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
 import type { HudReading } from '../canvas/banner'
+import { batteriesOppose } from '../experiment/history'
 import { toNetlist } from '../canvas/toNetlist'
 import { openTerminals } from '../canvas/openTerminals'
 import { closedSwitchNotice, nextTerminalInstruction } from '../canvas/terminalGuidance'
@@ -1203,7 +1204,8 @@ function CanvasInner({
           node.data.glow > 0 ||
           node.data.invalid ||
           node.data.demonstrated === true ||
-          node.data.condition !== undefined
+          node.data.condition !== undefined ||
+          node.data.opposed === true
         ) {
           return {
             ...node,
@@ -1215,6 +1217,7 @@ function CanvasInner({
               measurement: undefined,
               demonstrated: false,
               condition: undefined,
+              opposed: false,
             },
           }
         }
@@ -1420,6 +1423,17 @@ function CanvasInner({
     const id = requestId.current
     stopHum()
     setRunState({ phase: 'loading' })
+    // Bring the canvas on screen before the solver answers, so a staged
+    // blast (Time Bomb) is visible from its first shake. Only moves when
+    // the canvas is actually outside the viewport.
+    const canvasBox = document
+      .querySelector('[aria-label="Circuit canvas"]')
+      ?.getBoundingClientRect()
+    if (canvasBox !== undefined && (canvasBox.top < 0 || canvasBox.bottom > window.innerHeight)) {
+      document
+        .querySelector('[aria-label="Circuit canvas"]')
+        ?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'nearest' })
+    }
     const flippedBatteries = new Set(
       nodes.filter((node) => node.data.kind === 'battery' && node.data.flipped === true).map((node) => node.id),
     )
@@ -1472,6 +1486,8 @@ function CanvasInner({
             .filter(([, condition]) => condition === 'overworked')
             .map(([id]) => id),
         )
+        // Opposing batteries cancel: mark them so the canvas shows the standoff.
+        const opposedBench = result.ok ? batteriesOppose(result, netlist) : false
         // Bulbs the solver just blew: strain first, destruction after a beat,
         // so the Time Bomb shakes before it pops instead of flashing.
         const newlyExploded = new Set(
@@ -1516,6 +1532,7 @@ function CanvasInner({
                   invalid: offenders.has(node.id),
                   measurement,
                   condition: appliedCondition,
+                  opposed: opposedBench && node.data.kind === 'battery',
                 },
               }
             }),
@@ -1525,7 +1542,7 @@ function CanvasInner({
           applyResultToNodes(true)
           // Strain beat: a long shake so the demo can narrate the stress
           // before the blast. Skipped under reduced motion.
-          await new Promise((resolve) => window.setTimeout(resolve, 1400))
+          await new Promise((resolve) => window.setTimeout(resolve, 2200))
           if (requestId.current !== id) {
             return
           }
@@ -2296,7 +2313,7 @@ function CanvasInner({
             aria-label="Result heads-up display"
             className="border-glass-border pointer-events-none absolute right-3 top-3 z-10 rounded-full border bg-black/60 px-3 py-1 font-mono text-xs backdrop-blur-sm"
           >
-            {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.strain ? 'Overworked' : hud.lit ? 'Lit' : 'Dark'}
+            {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.strain ? 'Overworked' : hud.standoff ? 'Standoff' : hud.dim ? 'Dim' : hud.lit ? 'Lit' : 'Dark'}
           </div>
         )}
         {mode === 'experiment' && toolDock}
