@@ -598,7 +598,10 @@ body {
 }
 
 .stage-enter {
-  animation: stage-enter 0.45s ease both;
+  /* backwards (not both): retaining the final keyframe transform would make
+     main a containing block for fixed descendants, trapping full-screen
+     overlays inside the content box. */
+  animation: stage-enter 0.45s ease backwards;
 }
 
 @keyframes reveal-rise {
@@ -772,6 +775,68 @@ body {
   border-radius: 50%;
   background: var(--color-coach);
   box-shadow: 0 0 10px var(--color-coach);
+}
+
+/* Guided Lab entry sweep: a light band crosses while the page blurs behind. */
+.lab-swoosh-bar {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 34vw;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgb(56 214 233 / 0.16) 42%,
+    rgb(242 181 68 / 0.14) 58%,
+    transparent
+  );
+  animation: lab-swoosh-pan 1.35s cubic-bezier(0.6, 0, 0.3, 1) both;
+}
+
+@keyframes lab-swoosh-pan {
+  from {
+    transform: translateX(-40vw) skewX(-12deg);
+  }
+  to {
+    transform: translateX(130vw) skewX(-12deg);
+  }
+}
+
+.lab-swoosh-card {
+  animation: lab-swoosh-rise 0.45s ease-out both;
+}
+
+@keyframes lab-swoosh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lab-swoosh-fill {
+  animation: lab-swoosh-fill 1.3s linear both;
+}
+
+@keyframes lab-swoosh-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-swoosh-bar,
+  .lab-swoosh-card,
+  .lab-swoosh-fill {
+    animation: none;
+  }
 }
 
 /* Hub loop timeline: a signal particle zaps down the track. */

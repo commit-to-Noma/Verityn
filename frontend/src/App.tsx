@@ -116,8 +116,8 @@ const COACH_INTRODUCTION =
 export default function App() {
   const [presetId, setPresetId] = useState(PRESETS[0].id)
   const [entered, setEntered] = useState(false)
-  const [gateway, setGateway] = useState(false)
-  const gatewayShown = useRef(false)
+  const [labSwoosh, setLabSwoosh] = useState(false)
+  const swooshTimer = useRef<number | null>(null)
   const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(false)
   const [learnerReply, setLearnerReply] = useState('')
   const [predictionTranscript, setPredictionTranscript] = useState<{
@@ -546,25 +546,59 @@ export default function App() {
     setComplete(null)
   }, [cancelAdvance])
 
+  /** Lab entry swoosh: the current page stays mounted and blurred behind a
+   * sweeping transition; navigation fires only after the sweep lands.
+   * Event-driven (no effect), so StrictMode cannot double-arm it. Demos,
+   * auto runs, and reduced motion navigate immediately. */
+  const enterLabWithSwoosh = useCallback((enter: () => void) => {
+    if (
+      swooshTimer.current !== null ||
+      autoRef.current ||
+      demoRef.current.active ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      enter()
+      return
+    }
+    setLabSwoosh(true)
+    swooshTimer.current = window.setTimeout(() => {
+      swooshTimer.current = null
+      setLabSwoosh(false)
+      enter()
+    }, 1400)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (swooshTimer.current !== null) {
+        window.clearTimeout(swooshTimer.current)
+        swooshTimer.current = null
+      }
+    },
+    [],
+  )
+
   const handleResumeJourney = useCallback(() => {
     const checkpoint = checkpointRead.checkpoint
     if (checkpoint === null) {
       return
     }
-    setL1Prediction(checkpoint.l1Prediction)
-    setRealityStarted(checkpoint.realityStarted)
-    setRealityPrediction(checkpoint.realityPrediction)
-    setRealitySession(checkpoint.realitySession)
-    setTransferStarted(checkpoint.transferStarted)
-    setTransferPrediction(checkpoint.transferPrediction)
-    setTransferDone(checkpoint.transferDone)
-    setSnapshots(checkpoint.snapshots)
-    setComplete(null)
-    setEntered(true)
-    setLensPage(false)
-    setExperimentPage(false)
-    setResumedCheckpoint(true)
-  }, [checkpointRead.checkpoint])
+    enterLabWithSwoosh(() => {
+      setL1Prediction(checkpoint.l1Prediction)
+      setRealityStarted(checkpoint.realityStarted)
+      setRealityPrediction(checkpoint.realityPrediction)
+      setRealitySession(checkpoint.realitySession)
+      setTransferStarted(checkpoint.transferStarted)
+      setTransferPrediction(checkpoint.transferPrediction)
+      setTransferDone(checkpoint.transferDone)
+      setSnapshots(checkpoint.snapshots)
+      setComplete(null)
+      setEntered(true)
+      setLensPage(false)
+      setExperimentPage(false)
+      setResumedCheckpoint(true)
+    })
+  }, [checkpointRead.checkpoint, enterLabWithSwoosh])
 
   /** Reflection typing cancels a pending demo timer, like any edit. */
   const handleInteract = useCallback(() => {
@@ -597,13 +631,15 @@ export default function App() {
   }, [cancelAdvance])
 
   const handleStartJourney = useCallback(() => {
-    resetJourney()
-    setLensPage(false)
-    setExperimentPage(false)
-    setEntered(true)
-    introAnnounced.current = true
-    announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
-  }, [resetJourney, announceCoach])
+    enterLabWithSwoosh(() => {
+      resetJourney()
+      setLensPage(false)
+      setExperimentPage(false)
+      setEntered(true)
+      introAnnounced.current = true
+      announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
+    })
+  }, [resetJourney, announceCoach, enterLabWithSwoosh])
 
   const handleRestartJourney = useCallback(() => {
     if (window.confirm('Restart the lab and clear saved predictions?')) {
@@ -707,40 +743,24 @@ export default function App() {
     setTraceStage(lensPage ? 'lens' : experimentPage ? 'experiment' : stage)
   }, [lensPage, experimentPage, stage])
 
-  /** Gateway transition: once per session, first guided entry gets a 3 s
-   * mount screen. Skipped for demos, auto runs, and reduced motion.
-   * Leaving the lab context forces it closed, so a mid-transition exit can
-   * never orphan the dialog over the Hub. Split from the timer below so a
-   * StrictMode remount re-arms the timeout instead of stranding the dialog. */
-  useEffect(() => {
-    if (
-      stage === 'intro' ||
-      lensPage ||
-      experimentPage ||
-      auto ||
-      demo.active
-    ) {
-      setGateway(false)
-      return
-    }
-    if (gatewayShown.current) {
-      return
-    }
-    gatewayShown.current = true
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return
-    }
-    setGateway(true)
-  }, [stage, lensPage, experimentPage, auto, demo.active])
-
-  /** Gateway auto-dismiss; cleanup-safe under effect re-runs. */
-  useEffect(() => {
-    if (!gateway) {
-      return
-    }
-    const timer = window.setTimeout(() => setGateway(false), 3000)
-    return () => window.clearTimeout(timer)
-  }, [gateway])
+  /** Full-screen entry sweep; the current page stays mounted behind it. */
+  const swooshOverlay = labSwoosh ? (
+    <div
+      role="status"
+      aria-label="Entering the Guided Lab"
+      className="fixed inset-0 z-[70] overflow-hidden bg-black/55 backdrop-blur-md"
+    >
+      <div aria-hidden="true" className="lab-swoosh-bar" />
+      <div className="lab-swoosh-card flex h-full flex-col items-center justify-center p-4 text-center">
+        <p className="font-mono text-sm font-bold text-flow">01</p>
+        <p className="mt-2 text-xl font-semibold tracking-wide">Mounting Engineering Workspace</p>
+        <p className="mt-1 font-mono text-sm text-flow">Initializing Module 1: Live Circuit Physics…</p>
+        <div aria-hidden="true" className="mt-6 h-1 w-56 overflow-hidden rounded-full bg-glass-strong">
+          <div className="lab-swoosh-fill h-full w-full origin-left rounded-full bg-gradient-to-r from-flow to-light" />
+        </div>
+      </div>
+    </div>
+  ) : null
 
   /** Reality Lens is a first-class workspace, not a footer tool. Leaving the
    * journey unmounts the canvases, so any latched gate is cleared: builds must
@@ -786,13 +806,23 @@ export default function App() {
           handleResumeJourney()
           return
         }
-        if (!entered && !introAnnounced.current) {
+        const announce = !entered && !introAnnounced.current
+        if (announce) {
           introAnnounced.current = true
-          announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
         }
-        setLensPage(false)
-        setExperimentPage(false)
-        setEntered(true)
+        const enter = () => {
+          if (announce) {
+            announceCoach(COACH_INTRODUCTION, { singleUtterance: true })
+          }
+          setLensPage(false)
+          setExperimentPage(false)
+          setEntered(true)
+        }
+        if (!entered) {
+          enterLabWithSwoosh(enter)
+        } else {
+          enter()
+        }
       } else {
         setLensPage(false)
         setExperimentPage(false)
@@ -805,6 +835,7 @@ export default function App() {
       announceCoach,
       endDemoToManual,
       entered,
+      enterLabWithSwoosh,
       handleResumeJourney,
     ],
   )
@@ -1000,6 +1031,7 @@ export default function App() {
             </Suspense>
           </section>
         </div>
+        {swooshOverlay}
       </JourneyShell>
     )
   }
@@ -1034,6 +1066,7 @@ export default function App() {
             </Suspense>
           </section>
         </div>
+        {swooshOverlay}
       </JourneyShell>
     )
   }
@@ -1307,32 +1340,7 @@ export default function App() {
         </Suspense>
       )}
       {STAGE_CONTENT[stage] /* exhaustiveness: every stage renders above */}
-      {gateway && (
-        <div
-          role="dialog"
-          aria-label="Mounting Engineering Workspace"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-        >
-          <div className="flex w-full max-w-md flex-col items-center rounded-2xl border border-glass-border bg-[rgb(10_14_28/0.95)] p-8 text-center shadow-2xl">
-            <div aria-hidden="true" className="relative mb-6 flex h-24 w-24 items-center justify-center">
-              <div className="absolute inset-0 animate-ping rounded-full border-2 border-flow/30 motion-reduce:animate-none" />
-              <div className="absolute inset-2 animate-spin rounded-full border border-dashed border-light/50 [animation-duration:4s] motion-reduce:animate-none" />
-              <span className="font-mono text-lg font-bold text-flow">01</span>
-            </div>
-            <h2 className="text-xl font-semibold tracking-wide">Mounting Engineering Workspace</h2>
-            <p className="mt-1 animate-pulse font-mono text-sm text-flow motion-reduce:animate-none">
-              Initializing Module 1: Live Circuit Physics…
-            </p>
-            <button
-              type="button"
-              onClick={() => setGateway(false)}
-              className="border-glass-border mt-6 min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      )}
+      {swooshOverlay}
     </JourneyShell>
   )
 }

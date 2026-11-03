@@ -648,11 +648,10 @@ async function drive() {
   await clickTab('Guided Lab')
   await waitFor(() => hasText('1 / 5 · VERITYN TOOLS'), 'turntable back to lab')
   await clickButtonStarts('Open Guided Lab')
+  await waitFor(() => hasText('Mounting Engineering Workspace'), 'swoosh plays', 5000)
+  check('lab swoosh mounts the workspace', await hasText('Initializing Module 1'))
+  check('hub stays behind the swoosh', await hasText('Imagine it. Test it. Understand it.'))
   await waitFor(() => hasText('loose ends'), 'station opens lab')
-  await waitFor(() => hasText('Mounting Engineering Workspace'), 'gateway shows', 5000)
-  check('guided gateway mounts the workspace', await hasText('Initializing Module 1'))
-  await clickButton('Skip')
-  await waitFor(async () => !(await hasText('Mounting Engineering Workspace')), 'gateway skipped', 5000)
   await clickButton('Hub')
   await waitFor(() => hasText('Imagine it. Test it. Understand it.'), 'hub again')
   await clickTab('Experiment Bay')
@@ -678,10 +677,8 @@ async function drive() {
   await waitFor(() => hasText('Build something. Test what happens.'), 'station opens bench')
   await clickButton('Hub')
   await waitFor(() => hasText('Imagine it. Test it. Understand it.'), 'hub after solver')
-  check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment Bay') && await hasText('Under the hood'))
-  await ev(`document.querySelector('nav[aria-label="Laboratory"] details summary').click()`)
-  check('under the hood group', await hasText('Meta Muse Spark') && await hasText('Verityn Solver'))
-  await ev(`document.querySelector('nav[aria-label="Laboratory"] details').removeAttribute('open')`)
+  check('shell nav', await hasText('Guided Lab') && await hasText('Reality Lens') && await hasText('Experiment Bay') && await ev(`![...document.querySelectorAll('nav')].some((n) => (n.innerText ?? '').includes('Under the hood'))`))
+  check('no hood dropdown in nav', await ev(`document.querySelector('nav[aria-label="Laboratory"] details') === null`))
   const navCurrent = await ev(`document.querySelector('nav[aria-label="Laboratory"] button[aria-current="page"]')?.textContent.trim() ?? 'none'`)
   check('hub is current location', navCurrent === 'Hub', navCurrent)
   const expEnabled = await ev(`(() => {
@@ -693,7 +690,7 @@ async function drive() {
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
-  check('gateway shows once per session', !(await hasText('Mounting Engineering Workspace')))
+  check('swoosh settles into the lab', !(await hasText('Mounting Engineering Workspace')))
   check('Built with Meta disclosures are hidden in the Guided Lab', !(await hasText('Built with Meta')))
   check(
     'guided lab opens with the task',

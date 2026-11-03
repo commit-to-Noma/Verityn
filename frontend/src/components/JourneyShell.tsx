@@ -93,23 +93,11 @@ export default function JourneyShell({
     </button>
   )
 
-  const renderNavigationItems = (layout: 'row' | 'column') => (
+  /** Primary tabs only: the Under-the-hood section lives on the Hub page,
+   * and its shortcuts only duplicated lab/experiment destinations. */
+  const renderNavigationItems = () => (
     <>
       {SHELL_NAV.filter((item) => item.primary).map(renderNavButton)}
-      <details className={layout === 'row' ? 'relative' : undefined}>
-        <summary className="text-ink-muted hover:text-ink relative z-10 flex min-h-[44px] cursor-pointer list-none items-center rounded-[10px] px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
-          Under the hood
-        </summary>
-        <div
-          className={
-            layout === 'row'
-              ? 'border-glass-border absolute right-0 top-full z-[60] mt-2 flex w-56 flex-col rounded-xl border bg-[rgb(10_14_28/0.98)] p-2 shadow-xl'
-              : 'flex flex-col pl-2'
-          }
-        >
-          {SHELL_NAV.filter((item) => !item.primary).map(renderNavButton)}
-        </div>
-      </details>
     </>
   )
 
@@ -145,7 +133,7 @@ export default function JourneyShell({
               aria-label="Laboratory pages"
               className="absolute right-0 top-full z-[60] mt-2 flex w-64 flex-col rounded-xl border border-glass-border bg-[rgb(10_14_28/0.98)] p-2 shadow-xl"
             >
-              {renderNavigationItems('column')}
+              {renderNavigationItems()}
             </nav>
           </details>
           <nav
@@ -160,7 +148,7 @@ export default function JourneyShell({
                 style={{ left: pill.left - 3, width: pill.width + 6 }}
               />
             )}
-            {renderNavigationItems('row')}
+            {renderNavigationItems()}
           </nav>
           <div className="xl:ml-2">
             <ProofSwitch />

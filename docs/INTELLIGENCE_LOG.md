@@ -28,3 +28,5 @@ the Under the hood Smart details section, and the README.
 - Voice transcripts are cleaned for display; raw text stays in Trace — [transcript tests](../frontend/src/voice/displayTranscript.test.ts).
 - Journey progress highlights Recap on the recap page — [stage tests](../frontend/src/journey/stages.test.ts).
 - Saved Reality Lens segments are tappable with SAM provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
+- Shell nav holds three primary tabs (Under-the-hood lives on the Hub page only) — [shell nav tests](../frontend/src/journey/stages.test.ts), also exercised by the browser smoke.
+- Guided Lab entry stays on the Hub behind a full-screen swoosh, then lands in the lab — browser smoke `lab entry swoosh` checks; `.stage-enter` uses backwards fill so retained transforms never trap fixed overlays.
