@@ -55,6 +55,7 @@ import PredictionSummary from './PredictionSummary'
 import ResultBanner from './ResultBanner'
 import SimulationResultView from './SimulationResultView'
 import GuidedResultCard from './GuidedResultCard'
+import { friendlyComponentName } from './componentNames'
 import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
@@ -1084,6 +1085,8 @@ function CanvasInner({
   const [demoUndo, setDemoUndo] = useState<{ nodes: CircuitNodeType[]; edges: Edge[] } | null>(null)
   /** Coach-sanctioned Reality Check close: suppresses the stuck notice. */
   const [closeRetest, setCloseRetest] = useState(false)
+  /** Last switch state the learner tested hands-on in switch practice. */
+  const [practiceFlip, setPracticeFlip] = useState<boolean | null>(null)
   const demoObserve = useRef<{ demo: Demonstration; show: boolean } | null>(null)
   const uncertainRef = useRef<string[]>(initialUncertain)
   const requestId = useRef(0)
@@ -2254,6 +2257,69 @@ function CanvasInner({
       </button>
     )
   })()
+  /** Hands-on switch practice: flip it yourself and watch the solver reading. */
+  const switchPractice = (() => {
+    const practiceSwitch = nodes.find((node) => node.data.kind === 'switch')
+    if (
+      proofStage !== 'reality-build' ||
+      runState.phase !== 'done' ||
+      practiceSwitch === undefined
+    ) {
+      return null
+    }
+    const setClosed = (closed: boolean) => {
+      setPracticeFlip(closed)
+      if ((practiceSwitch.data.closed ?? true) !== closed) {
+        toggleSwitch(practiceSwitch.id)
+      }
+    }
+    const bulbId =
+      claim?.type === 'lit'
+        ? claim.component
+        : (nodes.find((node) => node.data.kind === 'bulb')?.id ?? null)
+    const reading =
+      bulbId !== null && runState.result.ok
+        ? runState.result.components[bulbId]
+        : undefined
+    return (
+      <section
+        aria-label="Switch practice"
+        className="glass-panel flex flex-col gap-2 p-4"
+      >
+        <h4 className="text-sm font-semibold">Your turn: flip the switch yourself</h4>
+        <p className="text-ink-muted text-sm">
+          No prediction, no coach — just try both positions and compare what the solver measures.
+        </p>
+        <div className="flex flex-row flex-wrap gap-2">
+          <button
+            type="button"
+            aria-pressed={practiceSwitch.data.closed === true}
+            onClick={() => setClosed(true)}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Test with the switch closed
+          </button>
+          <button
+            type="button"
+            aria-pressed={practiceSwitch.data.closed !== true}
+            onClick={() => setClosed(false)}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+          >
+            Test with the switch open
+          </button>
+        </div>
+        {practiceFlip !== null && reading !== undefined && (
+          <p className="text-sm" role="status">
+            Switch {(practiceSwitch.data.closed ?? true) ? 'closed' : 'open'} → {friendlyComponentName(bulbId ?? 'bulb')}{' '}
+            {reading.power > LIT_POWER_W ? 'lit' : 'stayed dark'},{' '}
+            <ReadoutValue value={reading.current} unit="A" />
+            {' · '}
+            <ReadoutValue value={reading.power} unit="W" />
+          </p>
+        )}
+      </section>
+    )
+  })()
   // The guided canvas remains independent from the right-hand stage content.
   // Keep the original full workbench composition for non-guided canvases.
   const experimentPane = (
@@ -2425,6 +2491,7 @@ function CanvasInner({
                   {insightPane}
                 </GuidedResultCard>
                 {retestButton}
+                {switchPractice}
                 {gate}
               </>
             ) : (
@@ -2443,6 +2510,7 @@ function CanvasInner({
                 )}
                 {feedbackPane}
                 {retestButton}
+                {switchPractice}
               </>
             )}
           </div>
