@@ -1,9 +1,9 @@
-import { Atom, ChevronLeft, ChevronRight, Lightbulb, MessagesSquare, Mic, Play } from 'lucide-react'
+import { Atom, ChevronLeft, ChevronRight, Eye, MessagesSquare, Mic, Play } from 'lucide-react'
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import HealthStatus from './HealthStatus'
 import LaboratoryTurntable from './LaboratoryTurntable'
 import { EngineCommand, type EngineCommandKind } from './UnderTheHoodTryIts'
-import { friendlyErrorCode } from '../experiment/history'
+import { LENS_SAMPLES } from '../lens/samples'
 import { META_EVIDENCE_BASE, SMART_DETAILS } from '../content/intelligence'
 import {
   HOMEPAGE_ENTRIES,
@@ -18,23 +18,33 @@ import {
 const IMPACT_CASES = [
   {
     title: 'Thinking stays human',
-    response: 'Predict first. A coach guides; the solver checks.',
+    problem: 'AI can answer before a learner has time to think.',
+    response:
+      'Predict first. A coach guides; the solver checks the circuit.',
   },
   {
-    title: 'Practice anywhere',
-    response: 'Reset and retry safely, no bench needed.',
+    title: 'Practice should not depend on a lab bench',
+    problem: 'Equipment and second chances are not always available.',
+    response:
+      'Build, reset, and retry safely in the browser.',
   },
   {
-    title: 'Living diagrams',
-    response: 'Review a diagram, then test it for real.',
+    title: 'Diagrams should not stay static',
+    problem: 'A still picture cannot show what changes in a system.',
+    response:
+      'Turn diagrams into models you can review and test.',
   },
   {
-    title: 'Wrong answers teach',
-    response: 'Compare prediction vs result — see what changed.',
+    title: 'A wrong answer should teach something',
+    problem: 'A bare “wrong” gives little reason to keep exploring.',
+    response:
+      'Compare predictions with results and learn what changed.',
   },
   {
-    title: 'Room to play',
-    response: 'Wire anything. Blow bulbs safely. Ask why.',
+    title: 'Curiosity needs room to play',
+    problem: 'Worksheets reward one right answer, so creative tinkering gets squeezed out.',
+    response:
+      'The Experiment Bay brings back messing about on purpose: wire anything, blow bulbs safely, then ask why.',
   },
 ] as const
 
@@ -133,8 +143,7 @@ function FieldIcon({ field }: { field: STEMFieldId }) {
   )
 }
 
-function STEMOrbit() {
-  const [selectedId, setSelectedId] = useState<STEMFieldId>('engineering')
+function STEMOrbit({ selectedId, onSelect }: { selectedId: STEMFieldId; onSelect: (id: STEMFieldId) => void }) {
   const selected = STEM_FIELDS.find((field) => field.id === selectedId) ?? STEM_FIELDS[2]
   const [rotation, setRotation] = useState(0)
   const rotationRef = useRef(0)
@@ -168,7 +177,7 @@ function STEMOrbit() {
           ? field
           : front
       ), STEM_FIELDS[0])
-      setSelectedId(frontField.id)
+      onSelect(frontField.id)
       return
     }
 
@@ -186,7 +195,7 @@ function STEMOrbit() {
         const frontDepth = Math.sin((FIELD_ANGLES[front.id] + nextRotation) * (Math.PI / 180))
         return fieldDepth > frontDepth ? field : front
       }, STEM_FIELDS[0])
-      setSelectedId(frontField.id)
+      onSelect(frontField.id)
       if (progress < 1) {
         rotationAnimation.current = requestAnimationFrame(animate)
       } else {
@@ -198,7 +207,7 @@ function STEMOrbit() {
             ? field
             : front
         ), STEM_FIELDS[0])
-        setSelectedId(frontField.id)
+        onSelect(frontField.id)
         rotationAnimation.current = null
         animationStartedAt.current = null
       }
@@ -276,7 +285,7 @@ function STEMOrbit() {
       const frontDepth = Math.sin((FIELD_ANGLES[front.id] + nextRotation) * (Math.PI / 180))
       return fieldDepth > frontDepth ? field : front
     }, STEM_FIELDS[0])
-    setSelectedId(frontField.id)
+    onSelect(frontField.id)
   }
 
   const finishPointerDrag = (event: PointerEvent<HTMLDivElement>) => {
@@ -303,23 +312,6 @@ function STEMOrbit() {
         onKeyDown={handleOrbitKeyDown}
         aria-describedby="stem-orbit-instructions"
       >
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div
-            key={selectedId}
-            className="field-backdrop-enter relative flex items-center justify-center"
-            style={{ filter: `drop-shadow(0 0 70px ${FIELD_GLOW[selectedId]}59)` }}
-          >
-            <div
-              className="absolute h-60 w-60 rounded-full sm:h-80 sm:w-80"
-              style={{
-                background: `radial-gradient(circle, ${FIELD_GLOW[selectedId]}40 0%, transparent 70%)`,
-              }}
-            />
-            <span className="block scale-[2.6] opacity-30 sm:scale-[3.2]">
-              <FieldIcon field={selectedId} />
-            </span>
-          </div>
-        </div>
         <div
           role="group"
           aria-label="Rotate STEM pathways"
@@ -415,7 +407,7 @@ function STEMOrbit() {
   )
 }
 
-type ConsoleTab = 'logic' | 'voice' | 'physics'
+type ConsoleTab = 'logic' | 'voice' | 'physics' | 'vision'
 
 const CONSOLE_TABS: ReadonlyArray<{
   id: ConsoleTab
@@ -426,12 +418,14 @@ const CONSOLE_TABS: ReadonlyArray<{
   { id: 'logic', card: 'Muse Spark', sub: 'Reasoning & logic', icon: MessagesSquare },
   { id: 'voice', card: 'Muse Voice', sub: 'Audio processing', icon: Mic },
   { id: 'physics', card: 'Verityn Solver', sub: 'Mathematical truth', icon: Atom },
+  { id: 'vision', card: 'SAM samples', sub: 'Saved masks only', icon: Eye },
 ]
 
 const CONSOLE_ENGINES: Record<ConsoleTab, EngineCommandKind> = {
   logic: 'spark',
   voice: 'voice',
   physics: 'solver',
+  vision: 'lens',
 }
 
 const VOICE_BEHAVIORS = [
@@ -489,21 +483,59 @@ function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
       </>
     )
   }
+  if (tab === 'physics') {
+    return (
+      <>
+        <p className="text-xs font-semibold text-flow">solver · worked example</p>
+        <div className="mt-2 flex flex-col gap-1 text-ink">
+          <p>% Ohm&apos;s Law Evaluation Node</p>
+          <p>Resistance = 10.00 Ohms</p>
+          <p>Voltage = 6.00 Volts</p>
+          <p>Current = Voltage / Resistance → 0.60 Amps</p>
+          <p>Power = Voltage × Current → 3.60 Watts</p>
+          <p>Status = INTACT (safe boundaries)</p>
+        </div>
+        <p className="mt-2 font-sans text-[11px] text-ink-muted">
+          Light a bulb, documented — every live run is measured the same way.
+        </p>
+      </>
+    )
+  }
+  const sample = LENS_SAMPLES[0]
+  if (sample === undefined) {
+    return null
+  }
   return (
-    <>
-      <p className="text-xs font-semibold text-flow">solver · worked example</p>
-      <div className="mt-2 flex flex-col gap-1 text-ink">
-        <p>% Ohm&apos;s Law Evaluation Node</p>
-        <p>Resistance = 10.00 Ohms</p>
-        <p>Voltage = 6.00 Volts</p>
-        <p>Current = Voltage / Resistance → 0.60 Amps</p>
-        <p>Power = Voltage × Current → 3.60 Watts</p>
-        <p>Status = INTACT (safe boundaries)</p>
+    <div className="grid items-center gap-3 sm:grid-cols-2">
+      <div className="relative overflow-hidden rounded-lg">
+        <img src={sample.image} alt="" aria-hidden="true" className="block h-auto w-full" />
+        <svg
+          viewBox={`0 0 ${sample.width} ${sample.height}`}
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full"
+        >
+          {[sample.boxes.battery, sample.boxes.bulb].map((box, index) => (
+            <rect
+              key={index}
+              x={box.left}
+              y={box.top}
+              width={box.right - box.left}
+              height={box.bottom - box.top}
+              rx={6}
+              fill="none"
+              stroke="var(--color-flow)"
+              strokeWidth={3}
+            />
+          ))}
+        </svg>
       </div>
-      <p className="mt-2 font-sans text-[11px] text-ink-muted">
-        Light a bulb, documented — every live run is measured the same way.
-      </p>
-    </>
+      <div>
+        <p className="font-mono text-xs font-semibold text-flow">sam · saved mask</p>
+        <p className="mt-1 font-sans text-xs leading-5 text-ink-muted">
+          {sample.title}: taps select saved boxes with SAM provenance; no live inference runs here.
+        </p>
+      </div>
+    </div>
   )
 }
 
@@ -572,12 +604,29 @@ export default function LabIntro({
   }
   const [loopStop, setLoopStop] = useState(0)
   const [consoleTab, setConsoleTab] = useState<ConsoleTab>('logic')
-  const [sandboxLit, setSandboxLit] = useState(false)
+  const [stemField, setStemField] = useState<STEMFieldId>('engineering')
 
   return (
     <section aria-labelledby="intro-heading" className="intro-ambient -m-4 flex flex-col items-center gap-10 px-4 py-16 sm:-m-6 sm:py-20">
-      <div className="grid w-full items-center gap-6 text-left md:grid-cols-[0.86fr_1.14fr] lg:gap-8">
-        <div className="flex flex-col items-start gap-4">
+      <div className="relative grid w-full items-center gap-6 text-left md:grid-cols-[0.86fr_1.14fr] lg:gap-8">
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            key={stemField}
+            className="field-backdrop-enter relative flex items-center justify-center"
+            style={{ filter: `drop-shadow(0 0 70px ${FIELD_GLOW[stemField]}59)` }}
+          >
+            <div
+              className="absolute h-[264px] w-[264px] rounded-full sm:h-[352px] sm:w-[352px]"
+              style={{
+                background: `radial-gradient(circle, ${FIELD_GLOW[stemField]}40 0%, transparent 70%)`,
+              }}
+            />
+            <span className="block scale-[2.9] opacity-50 sm:scale-[3.5]">
+              <FieldIcon field={stemField} />
+            </span>
+          </div>
+        </div>
+        <div className="relative flex flex-col items-start gap-4">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-flow">
             Verityn STEM Laboratory
           </p>
@@ -625,7 +674,9 @@ export default function LabIntro({
             </p>
           )}
         </div>
-        <STEMOrbit />
+        <div className="relative w-full">
+          <STEMOrbit selectedId={stemField} onSelect={setStemField} />
+        </div>
       </div>
 
       <div id="laboratory-turntable" className="flex w-full scroll-mt-6 flex-col items-center gap-4">
@@ -636,10 +687,10 @@ export default function LabIntro({
         <LaboratoryTurntable onStationAction={handleStation} />
       </div>
 
-      <section aria-labelledby="laboratory-loop-heading" className="w-full">
+      <section aria-labelledby="laboratory-loop-heading" className="w-full border-t border-glass-border/60 pt-10">
         <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">The method</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">01 · The method</p>
             <h3 id="laboratory-loop-heading" className="text-xl font-semibold">A simple learning loop</h3>
           </div>
           <p className="max-w-sm text-sm text-ink-muted">Your idea leads. The lab helps you test it.</p>
@@ -684,14 +735,15 @@ export default function LabIntro({
           </p>
         </div>
       </section>
-      <section id="under-the-hood" aria-labelledby="under-the-hood-heading" className="w-full">
-        <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">Under the hood</p>
+      <section id="under-the-hood" aria-labelledby="under-the-hood-heading" className="w-full border-t border-glass-border/60 pt-10">
+        <p className="text-flow text-xs font-semibold uppercase tracking-[0.18em]">02 · Under the hood</p>
         <h3 id="under-the-hood-heading" className="mt-1 text-xl font-semibold">Try the real building blocks</h3>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-          Three tools do everything on this page. The coach asks, your voice answers, the solver measures.
+          Four tools do everything on this page. The coach asks, your voice answers, the solver measures, and the
+          samples show their work.
         </p>
         <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-          <div role="tablist" aria-label="Engines" className="flex flex-col gap-2 sm:grid sm:grid-cols-3 lg:flex lg:flex-col">
+          <div role="tablist" aria-label="Engines" className="flex flex-col gap-2 sm:grid sm:grid-cols-2 lg:flex lg:flex-col">
             {CONSOLE_TABS.map((tab) => {
               const Icon = tab.icon
               const selected = consoleTab === tab.id
@@ -730,8 +782,8 @@ export default function LabIntro({
         </div>
       </section>
 
-      <section aria-labelledby="impact-heading" className="w-full">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">Why Verityn matters</p>
+      <section aria-labelledby="impact-heading" className="w-full border-t border-glass-border/60 pt-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-flow">03 · Why Verityn matters</p>
         <h3 id="impact-heading" className="mt-1 max-w-2xl text-4xl font-semibold leading-[1.08] tracking-tight sm:text-5xl">Answers are everywhere. Understanding is not.</h3>
         <div aria-hidden="true" className="mt-3 h-1 w-40 rounded-full bg-gradient-to-r from-flow via-light to-transparent" />
         <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-muted">
@@ -739,87 +791,23 @@ export default function LabIntro({
           Predicting before the AI speaks keeps the reasoning with you — Verityn sharpens thinking instead of letting
           it atrophy.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="glass-panel flex h-full flex-col gap-3 p-5 lg:col-span-2 lg:row-span-2">
-            <p className="font-mono text-xs font-semibold text-light">01</p>
-            <h4 className="text-lg font-semibold">{IMPACT_CASES[0].title}</h4>
-            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
-              <span className="mr-1 font-semibold text-flow">Verityn:</span>
-              {IMPACT_CASES[0].response}
-            </p>
-            <div aria-hidden="true" className="mt-auto rounded-xl border border-glass-border bg-black/30 p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-coach">Coach preview</p>
-              <p className="mt-2 w-fit max-w-full rounded-lg rounded-bl-none bg-glass-strong px-3 py-2 text-xs text-ink">
-                What do you expect the circuit to do?
+        <ol className="mt-4 flex max-w-3xl flex-col gap-3">
+          {IMPACT_CASES.map((reason, index) => (
+            <li key={reason.title} className="glass-panel flex flex-col gap-1.5 p-5">
+              <p className="text-base font-semibold">
+                <span className="mr-3 font-mono text-xs font-semibold text-light">
+                  0{index + 1}
+                </span>
+                {reason.title}
               </p>
-              <div className="mt-2 flex gap-2">
-                {['Yes', 'No', 'Not sure'].map((choice) => (
-                  <span key={choice} className="rounded-[8px] border border-glass-border px-2 py-1 text-[11px] text-ink-muted">
-                    {choice}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </article>
-          <article className="glass-panel flex h-full flex-col gap-3 p-5 sm:col-span-2">
-            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">02</span>{IMPACT_CASES[1].title}</p>
-              <p className="text-sm font-semibold"><span className="mr-2 font-mono text-xs text-light">03</span>{IMPACT_CASES[2].title}</p>
-            </div>
-            <p className="text-sm leading-6 text-ink-muted">Reset freely — then test the diagram itself.</p>
-            <div aria-hidden="true" className="relative overflow-hidden rounded-xl border border-glass-border bg-black/50 bg-[radial-gradient(circle_at_50%_50%,rgb(51_65_85/0.5)_1px,transparent_1px)] [background-size:14px_14px] p-3">
-              <svg viewBox="0 0 220 54" className="h-12 w-full text-flow">
-                <rect x="8" y="14" width="22" height="26" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
-                <polyline points="30,40 110,40 110,27" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
-                <polyline points="30,14 110,14 110,22" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
-                <circle cx="110" cy="25" r="8" fill="var(--color-glow-light)" opacity="0.9" />
-                <polyline points="118,25 150,25 150,40 212,40" fill="none" stroke="currentColor" strokeWidth="2" />
-                <polyline points="150,14 212,14 212,40" fill="none" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              <span className="absolute right-2 top-2 rounded-full border border-glass-border bg-black/60 px-2 py-0.5 font-mono text-[10px]">0.6 A · Lit</span>
-            </div>
-          </article>
-          <article className="glass-panel flex h-full flex-col gap-3 p-5">
-            <p className="font-mono text-xs font-semibold text-light">04</p>
-            <h4 className="text-sm font-semibold">{IMPACT_CASES[3].title}</h4>
-            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
-              <span className="mr-1 font-semibold text-flow">Verityn:</span>
-              {IMPACT_CASES[3].response}
-            </p>
-            <ul aria-label="Example friendly error labels" className="mt-auto flex flex-wrap gap-1.5">
-              {['SHORTED_BATTERY', 'DANGLING_TERMINAL', 'NO_PATH'].map((code) => (
-                <li key={code} className="rounded-full border border-bad/50 bg-bad/10 px-2.5 py-1 text-[11px] font-medium">
-                  {friendlyErrorCode(code)}
-                </li>
-              ))}
-            </ul>
-          </article>
-          <article className="glass-panel flex h-full flex-col gap-3 p-5">
-            <p className="font-mono text-xs font-semibold text-light">05</p>
-            <h4 className="text-sm font-semibold">{IMPACT_CASES[4].title}</h4>
-            <p className="border-l border-flow/70 pl-3 text-sm leading-6 text-ink">
-              <span className="mr-1 font-semibold text-flow">Verityn:</span>
-              {IMPACT_CASES[4].response}
-            </p>
-            <div className="mt-auto flex items-center gap-3">
-              <button
-                type="button"
-                aria-pressed={sandboxLit}
-                onClick={() => setSandboxLit((current) => !current)}
-                className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-              >
-                {sandboxLit ? 'Switch off' : 'Try the switch'}
-              </button>
-              <span className="flex items-center gap-2 text-sm" aria-live="polite">
-                <Lightbulb
-                  aria-hidden="true"
-                  className={`h-6 w-6 ${sandboxLit ? 'text-light drop-shadow-[0_0_10px_var(--color-glow-light)]' : 'text-ink-muted'}`}
-                />
-                {sandboxLit ? 'Lit' : 'Dark'}
-              </span>
-            </div>
-          </article>
-        </div>
+              <p className="text-sm leading-6 text-ink-muted">{reason.problem}</p>
+              <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
+                <span className="mr-1 font-semibold text-flow">Verityn:</span>
+                {reason.response}
+              </p>
+            </li>
+          ))}
+        </ol>
       </section>
     </section>
   )

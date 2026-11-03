@@ -50,3 +50,8 @@ the Under the hood Smart details section, and the README.
 - STEM orbit backdrop reacts to selection: the picked discipline's asset renders large behind the ring, tinted and glowing in its field color — verified by hero screenshots (gear/math/science).
 - Roadmap disciplines tease their labs with planned Meta tools (chemistry bench, rover coding, function playground) — [homepage tests](../frontend/src/components/LabIntro.test.ts).
 - Bento intro names cognitive atrophy: predicting before the AI speaks keeps reasoning with the learner.
+- STEM backdrop hero-centered, 10% bigger, 50% opacity; selection state lifted so the glow lives behind the whole hero — verified by hero screenshots.
+- Why-Verityn back to five problem→solution rows with no widgets — smoke `why matters` checks.
+- Built with Meta footnote removed; SAM returns as the console's fourth tab with its sample-only mask and live proposal command — smoke console vision checks.
+- Hub sections numbered and divided (01 method, 02 hood, 03 why) so each reads as its own block.
+- Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline — [homepage tests](../frontend/src/components/LabIntro.test.ts).

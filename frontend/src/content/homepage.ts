@@ -104,27 +104,28 @@ export const STEM_FIELDS: STEMField[] = [
     id: 'science',
     title: 'Science',
     description:
-      'Model a natural system, predict what will change, then compare your idea with simulated results. Sneak peek: a virtual chemistry bench — mix solutions and predict the reaction, with Muse Spark probing your hypothesis and Muse Voice capturing your lab notes.',
+      'Model a natural system, predict what will change, then compare your idea with simulated results. Sneak peek: a 3D chemistry bench — mix test tubes and watch realistic reactions, even the dangerous ones, with Muse Spark coaching your technique.',
     status: 'future',
   },
   {
     id: 'technology',
     title: 'Technology',
     description:
-      'Design a useful tool, test how it behaves, and improve it through repeated trials. Sneak peek: program a rover through obstacle courses, with Muse Spark as your debugging coach.',
+      'Design a useful tool, test how it behaves, and improve it through repeated trials. Sneak peek: assemble 3D gadgets from parts and stress-test them in a virtual workshop, with Muse Spark as your debugging coach.',
     status: 'future',
   },
   {
     id: 'engineering',
     title: 'Engineering',
-    description: 'Circuits are the first live module: build a system, test it, and learn from its measurements.',
+    description:
+      'Circuits are the first live module: build a system, test it, and learn from its measurements. Next up: 3D bridges you load until they fail, plus robotics and structures labs.',
     status: 'live',
   },
   {
     id: 'mathematics',
     title: 'Mathematics',
     description:
-      'Change values in a model, spot patterns, and see how one quantity affects another. Sneak peek: a function playground — stretch curves and watch predictions update, narrated by Muse Spark.',
+      'Change values in a model, spot patterns, and see how one quantity affects another. Sneak peek: grab 3D graphs and geometric solids and twist them live, narrated by Muse Spark.',
     status: 'future',
   },
 ]

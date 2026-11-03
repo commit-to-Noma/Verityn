@@ -6,7 +6,6 @@ import JourneyProgress from './JourneyProgress'
 import ProofSwitch from './ProofSwitch'
 import TracePanel from './TracePanel'
 import { useProofMode } from '../proof/store'
-import { META_EVIDENCE_BASE } from '../content/intelligence'
 
 /** Laboratory frame: brand header, persistent nav, workspace, dev controls. */
 export default function JourneyShell({
@@ -176,49 +175,6 @@ export default function JourneyShell({
         {children}
       </main>
       <footer className="flex flex-col gap-4">
-        {location === 'hub' && (
-        <section aria-labelledby="built-with-meta-heading" className="rounded-xl border border-gray-800 bg-white/[0.02] px-4 py-3 opacity-90">
-          <h2 id="built-with-meta-heading" className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">Built with Meta</h2>
-          <ul className="mt-2 flex flex-col gap-1.5 text-[13px] leading-5 lg:flex-row lg:flex-wrap lg:gap-x-6">
-            <li>
-              <span className="font-bold">Meta Muse Spark</span>
-              <span className="text-ink-muted"> — R1 questions and drafted explanations. </span>
-              <a
-                className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}docs/INTELLIGENCE_LOG.md`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Trace notes
-              </a>
-            </li>
-            <li>
-              <span className="font-bold">Meta Muse Voice</span>
-              <span className="text-ink-muted"> — 5-second recordings into editable text. </span>
-              <a
-                className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}docs/ARCHITECTURE.md`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Voice notes
-              </a>
-            </li>
-            <li>
-              <span className="font-bold">Meta SAM 3.1</span>
-              <span className="text-ink-muted"> — sample only; no live inference is used. </span>
-              <a
-                className="text-flow underline underline-offset-2"
-                href={`${META_EVIDENCE_BASE}docs/sam-spike-results.json`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Probe results
-              </a>
-            </li>
-          </ul>
-        </section>
-        )}
         {proof && <TracePanel />}
         <details id="lab-tools" className="glass-panel p-4">
           <summary className="cursor-pointer text-sm font-semibold">

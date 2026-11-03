@@ -2,17 +2,39 @@ import { useState } from 'react'
 import {
   ApiError,
   converseWithCoach,
+  proposeCircuit,
   simulate,
   transcribeAudio,
   type Netlist,
   type TraceEvent,
 } from '../api/client'
+import { LENS_SAMPLES } from '../lens/samples'
 import { encodeWav } from '../voice/audio'
 
 type TryItResult = {
   label: string
   detail: string
   trace?: TraceEvent
+}
+
+async function sampleAsDataUrl(url: string): Promise<string> {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error('Could not load the Reality Lens sample image.')
+  }
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result)
+      } else {
+        reject(new Error('Could not prepare the Reality Lens sample image.'))
+      }
+    }
+    reader.onerror = () => reject(new Error('Could not prepare the Reality Lens sample image.'))
+    reader.readAsDataURL(blob)
+  })
 }
 
 async function recordFiveSeconds(): Promise<Blob> {
@@ -85,7 +107,7 @@ function TraceRow({ event }: { event: TraceEvent }) {
   )
 }
 
-export type EngineCommandKind = 'spark' | 'voice' | 'solver'
+export type EngineCommandKind = 'spark' | 'voice' | 'lens' | 'solver'
 
 const COMMANDS: Record<EngineCommandKind, { prompt: string; button: string; busy: string }> = {
   spark: {
@@ -97,6 +119,11 @@ const COMMANDS: Record<EngineCommandKind, { prompt: string; button: string; busy
     prompt: 'record --seconds 5 | transcribe',
     button: 'Record 5 seconds',
     busy: 'Recording / transcribing…',
+  },
+  lens: {
+    prompt: 'propose --sample circuit-1',
+    button: 'Try Reality Lens',
+    busy: 'Requesting proposal…',
   },
   solver: {
     prompt: 'measure --loop 6V',
@@ -126,6 +153,19 @@ async function runEngine(engine: EngineCommandKind): Promise<TryItResult> {
     form.append('audio', wav, 'under-the-hood.wav')
     const result = await transcribeAudio(form)
     return { label: result.source, detail: result.transcript, trace: result.trace }
+  }
+  if (engine === 'lens') {
+    const sample = LENS_SAMPLES[0]
+    if (sample === undefined) {
+      throw new Error('No Reality Lens sample is available.')
+    }
+    const image = await sampleAsDataUrl(sample.image)
+    const result = await proposeCircuit(image)
+    return {
+      label: result.provider,
+      detail: `Proposal status: ${result.proposal.status}; ${result.proposal.components.length} components and ${result.proposal.connections.length} connections.`,
+      trace: result.trace,
+    }
   }
   const result = await simulate(SIX_V_LOOP)
   if (!result.ok) {
