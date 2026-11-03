@@ -59,3 +59,5 @@ the Under the hood Smart details section, and the README.
 - Why-Verityn reasons split 2 + 3 across two columns to fill the section width — smoke five-reasons check.
 - STEM backdrop is a soft blurred silhouette (6px blur, 40%) that keeps its shape without fighting the headline — verified by hero screenshot.
 - Why-Verityn reasons rebuilt as a glowing-node timeline with no boxes, ending the stretched-cell gaps — smoke five-reasons check.
+- STEM backdrop softened to a light-blur, low-intensity silhouette that never fights the headline — verified by hero screenshot.
+- Why-Verityn reasons are divider-separated ledger rows (number, problem, answer), distinct from the method timeline — smoke five-reasons check.
