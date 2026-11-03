@@ -512,6 +512,39 @@ function ReviewPanels({
                 </div>
               )}
             </div>
+            <div aria-label="Detected evidence summary" className="flex flex-col gap-1.5">
+              <p className="text-ink-muted text-xs">
+                Detected {health.partsLine.charAt(0).toLowerCase() + health.partsLine.slice(1)} ·{' '}
+                {tracedWires.length} of {proposal.connections.length} wires traced
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {proposal.components.map((component) => {
+                  const status = componentReviewStatus(component.id, proposal, corrected)
+                  const needsWork = status === 'needs-review' || status === 'unsupported-diagram'
+                  return (
+                    <li key={component.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleSelection(component.id)}
+                        aria-pressed={selection === component.id}
+                        title={`${component.id} · ${REVIEW_STATUS_LABELS[status]} — inspect`}
+                        className={`flex min-h-[32px] items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] ${
+                          selection === component.id
+                            ? 'border-ok/60 text-ink'
+                            : 'border-glass-border text-ink-muted'
+                        }`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`h-1.5 w-1.5 rounded-full ${needsWork ? 'bg-bad' : 'bg-ok'}`}
+                        />
+                        {component.id}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
             {testedResult?.ok === true && (
               <ul aria-label="Measured bulb readings on your photo" className="flex flex-wrap gap-2">
                 {proposal.components
