@@ -7,6 +7,7 @@
  *   Predict -> Build -> Reality Check -> R1 -> R2 -> R4 -> Solo -> Finale
  *     -> Homepage turntable (rotate, keyboard, station routes)
  *     -> Reality Lens stubbed upload (needs_review) -> unsupported refusal
+ *     -> Lens workbench: filmstrip continuity, review inspector selection
  *     -> Guided demo full run (pause/resume, replay, manual takeover)
  *     -> Experiment presets, manual run, stale, history, one explain call
  *     -> Overload flow: intact run, voltage edit, overload, damage latch,
@@ -990,7 +991,8 @@ async function drive() {
   check('chooser persists after select', await ev(`!!document.querySelector('input[type="file"]')`))
   check('drop zone offered', await ev(`!!document.querySelector('[aria-label="Diagram drop zone"]')`))
   check('no upload prediction gate', !(await hasText('Before we interpret: will it light?')))
-  check('gallery collapses during review', !(await hasText('Textbook loop')))
+  check('filmstrip offers samples during review', await ev(`!!document.querySelector('[aria-label="Diagram filmstrip"] button[data-filmstrip="textbook-loop"]')`))
+  check('filmstrip marks upload active', await ev(`document.querySelector('[data-filmstrip="upload"]')?.getAttribute('aria-current') === 'true'`))
   check('review defaults to Compare', await ev(`(() => {
     const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Compare');
     return b?.getAttribute('aria-pressed') === 'true';
@@ -999,6 +1001,8 @@ async function drive() {
   check('detected evidence list', await hasText('Detected evidence') && await hasText('switch_1'))
   check('proposal counts from data', await hasText('1 battery, 1 switch, 1 bulb'))
   check('needs-review copy', await hasText('Some connections need your review'))
+  await ev(`[...document.querySelectorAll('section[aria-label="Diagram upload and review"] button')].find((b) => b.textContent.includes('switch_1') && b.getAttribute('aria-pressed') !== null)?.click()`)
+  check('inspector shows selection', await waitFor(() => ev(`document.querySelector('[aria-label="Review inspector"]')?.innerText.includes('switch_1')`), 'inspector selection', 10000))
   await captureScreenshot('lens-review')
   // The replica (and its lock notice) mounts on the reveal beat after the panels.
   await waitFor(() => hasText('Confirm the model below before testing'), 'lens lock', 20000)
@@ -1007,7 +1011,13 @@ async function drive() {
   await clickButton('Confirm model')
   await waitFor(() => hasText('Verityn Solver will test'), 'lens confirmed')
   await waitFor(() => hasText('Confirmed circuit tested'), 'lens proof', 25000)
-  check('proof cites open-switch reading', await hasText('Bulb dark') && await hasText('0.0 A'))
+  await ev(`document.querySelector('[data-filmstrip="textbook-loop"]')?.click()`)
+  await waitFor(() => hasText('Tap a highlighted point'), 'filmstrip sample', 20000)
+  check('filmstrip keeps upload slot', await ev(`!!document.querySelector('[data-filmstrip="upload"]')`))
+  await ev(`document.querySelector('[data-filmstrip="upload"]')?.click()`)
+  await waitFor(() => hasText('Verityn Solver will test'), 'filmstrip upload restored', 20000)
+  check('review continuity after switch', await hasText('Confirmed circuit tested'))
+  check('proof cites open-switch reading', await waitFor(() => hasText('Bulb dark') && hasText('0.0 A'), 'proof reading restored', 10000))
   check('proof attribution', await hasText("Computed by Verityn's solver."))
   check('triptych photo panel', await hasText('Your photo or sketch'))
   check('triptych reading panel', await hasText('Confirmed circuit') && await hasText('Proposed by Meta, reviewed by you.'))

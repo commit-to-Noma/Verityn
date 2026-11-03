@@ -287,6 +287,13 @@ Phase 2 lens acceptance (all in the real browser unless noted):
 - 1440px, 1180px, 390px: panels side by side on desktop, stacked
   on mobile, zero horizontal overflow; no `Experimental` or
   `Snap & Build` learner-facing text remains.
+- Unified workbench: a diagram filmstrip (upload beside samples
+  with active states) stays mounted through review; switching
+  diagrams preserves confirm/test state on both sides; the
+  review inspector names the selected part or wire with its
+  status and evidence (unit: filmstrip slots and active marks;
+  browser: filmstrip presence, inspector selection, switch-away
+  and switch-back continuity, screenshot `lens-review`).
 
 Phase 3 demo acceptance (all in the real browser unless noted):
 

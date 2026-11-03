@@ -34,6 +34,7 @@ import { LENS_ACCEPT, firstLensFile, validateLensFile } from '../vision/upload'
 import { LENS_STEP_LABELS, lensSteps } from '../vision/steps'
 import CircuitCanvas from './CircuitCanvas'
 import HealthStatus from './HealthStatus'
+import LensFilmstrip from './LensFilmstrip'
 import ProofChips from './ProofChips'
 import ReadoutValue from './ReadoutValue'
 import RealityTriptych from './RealityTriptych'
@@ -237,6 +238,18 @@ function ReviewPanels({
     setSelection((current) => (current === id ? null : id))
   }
 
+  const inspectedComponent =
+    selection === null
+      ? null
+      : (proposal.components.find((component) => component.id === selection) ?? null)
+  const inspectedWireIndex =
+    selection !== null && inspectedComponent === null && selection.startsWith('V')
+      ? Number(selection.slice(1)) - 1
+      : -1
+  const inspectedWire =
+    inspectedWireIndex >= 0 ? (proposal.connections[inspectedWireIndex] ?? null) : null
+  const inspectedWireId = inspectedWire !== null ? `V${inspectedWireIndex + 1}` : null
+
   return (
     <div className="flex flex-col gap-3" aria-live="polite">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Review view">
@@ -310,6 +323,8 @@ function ReviewPanels({
           />
         </label>
       )}
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0">
       <div
         className={`grid gap-4 ${
           view === 'compare' && showOriginal && showModel
@@ -559,50 +574,115 @@ function ReviewPanels({
           </div>
         )}
       </div>
-      {result.assumptions.map((assumption) => (
-        <p key={assumption} className="text-ink-muted text-xs">
-          Assumed: {assumption}
-        </p>
-      ))}
-      <h4 className="text-base font-semibold">Review before testing</h4>
-      {loadable && !confirmed && (
-        <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
-      )}
-      <div className="flex flex-wrap items-center gap-3">
+      </div>
+      <aside aria-label="Review inspector" className="glass-panel flex min-w-0 flex-col gap-3 p-4">
+        <div className="flex flex-col gap-2">
+          <h4 className="text-base font-semibold">Inspector</h4>
+          {inspectedComponent !== null && (
+            <div className="border-glass-border flex flex-col gap-1 rounded-[10px] border p-3">
+              <p className="font-mono text-sm font-medium">{inspectedComponent.id}</p>
+              <p className="text-ink-muted text-sm capitalize">
+                {inspectedComponent.type} ·{' '}
+                {REVIEW_STATUS_LABELS[componentReviewStatus(inspectedComponent.id, proposal, corrected)]}
+              </p>
+              {inspectedComponent.type === 'battery' && inspectedComponent.polarity !== undefined && (
+                <p className="font-mono text-xs">
+                  {inspectedComponent.polarity === null
+                    ? 'polarity unknown'
+                    : polarityText(inspectedComponent.polarity)}
+                </p>
+              )}
+              {inspectedComponent.type === 'switch' && (
+                <p className="text-ink-muted text-xs">
+                  {inspectedComponent.closed === null
+                    ? 'state unknown'
+                    : inspectedComponent.closed
+                      ? 'closed'
+                      : 'open'}
+                </p>
+              )}
+              {trace && (
+                <p className="text-ink-muted font-mono text-xs">
+                  {inspectedComponent.evidence.region_id}
+                </p>
+              )}
+            </div>
+          )}
+          {inspectedWire !== null && inspectedWireId !== null && (
+            <div className="border-glass-border flex flex-col gap-1 rounded-[10px] border p-3">
+              <p className="font-mono text-sm font-medium">{inspectedWireId}</p>
+              <p className="text-ink-muted text-sm">
+                {inspectedWire.from.node}.{inspectedWire.from.terminal} ↔ {inspectedWire.to.node}.
+                {inspectedWire.to.terminal}
+              </p>
+              <p className="text-ink-muted text-xs">
+                {REVIEW_STATUS_LABELS[connectionReviewStatus(inspectedWire)]}
+              </p>
+              {connectionReviewStatus(inspectedWire) === 'connection-ambiguous' && (
+                <p className="text-ink-muted text-xs">
+                  {ambiguousWireNote(inspectedWire.evidence.path !== null)}
+                </p>
+              )}
+              {trace && (
+                <p className="text-ink-muted font-mono text-xs">
+                  {inspectedWire.evidence.region_id}
+                </p>
+              )}
+            </div>
+          )}
+          {inspectedComponent === null && inspectedWire === null && (
+            <p className="text-ink-muted text-sm">
+              Select a part or a wire — on the photo, in the evidence list, or on the replica — to
+              inspect it here.
+            </p>
+          )}
+        </div>
+        {result.assumptions.map((assumption) => (
+          <p key={assumption} className="text-ink-muted text-xs">
+            Assumed: {assumption}
+          </p>
+        ))}
+        <h4 className="text-base font-semibold">Review before testing</h4>
         {loadable && !confirmed && (
-          <button
-            type="button"
-            onClick={() => {
-              interrupt()
-              onConfirm()
-            }}
-            className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
-          >
-            Confirm model
-          </button>
+          <p className="text-sm">The model proposed this circuit. Review it before testing.</p>
         )}
-        {loadable && !confirmed && (
+        <div className="flex flex-wrap items-center gap-3">
+          {loadable && !confirmed && (
+            <button
+              type="button"
+              onClick={() => {
+                interrupt()
+                onConfirm()
+              }}
+              className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+            >
+              Confirm model
+            </button>
+          )}
+          {loadable && !confirmed && (
+            <button
+              type="button"
+              onClick={editModel}
+              className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Edit model
+            </button>
+          )}
+          {confirmed && (
+            <p className="text-ink-muted text-sm" role="status">
+              Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
+              the circuit you approved.
+            </p>
+          )}
           <button
             type="button"
-            onClick={editModel}
+            onClick={onReset}
             className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
           >
-            Edit model
+            Try another image
           </button>
-        )}
-        {confirmed && (
-          <p className="text-ink-muted text-sm" role="status">
-            Model confirmed{corrected ? ' with your corrections' : ''}. Verityn Solver will test
-            the circuit you approved.
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onReset}
-          className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
-        >
-          Try another image
-        </button>
+        </div>
+      </aside>
       </div>
       {showTriptych(confirmed, testedResult) && testedResult !== null && (
         <RealityTriptych
@@ -1032,36 +1112,79 @@ export default function SnapBuildLab({
           </div>
         </div>
       )}
-      {state.phase === 'proposed' && (
-        <div ref={reviewRef} className="glass-panel flex scroll-mt-4 flex-col gap-3 p-4">
-          <ReviewPanels
-            key={`proposal-${state.nonce}`}
-            image={state.image}
-            size={state.size}
-            result={state.result}
-            nonce={state.nonce}
-            confirmed={confirmed}
-            testedResult={lensResult}
-            onConfirm={() => setConfirmed(true)}
-            onTested={(result) => {
-              setTested(true)
-              setLensResult(result)
+      {state.phase === 'proposed' && lensSample === null && (
+        <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-4">
+          <LensFilmstrip
+            samples={LENS_SAMPLES}
+            activeSampleId={null}
+            uploadImage={state.image}
+            uploadActive
+            onSelectSample={(id) => {
+              const next = LENS_SAMPLES.find((sample) => sample.id === id)
+              if (next !== undefined) {
+                setLensSample(next)
+              }
             }}
-            onReset={reset}
-            onTryExperiment={onTryExperiment}
+            onSelectUpload={() => {}}
           />
+          <div ref={reviewRef} className="glass-panel flex scroll-mt-4 flex-col gap-3 p-4">
+            <ReviewPanels
+              key={`proposal-${state.nonce}`}
+              image={state.image}
+              size={state.size}
+              result={state.result}
+              nonce={state.nonce}
+              confirmed={confirmed}
+              testedResult={lensResult}
+              onConfirm={() => setConfirmed(true)}
+              onTested={(result) => {
+                setTested(true)
+                setLensResult(result)
+              }}
+              onReset={reset}
+              onTryExperiment={onTryExperiment}
+            />
+          </div>
         </div>
       )}
-      {state.phase === 'proposed' && lensSample === null ? (
-        <details id="lens-samples" className="glass-panel scroll-mt-4 px-4 py-2">
-          <summary className="min-h-[44px] cursor-pointer content-center text-sm font-medium">
-            Sample diagrams ({LENS_SAMPLES.length})
-          </summary>
-          <div className="mt-2 grid gap-3 pb-2 sm:grid-cols-2 lg:grid-cols-4">
-            {sampleCards}
-          </div>
-        </details>
-      ) : (
+      {lensSample !== null && (
+        <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-4">
+          <LensFilmstrip
+            samples={LENS_SAMPLES}
+            activeSampleId={lensSample.id}
+            uploadImage={
+              state.phase === 'working' || state.phase === 'proposed'
+                ? state.image
+                : state.phase === 'error'
+                  ? state.image
+                  : null
+            }
+            uploadActive={false}
+            onSelectSample={(id) => {
+              const next = LENS_SAMPLES.find((sample) => sample.id === id)
+              if (next !== undefined) {
+                setLensSample(next)
+              }
+            }}
+            onSelectUpload={() => setLensSample(null)}
+          />
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-3 p-4" aria-live="polite">
+                <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
+                <p className="text-ink-muted text-sm">Loading Reality Lens…</p>
+              </div>
+            }
+          >
+            <RealityLens
+              key={lensSample.id}
+              sample={lensSample}
+              onBack={() => setLensSample(null)}
+            />
+          </Suspense>
+        </div>
+      )}
+      {state.phase !== 'proposed' && lensSample === null && (
       <div id="lens-samples" className="flex scroll-mt-4 flex-col gap-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -1084,26 +1207,9 @@ export default function SnapBuildLab({
             </span>
           </div>
         </div>
-        {lensSample === null ? (
-          <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
-            {sampleCards}
-          </div>
-        ) : (
-          <Suspense
-            fallback={
-              <div className="flex items-center gap-3 p-4" aria-live="polite">
-                <LoaderCircle className="text-flow h-5 w-5 animate-spin" aria-hidden="true" />
-                <p className="text-ink-muted text-sm">Loading Reality Lens…</p>
-              </div>
-            }
-          >
-            <RealityLens
-              key={lensSample.id}
-              sample={lensSample}
-              onBack={() => setLensSample(null)}
-            />
-          </Suspense>
-        )}
+        <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
+          {sampleCards}
+        </div>
       </div>
       )}
     </section>
