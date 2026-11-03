@@ -61,7 +61,7 @@ import type { CircuitNodeType } from './canvas/CircuitNode'
 import { circuitNodeTypes } from './canvas/nodeTypes'
 import { SwitchToggleContext } from './canvas/switchToggle'
 import { BatteryFlipContext } from './canvas/batteryFlip'
-import { playClack, playPop, startHum, stopHum } from '../experiment/sound'
+import { playClack, playPop, playZap, startHum, stopHum } from '../experiment/sound'
 import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
@@ -1502,6 +1502,9 @@ function CanvasInner({
             }
           }),
         )
+        if (mode === 'experiment' && !result.ok && result.error_code === 'SHORTED_BATTERY') {
+          playZap()
+        }
         if (mode === 'experiment' && result.ok) {
           const blown = Object.entries(result.conditions ?? {}).some(
             ([partId, condition]) =>

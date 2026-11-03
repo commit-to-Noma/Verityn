@@ -3,11 +3,12 @@ import { toNetlist } from '../canvas/toNetlist'
 import { EXPERIMENT_PRESETS } from './presets'
 
 describe('EXPERIMENT_PRESETS', () => {
-  it('offers the five documented starters with prompts', () => {
+  it('offers the six documented starters with prompts', () => {
     expect(EXPERIMENT_PRESETS.map((preset) => preset.id)).toEqual([
       'light-bulb',
       'open-switch',
-      'series-pair',
+      'time-bomb',
+      'parallel-power',
       'shorted-battery',
       'overload-bulb',
     ])
@@ -37,7 +38,7 @@ describe('EXPERIMENT_PRESETS', () => {
     }
   })
 
-  it('wires the closed loop, the open switch, the series pair, and the short', () => {
+  it('wires the closed loop, the open switch, the bomb, the parallel trio, and the short', () => {
     const nets = new Map(
       EXPERIMENT_PRESETS.map((preset) => [
         preset.id,
@@ -51,11 +52,20 @@ describe('EXPERIMENT_PRESETS', () => {
     expect(
       nets.get('open-switch')?.components.filter((part) => part.type === 'wire'),
     ).toHaveLength(3)
-    const series = nets.get('series-pair')?.components.filter((part) => part.type === 'bulb')
-    expect(series?.map((part) => part.id).sort()).toEqual(['L1', 'L2'])
+    const bomb = nets.get('time-bomb')
+    expect(bomb?.components.find((part) => part.id === 'B1')).toMatchObject({
+      type: 'battery',
+      volts: 24,
+    })
+    expect(bomb?.components.find((part) => part.id === 'S1')).toMatchObject({
+      type: 'switch',
+      closed: true,
+    })
+    const trio = nets.get('parallel-power')?.components.filter((part) => part.type === 'bulb')
+    expect(trio?.map((part) => part.id).sort()).toEqual(['L1', 'L2', 'L3'])
     expect(
-      nets.get('series-pair')?.components.filter((part) => part.type === 'switch'),
-    ).toHaveLength(0)
+      nets.get('parallel-power')?.components.filter((part) => part.type === 'wire'),
+    ).toHaveLength(6)
     const short = nets.get('shorted-battery')?.components.find((part) => part.id === 'W1')
     expect(short).toMatchObject({ type: 'wire', a: 'B1.a', b: 'B1.b' })
   })

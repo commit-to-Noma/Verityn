@@ -91,6 +91,29 @@ export function playClack(): void {
   }
 }
 
+/** Electric zap when the solver rejects a shorted battery. */
+export function playZap(): void {
+  const ctx = audio()
+  if (ctx === null) {
+    return
+  }
+  try {
+    const now = ctx.currentTime
+    const oscillator = ctx.createOscillator()
+    oscillator.type = 'sawtooth'
+    oscillator.frequency.setValueAtTime(180, now)
+    oscillator.frequency.exponentialRampToValueAtTime(60, now + 0.18)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.22, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2)
+    oscillator.connect(gain).connect(ctx.destination)
+    oscillator.start(now)
+    oscillator.stop(now + 0.22)
+  } catch {
+    /* Sound never breaks the bench. */
+  }
+}
+
 /** Sharp glass pop when a bulb blows. */
 export function playPop(): void {
   const ctx = audio()

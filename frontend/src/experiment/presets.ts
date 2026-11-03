@@ -52,23 +52,47 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     expected: 'valid, L1 0.0 A, 0.0 W, dark',
   },
   {
-    id: 'series-pair',
-    title: 'Two bulbs in series',
-    tagline: 'Compare how the circuit behaves when two bulbs share one path',
-    prompt: 'Both bulbs share one path. How bright is each compared with a single bulb?',
+    id: 'time-bomb',
+    title: 'Time Bomb',
+    tagline: 'Dump 24 V into one bulb → flash, pop, darkness',
+    prompt: 'One bulb, one 24 V battery. Press Test and stand back.',
     seed: {
       nodes: [
-        { id: 'B1', kind: 'battery', x: 230, y: 30 },
-        { id: 'L1', kind: 'bulb', x: 40, y: 160 },
-        { id: 'L2', kind: 'bulb', x: 230, y: 290 },
+        { id: 'B1', kind: 'battery', volts: 24, x: 230, y: 30 },
+        { id: 'S1', kind: 'switch', closed: true, x: 40, y: 160 },
+        { id: 'L1', kind: 'bulb', x: 230, y: 290 },
+      ],
+      edges: [
+        { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
+        { id: 'W2', source: 'S1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'a' },
+        { id: 'W3', source: 'B1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
+      ],
+    },
+    expected: 'L1 explodes on the first run (24 V past the 18 V blow point)',
+  },
+  {
+    id: 'parallel-power',
+    title: 'Parallel Power',
+    tagline: 'Three bulbs across one battery → all lit, full brightness',
+    prompt:
+      'Three bulbs share the same battery terminals. In series they would dim; in parallel each gets the full 6 V. Run it and compare.',
+    seed: {
+      nodes: [
+        { id: 'B1', kind: 'battery', volts: 6, x: 300, y: 30 },
+        { id: 'L1', kind: 'bulb', x: 60, y: 160 },
+        { id: 'L2', kind: 'bulb', x: 300, y: 290 },
+        { id: 'L3', kind: 'bulb', x: 540, y: 160 },
       ],
       edges: [
         { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'L1', targetTerminal: 'a' },
-        { id: 'W2', source: 'L1', sourceTerminal: 'b', target: 'L2', targetTerminal: 'a' },
-        { id: 'W3', source: 'L2', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
+        { id: 'W2', source: 'B1', sourceTerminal: 'a', target: 'L2', targetTerminal: 'a' },
+        { id: 'W3', source: 'B1', sourceTerminal: 'a', target: 'L3', targetTerminal: 'a' },
+        { id: 'W4', source: 'L1', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
+        { id: 'W5', source: 'L2', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
+        { id: 'W6', source: 'L3', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
       ],
     },
-    expected: 'L1 and L2 0.3 A, 0.9 W each, both lit',
+    expected: 'L1, L2, L3 0.6 A, 3.6 W each, all lit',
   },
   {
     id: 'shorted-battery',

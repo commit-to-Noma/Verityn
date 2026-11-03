@@ -933,7 +933,7 @@ export default function ExperimentPage({
 
       <section aria-label="Starter experiments" className="flex flex-col gap-3">
         <h3 className="text-base font-semibold">Start from a working bench</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {EXPERIMENT_PRESETS.map((preset) => (
             <div
               key={preset.id}
