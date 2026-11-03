@@ -43,7 +43,7 @@ STAGES = ("request", "transport", "response", "parse")
 
 
 class SamError(RuntimeError):
-    """A SAM spike failure with controlled fields only.
+    """A SAM 3.1 spike failure with controlled fields only.
 
     message is always a fixed string: never image bytes, keys,
     prompts, or model output. stage names the failure step;
@@ -65,27 +65,27 @@ def sam_enabled():
 def sniff_mime(data):
     """Identify jpeg/png/webp from magic bytes, never the filename."""
     if not isinstance(data, bytes):
-        raise SamError("SAM needs raw image bytes.", stage="request")
+        raise SamError("SAM 3.1 needs raw image bytes.", stage="request")
     if data[:3] == b"\xff\xd8\xff":
         return "image/jpeg"
     if data[:8] == b"\x89PNG\r\n\x1a\n":
         return "image/png"
     if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "image/webp"
-    raise SamError("SAM needs a jpeg, png, or webp image.", stage="request")
+    raise SamError("SAM 3.1 needs a jpeg, png, or webp image.", stage="request")
 
 
 def validate_prompt(text):
     """Clean a noun-phrase prompt; object prompts must not mix in."""
     if not isinstance(text, str):
-        raise SamError("SAM needs a text prompt.", stage="request")
+        raise SamError("SAM 3.1 needs a text prompt.", stage="request")
     phrase = text.strip()
     if not phrase:
-        raise SamError("SAM needs a non-empty prompt.", stage="request")
+        raise SamError("SAM 3.1 needs a non-empty prompt.", stage="request")
     if len(phrase) > SAM_MAX_PROMPT_CHARS:
-        raise SamError("SAM prompt is too long.", stage="request")
+        raise SamError("SAM 3.1 prompt is too long.", stage="request")
     if "<" in phrase or "|>" in phrase:
-        raise SamError("SAM noun phrases cannot carry object prompts.",
+        raise SamError("SAM 3.1 noun phrases cannot carry object prompts.",
                        stage="request")
     return phrase
 
@@ -94,16 +94,16 @@ def build_image_payload(*, prompt, image_bytes, mime=None, model=SAM_MODEL,
                         include_confidence=True):
     """Build the exact unary Responses request for one image."""
     if not isinstance(model, str) or not MODEL_ID_PATTERN.match(model):
-        raise SamError("SAM model id is invalid.", stage="request")
+        raise SamError("SAM 3.1 model id is invalid.", stage="request")
     if not isinstance(image_bytes, bytes) or not image_bytes:
-        raise SamError("SAM needs raw image bytes.", stage="request")
+        raise SamError("SAM 3.1 needs raw image bytes.", stage="request")
     if len(image_bytes) > SAM_MAX_IMAGE_BYTES:
-        raise SamError("SAM image exceeds the size limit.", stage="request")
+        raise SamError("SAM 3.1 image exceeds the size limit.", stage="request")
     detected = sniff_mime(image_bytes)
     if mime is None:
         mime = detected
     if mime != detected or mime not in MIME_TYPES:
-        raise SamError("SAM needs a jpeg, png, or webp image.",
+        raise SamError("SAM 3.1 needs a jpeg, png, or webp image.",
                        stage="request")
     phrase = validate_prompt(prompt)
     encoded = base64.b64encode(image_bytes).decode("ascii")
@@ -138,38 +138,38 @@ def _post_json(url, payload, api_key, timeout_s):
             raw = response.read()
             status = response.status
     except urllib.error.HTTPError as err:
-        raise SamError(f"SAM request failed (HTTP {err.code}).",
+        raise SamError(f"SAM 3.1 request failed (HTTP {err.code}).",
                        stage="transport",
                        http_status=err.code) from err
     except TimeoutError as err:
-        raise SamError("SAM request timed out.",
+        raise SamError("SAM 3.1 request timed out.",
                        stage="transport") from err
     except urllib.error.URLError as err:
-        raise SamError("SAM request failed.",
+        raise SamError("SAM 3.1 request failed.",
                        stage="transport") from err
     try:
         return status, json.loads(raw)
     except (json.JSONDecodeError, UnicodeDecodeError) as err:
-        raise SamError("SAM response malformed.", stage="response",
+        raise SamError("SAM 3.1 response malformed.", stage="response",
                        http_status=status) from err
 
 
 def extract_output_text(body):
     """Pull the single output_text lane from a unary Responses body."""
     if not isinstance(body, dict):
-        raise SamError("SAM response malformed.", stage="response")
+        raise SamError("SAM 3.1 response malformed.", stage="response")
     status = body.get("status")
     if status == "refusal":
-        raise SamError("SAM refused the request.", stage="response")
+        raise SamError("SAM 3.1 refused the request.", stage="response")
     if status == "incomplete":
-        raise SamError("SAM response incomplete.", stage="response")
+        raise SamError("SAM 3.1 response incomplete.", stage="response")
     if status == "failed":
-        raise SamError("SAM request failed upstream.", stage="response")
+        raise SamError("SAM 3.1 request failed upstream.", stage="response")
     if status != "completed":
-        raise SamError("SAM response malformed.", stage="response")
+        raise SamError("SAM 3.1 response malformed.", stage="response")
     output = body.get("output")
     if not isinstance(output, list):
-        raise SamError("SAM response malformed.", stage="response")
+        raise SamError("SAM 3.1 response malformed.", stage="response")
     lanes = []
     for item in output:
         if not isinstance(item, dict):
@@ -181,13 +181,13 @@ def extract_output_text(body):
             if not isinstance(part, dict):
                 continue
             if part.get("type") == "refusal":
-                raise SamError("SAM refused the request.",
+                raise SamError("SAM 3.1 refused the request.",
                                stage="response")
             if (part.get("type") == "output_text"
                     and isinstance(part.get("text"), str)):
                 lanes.append(part["text"])
     if len(lanes) != 1:
-        raise SamError("SAM response has no single text lane.",
+        raise SamError("SAM 3.1 response has no single text lane.",
                        stage="response")
     return lanes[0]
 
@@ -204,7 +204,7 @@ _IGNORED_CONFIDENCE = "ignored_confidence"
 
 
 def _fail():
-    raise SamError("SAM lane malformed.", stage="parse")
+    raise SamError("SAM 3.1 lane malformed.", stage="parse")
 
 
 def _parse_token(body, warnings):
@@ -315,7 +315,7 @@ def parse_lane(text):
     records that as an error, never as found or not-found.
     """
     if not isinstance(text, str):
-        raise SamError("SAM lane malformed.", stage="parse")
+        raise SamError("SAM 3.1 lane malformed.", stage="parse")
     records = []
     warnings = set()
     for raw_line in text.split("\n"):
@@ -363,19 +363,19 @@ def segment_image(*, api_key, prompt, image_bytes, mime=None,
                   model=SAM_MODEL, base_url=SAM_API_BASE,
                   timeout_s=SAM_TIMEOUT_S, include_confidence=True,
                   _post=None):
-    """Run one SAM text prompt against one image (flag-gated).
+    """Run one SAM 3.1 text prompt against one image (flag-gated).
 
     Returns {"records": [...], "warnings": [...]}. Raises SamError on
     any failure; the spike script maps that to an error cell, never
     to a detection verdict. _post injects the transport (tests only).
     """
     if not sam_enabled():
-        raise SamError("SAM spike is disabled.", stage="request")
+        raise SamError("SAM 3.1 spike is disabled.", stage="request")
     if not isinstance(api_key, str) or not api_key:
-        raise SamError("SAM needs an API key.", stage="request")
+        raise SamError("SAM 3.1 needs an API key.", stage="request")
     if not isinstance(base_url, str) or not base_url.startswith(
             "https://"):
-        raise SamError("SAM needs an https base URL.", stage="request")
+        raise SamError("SAM 3.1 needs an https base URL.", stage="request")
     payload = build_image_payload(
         prompt=prompt, image_bytes=image_bytes, mime=mime, model=model,
         include_confidence=include_confidence)

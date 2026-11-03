@@ -137,7 +137,7 @@ what was seen; uncertain parts are marked for review; Confirm is disabled until
 the proposal is reviewable; Discard returns to the prior state. After a
 confirmed upload is tested, a triptych shows the photo, the confirmed
 circuit, and the solver measurement (or the validator code with its fix);
-nothing numeric renders before confirmation, and no SAM overlay is claimed
+nothing numeric renders before confirmation, and no SAM 3.1 overlay is claimed
 for uploads.
 
 ### Voice, Solo, and finale

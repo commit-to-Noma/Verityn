@@ -1,10 +1,11 @@
-# Live SAM Scope
+# Live SAM 3.1 Scope
 
-Goal: earn the right to say Reality Lens uses SAM on real uploads — behind a
-measured accuracy gate, with an honest fallback. Until the gate passes, every
-claim stays exactly as it is today: SAM sample-only.
+Goal: earn the right to say Reality Lens uses Segment Anything Model 3.1
+(SAM 3.1) on real uploads — behind a measured accuracy gate, with an honest
+fallback. Until the gate passes, every claim stays exactly as it is today:
+SAM 3.1 sample-only.
 
-## Where SAM stands today
+## Where SAM 3.1 stands today
 
 - `src/verityn/sam.py`: isolated SAM 3.1 client, stdlib-only, runs only with
   `VERITYN_SAM_ENABLED=1`. Nothing in the learning journey imports it.
@@ -22,13 +23,13 @@ with wiring.
 
 ## What "live" means (three integration points, in order)
 
-1. **Tap-to-segment on uploads.** The user taps their own photo; SAM
+1. **Tap-to-segment on uploads.** The user taps their own photo; SAM 3.1
    returns the region; the lens maps it onto the proposal. No
    auto-decisions: taps only.
-2. **Region proposals for review.** Before Spark proposes, SAM suggests
+2. **Region proposals for review.** Before Spark proposes, SAM 3.1 suggests
    part boxes that the review UI shows as candidates. Spark still writes
-   the proposal; SAM boxes are evidence, gated by confidence.
-3. **Wire-trace refinement.** SAM masks seed the traced-wire overlay for
+   the proposal; SAM 3.1 boxes are evidence, gated by confidence.
+3. **Wire-trace refinement.** SAM 3.1 masks seed the traced-wire overlay for
    uploads. This is last because it is the hardest to verify visually.
 
 Each point ships separately behind its own flag and can be killed
@@ -53,16 +54,16 @@ The gate stays a script, not a feeling. Extend `scripts/sam_spike.py`:
 ## Architecture when the gate passes
 
 - New flag `VERITYN_SAM_LIVE=1`, separate from the spike flag. The
-  propose path (`src/verityn/vision.py`) calls SAM only when live is on;
+  propose path (`src/verityn/vision.py`) calls SAM 3.1 only when live is on;
   any failure (timeout, parse, low confidence) falls back to the
   current Spark-only path — never a red error, never a silent fake.
 - Timeouts and budgets: keep the 60 s client timeout; cap live calls
   per upload (propose-time boxes + user taps only, no polling).
-- Provenance in the UI: review shows `SAM assist` with per-box
+- Provenance in the UI: review shows `SAM 3.1 assist` with per-box
   confidence when live boxes were used, `Spark only` otherwise. Trace
   keeps the raw boxes; sample `sam-sample` labels stay as they are.
 - Privacy: uploads already travel to the vision endpoint for
-  proposals; SAM sees the same bytes under the same handling — mask
+  proposals; SAM 3.1 sees the same bytes under the same handling — mask
   payloads validated structurally and dropped, as today.
 
 ## Rollout steps
@@ -75,13 +76,13 @@ The gate stays a script, not a feeling. Extend `scripts/sam_spike.py`:
 
 ## Non-goals
 
-- No auto-confirm from SAM output: the learner always confirms.
-- No SAM in Guided Lab, scoring, or the solver path.
+- No auto-confirm from SAM 3.1 output: the learner always confirms.
+- No SAM 3.1 in Guided Lab, scoring, or the solver path.
 - No stored user images: live calls are request-scoped like proposals.
 
 ## Open questions
 
-- Judges: does "SAM assists review behind a measured gate" read as
-  real SAM usage for the award, or do they expect end-to-end
+- Judges: does "SAM 3.1 assists review behind a measured gate" read as
+  real SAM 3.1 usage for the award, or do they expect end-to-end
   segmentation? The tap + candidate design is the honest middle.
 - Credit budget for gate runs: who authorizes and how often?

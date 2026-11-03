@@ -151,7 +151,7 @@ describe('buildEvidenceCard', () => {
     expect(
       metaToolChips(['muse-spark-1.3', 'template', 'muse-voice-transcribe', 'muse-spark-1.3']),
     ).toEqual(['Spark', 'Voice'])
-    expect(toolShortLabel('sam-3.1')).toBe('SAM')
+    expect(toolShortLabel('sam-3.1')).toBe('SAM 3.1')
     expect(toolShortLabel('template')).toBeNull()
   })
 

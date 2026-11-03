@@ -300,7 +300,7 @@ export default function RealityLens({
           : sampleSegmentCaption(selectedPoint)}
       </p>
       <p className="text-ink-muted text-xs">
-        Segmentation preview · deterministic physics. Taps only select saved regions; no live SAM
+        Segmentation preview · deterministic physics. Taps only select saved regions; no live SAM 3.1
         call is made.
       </p>
       <div className="flex flex-wrap gap-2">

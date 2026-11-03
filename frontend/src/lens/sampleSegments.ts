@@ -1,8 +1,8 @@
 /** Saved Reality Lens segments as tappable sample points.
  *
  * These points only select regions already stored in the curated sample
- * pack. Spike captures reuse SAM boxes from docs/sam-spike-results.json;
- * drawn rehearsals reuse hand-placed boxes. Tapping never calls SAM.
+ * pack. Spike captures reuse SAM 3.1 boxes from docs/sam-spike-results.json;
+ * drawn rehearsals reuse hand-placed boxes. Tapping never calls SAM 3.1.
  */
 
 import type { LensSample } from './samples'
@@ -25,7 +25,7 @@ const SEGMENT_LABELS: Record<SampleSegmentId, string> = {
   bulb: 'Bulb',
 }
 
-/** Spike captures live under the SAM fixture directory; rehearsals do not. */
+/** Spike captures live under the SAM 3.1 fixture directory; rehearsals do not. */
 export function sampleSegmentSource(sample: LensSample): SampleSegmentSource {
   return sample.source.startsWith('tests/fixtures/sam_spike/') ? 'sam-sample' : 'hand-placed'
 }
@@ -49,7 +49,7 @@ export function sampleSegmentPoints(sample: LensSample): SampleSegmentPoint[] {
 /** Honest caption for a tapped point: provenance is always named. */
 export function sampleSegmentCaption(point: SampleSegmentPoint): string {
   if (point.source === 'sam-sample') {
-    return `${point.label} sample segment · SAM confidence ${point.confidence.toFixed(2)}`
+    return `${point.label} sample segment · SAM 3.1 confidence ${point.confidence.toFixed(2)}`
   }
   return `${point.label} sample segment · hand-placed rehearsal region`
 }

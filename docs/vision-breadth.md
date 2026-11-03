@@ -1,10 +1,10 @@
 # Vision Extraction Breadth Assessment (offline, 2026-10-28)
 
-Independent review of the 10 SAM-spike fixtures against the production
+Independent review of the 10 SAM 3.1-spike fixtures against the production
 proposal contract (battery/bulb/switch only; strict schema; validator
 enforces ready ⟺ certain + fully determined). No live calls were made
 for this assessment; live verdicts below come from previously authorized
-single-call probes. SAM detection results from `docs/sam-spike-results.json`.
+single-call probes. SAM 3.1 detection results from `docs/sam-spike-results.json`.
 
 ## Verified live (fixtures preserved)
 

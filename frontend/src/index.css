@@ -720,7 +720,7 @@ body {
     radial-gradient(560px 360px at 50% 90%, rgb(56 214 233 / 0.1), transparent 70%);
 }
 
-/* Reality Lens overlay: SAM boxes, current vectors, culprit spotlight. */
+/* Reality Lens overlay: SAM 3.1 boxes, current vectors, culprit spotlight. */
 .lens-box {
   fill: none;
   stroke: var(--color-flow);

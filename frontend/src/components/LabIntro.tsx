@@ -419,7 +419,7 @@ const CONSOLE_TABS: ReadonlyArray<{
   { id: 'logic', card: 'Muse Spark', sub: 'Reasoning & logic', icon: MessagesSquare },
   { id: 'voice', card: 'Muse Voice', sub: 'Audio processing', icon: Mic },
   { id: 'physics', card: 'Verityn Solver', sub: 'Mathematical truth', icon: Atom },
-  { id: 'vision', card: 'SAM samples', sub: 'Saved masks only', icon: Eye },
+  { id: 'vision', card: 'SAM 3.1 samples', sub: 'Saved masks only', icon: Eye },
 ]
 
 const CONSOLE_ENGINES: Record<ConsoleTab, EngineCommandKind> = {
@@ -531,9 +531,9 @@ function ConsoleTrace({ tab }: { tab: ConsoleTab }) {
         </svg>
       </div>
       <div>
-        <p className="font-mono text-xs font-semibold text-flow">sam · saved mask</p>
+        <p className="font-mono text-xs font-semibold text-flow">sam 3.1 · saved mask</p>
         <p className="mt-1 font-sans text-xs leading-5 text-ink-muted">
-          {sample.title}: taps select saved boxes with SAM provenance; no live inference runs here.
+          {sample.title}: taps select saved boxes with SAM 3.1 provenance; no live inference runs here.
         </p>
       </div>
     </div>

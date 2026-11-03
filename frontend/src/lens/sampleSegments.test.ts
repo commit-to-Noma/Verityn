@@ -15,7 +15,7 @@ describe('sampleSegmentPoints', () => {
     expect(bulb.yPct).toBeCloseTo(((123 + 173) / 2 / 291) * 100, 5)
   })
 
-  it('names SAM-sample provenance for captures and hand placement for rehearsals', () => {
+  it('names SAM 3.1-sample provenance for captures and hand placement for rehearsals', () => {
     const verified = LENS_SAMPLES.find((entry) => entry.id === 'textbook-loop')
     const drawn = LENS_SAMPLES.find((entry) => entry.id === 'low-voltage-loop')
     if (!verified || !drawn) throw new Error('lens samples missing')
@@ -24,7 +24,7 @@ describe('sampleSegmentPoints', () => {
     expect(sampleSegmentSource(drawn)).toBe('hand-placed')
     const [battery] = sampleSegmentPoints(verified)
     const [rehearsal] = sampleSegmentPoints(drawn)
-    expect(sampleSegmentCaption(battery)).toBe('Battery sample segment · SAM confidence 0.91')
+    expect(sampleSegmentCaption(battery)).toBe('Battery sample segment · SAM 3.1 confidence 0.91')
     expect(sampleSegmentCaption(rehearsal)).toBe(
       'Battery sample segment · hand-placed rehearsal region',
     )

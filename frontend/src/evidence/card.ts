@@ -39,7 +39,7 @@ export function toolShortLabel(tool: string): string | null {
     return 'Spark'
   }
   if (tool.includes('sam-3.1')) {
-    return 'SAM'
+    return 'SAM 3.1'
   }
   return null
 }

@@ -1,4 +1,4 @@
-# SAM 3.1 spike: "Snap the Real Thing" (World-As-Lab)
+# Segment Anything Model 3.1 (SAM 3.1) spike: "Snap the Real Thing" (World-As-Lab)
 
 2-hour isolated technical spike. Status: **RUN 2026-10-28  -  GATE
 FAILED (2 of 10)**. Ran once with explicit authorization: 30 live
@@ -53,7 +53,7 @@ that the key is set; it never prints it.
 
 ## Success gate
 
-Proceed to a UI overlay ONLY if SAM detects **both** the battery
+Proceed to a UI overlay ONLY if SAM 3.1 detects **both** the battery
 **and** the bulb in at least **7 of 10** images, reported strictly
 as "x of 10". Malformed lanes and transport failures count as
 errors, never as detections. If the gate fails or the payload is

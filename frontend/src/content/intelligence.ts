@@ -171,7 +171,7 @@ export const SMART_DETAILS = [
     evidence: 'frontend/src/journey/stages.test.ts',
   },
   {
-    behavior: 'Saved Reality Lens segments are tappable with SAM provenance',
+    behavior: 'Saved Reality Lens segments are tappable with SAM 3.1 provenance',
     group: 'vision',
     title: 'Tappable segments',
     where: 'Sample diagrams',

@@ -27,7 +27,7 @@ the Under the hood Smart details section, and the README.
 - Batteries report supplied current and power, never negative labels — [canvas node tests](../frontend/src/components/canvas/CircuitNode.test.tsx).
 - Voice transcripts are cleaned for display; raw text stays in Trace — [transcript tests](../frontend/src/voice/displayTranscript.test.ts).
 - Journey progress highlights Recap on the recap page — [stage tests](../frontend/src/journey/stages.test.ts).
-- Saved Reality Lens segments are tappable with SAM provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
+- Saved Reality Lens segments are tappable with SAM 3.1 provenance — [sample segment tests](../frontend/src/lens/sampleSegments.test.ts).
 - Shell nav holds three primary tabs (Under-the-hood lives on the Hub page only) — [shell nav tests](../frontend/src/journey/stages.test.ts), also exercised by the browser smoke.
 - Guided Lab entry stays on the Hub behind a full-screen swoosh, then lands in the lab — browser smoke `lab entry swoosh` checks; `.stage-enter` uses backwards fill so retained transforms never trap fixed overlays.
 - Bay run deck sits side by side (run button + status pill in one execution row) — browser smoke `execution deck side by side`.
@@ -46,13 +46,13 @@ the Under the hood Smart details section, and the README.
 - Stress Rig stops at fracture: a freshly exploded bulb ends the sweep with its point kept and a "fractured at N V" note — [bench tests](../frontend/src/experiment/bench.test.ts), smoke fracture checks.
 - Latched bulbs never replay the strain beat: the explosion latch (not wiped node art) decides what counts as fresh — smoke bomb checks still pass first-run strain.
 - Hub Under-the-hood is a 3-tab diagnostic console: tabs left, one terminal right with trace, executable command, and evidence refs; text wall removed — smoke console checks.
-- Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM sample-only wording — smoke footnote checks.
+- Hub bento copy shortened so widgets lead; Built with Meta stays a bordered footnote with honest SAM 3.1 sample-only wording — smoke footnote checks.
 - STEM orbit backdrop reacts to selection: the picked discipline's asset renders large behind the ring, tinted and glowing in its field color — verified by hero screenshots (gear/math/science).
 - Roadmap disciplines tease their labs with planned Meta tools (chemistry bench, rover coding, function playground) — [homepage tests](../frontend/src/components/LabIntro.test.ts).
 - Bento intro names cognitive atrophy: predicting before the AI speaks keeps reasoning with the learner.
 - STEM backdrop hero-centered, 10% bigger, 50% opacity; selection state lifted so the glow lives behind the whole hero — verified by hero screenshots.
 - Why-Verityn back to five problem→solution rows with no widgets — smoke `why matters` checks.
-- Built with Meta footnote removed; SAM returns as the console's fourth tab with its sample-only mask and live proposal command — smoke console vision checks.
+- Built with Meta footnote removed; SAM 3.1 returns as the console's fourth tab with its sample-only mask and live proposal command — smoke console vision checks.
 - Hub sections numbered and divided (01 method, 02 hood, 03 why) so each reads as its own block.
 - Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline — [homepage tests](../frontend/src/components/LabIntro.test.ts).
 - STEM backdrop faded to a true background (25% silhouette, softer hue/glow) so the headline stays readable — verified by hero screenshot.
@@ -63,3 +63,4 @@ the Under the hood Smart details section, and the README.
 - Why-Verityn reasons are divider-separated ledger rows (number, problem, answer), distinct from the method timeline — smoke five-reasons check.
 - Hub locked: backdrop gradient IDs namespaced (no duplicate SVG IDs) and ledger reasons expose screen-reader numbering — verified zero duplicate IDs live.
 - Reality Check reply earns Solo: only a part-naming reply (voice or saved line) unlocks the gate, void replies get a code-written nudge, and only the close-then-reopen excursion auto-advances — [reply tests](../frontend/src/journey/realityReply.test.ts), smoke waiting/unlock/excursion checks; Heard lines are stage-stamped so a Predict transcript never reads as a Reality reply.
+- Vision model named in full everywhere: Segment Anything Model 3.1 (SAM 3.1) in prose and labels, SAM 3.1 in short strings; identifiers, flags, and the `sam-3.1` model id unchanged — frontend evidence/caption tests plus smoke sample/console checks.
