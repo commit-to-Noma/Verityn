@@ -1,16 +1,19 @@
 import { CircleCheckBig } from 'lucide-react'
 
-/** Chapter gate: evidence stays visible and the learner can always continue. */
+/** Chapter gate: evidence stays visible; a waiting gate names its unlock
+ * instead of offering the advance button. */
 export default function ChapterComplete({
   title,
   detail,
   nextLabel,
+  waiting,
   auto,
   onContinue,
 }: {
   title: string
   detail: string
   nextLabel: string
+  waiting?: string
   auto: boolean
   onContinue: () => void
 }) {
@@ -28,13 +31,19 @@ export default function ChapterComplete({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onContinue}
-          className="bg-flow text-on-accent flex min-h-[44px] items-center justify-center rounded-[10px] px-4 text-sm font-medium"
-        >
-          {nextLabel}
-        </button>
+        {waiting !== undefined ? (
+          <p className="text-sm text-ink-muted" role="status">
+            {waiting}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={onContinue}
+            className="bg-flow text-on-accent flex min-h-[44px] items-center justify-center rounded-[10px] px-4 text-sm font-medium"
+          >
+            {nextLabel}
+          </button>
+        )}
         {auto && (
           <p className="auto-note text-sm text-ink-muted">
             <span aria-hidden="true">Moving on shortly…</span>

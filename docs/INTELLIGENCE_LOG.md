@@ -62,3 +62,4 @@ the Under the hood Smart details section, and the README.
 - STEM backdrop softened to a light-blur, low-intensity silhouette that never fights the headline — verified by hero screenshot.
 - Why-Verityn reasons are divider-separated ledger rows (number, problem, answer), distinct from the method timeline — smoke five-reasons check.
 - Hub locked: backdrop gradient IDs namespaced (no duplicate SVG IDs) and ledger reasons expose screen-reader numbering — verified zero duplicate IDs live.
+- Reality Check reply earns Solo: only a part-naming reply (voice or saved line) unlocks the gate, void replies get a code-written nudge, and only the close-then-reopen excursion auto-advances — [reply tests](../frontend/src/journey/realityReply.test.ts), smoke waiting/unlock/excursion checks; Heard lines are stage-stamped so a Predict transcript never reads as a Reality reply.

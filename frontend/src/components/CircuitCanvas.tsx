@@ -41,7 +41,7 @@ import {
   shouldBurstGlow,
 } from '../canvas/visuals'
 import type { Challenge, Choice, Prediction } from '../lessons/lesson'
-import { LIT_POWER_W, choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
+import { choiceToClaim, compareWithExpected, matchesExpected } from '../lessons/lesson'
 import type { CoachTraceOutcome, DemoTraceEvent, TraceInput } from '../lessons/trace'
 import { showCoachText, speakCoach } from '../voice/coachVoice'
 import ProofChips from './ProofChips'
@@ -49,7 +49,6 @@ import { useProofMode } from '../proof/store'
 import { SOLO_COACH_MESSAGE } from '../lessons/trace'
 import { VerdictIcon } from './verdict'
 import { VERDICT_LABELS } from './verdictLabels'
-import PredictionVerdictLine from './PredictionVerdictLine'
 import EvidenceTrace from './EvidenceTrace'
 import ReadoutValue from './ReadoutValue'
 import SoloResult from './SoloResult'
@@ -202,7 +201,7 @@ const RUNG_ORDER: Record<string, number> = { R1: 0, R2: 1, R4: 2 }
 
 const NEXT_LABEL: Record<string, string> = {
   R1: 'Ask the question',
-  R2: 'Show me the pointer',
+  R2: 'Point to it on the circuit',
   R4: 'Try the demonstration',
 }
 
@@ -742,13 +741,8 @@ function StartVerdict({
  * it keeps its own mount across verdict re-checks. */
 function DoneVerdictCard({
   state,
-  choice,
-  observed,
 }: {
   state: Extract<VerdictState, { phase: 'done' }>
-  choice: Choice
-  /** Solver measurement for the claimed component, when the run solved. */
-  observed?: { current: number; power: number }
 }) {
   return (
     <div className="glass-panel flex flex-col gap-1 p-4" aria-live="polite">
@@ -759,14 +753,6 @@ function DoneVerdictCard({
         <VerdictIcon status={state.verdict.status} />
         <div>
           <p className="text-base font-medium text-ink">{VERDICT_LABELS[state.verdict.status]}</p>
-          {observed !== undefined && state.claim.type === 'lit' && (
-            <PredictionVerdictLine
-              choice={choice}
-              current={observed.current}
-              power={observed.power}
-              lit={observed.power > LIT_POWER_W}
-            />
-          )}
         </div>
       </div>
     </div>
@@ -777,7 +763,6 @@ function ClaimVerdict({
   state,
   choice,
   session,
-  observed,
   onRetry,
   onCoached,
   onCoachInteract,
@@ -798,8 +783,6 @@ function ClaimVerdict({
   state: VerdictState
   choice: Choice
   session: string | null
-  /** Solver measurement for the claimed component, when the run solved. */
-  observed?: { current: number; power: number }
   onRetry: () => void
   onCoached?: (outcome: CoachTraceOutcome) => void
   onCoachInteract?: () => void
@@ -846,7 +829,7 @@ function ClaimVerdict({
         (renderDone !== undefined ? (
           renderDone()
         ) : (
-          <DoneVerdictCard state={state} choice={choice} observed={observed} />
+          <DoneVerdictCard state={state} />
         ))}
       {state.phase === 'error' && (
         <div className="glass-panel flex items-center gap-3 p-4" role="alert">
@@ -2499,7 +2482,6 @@ function CanvasInner({
             state={verdictState}
             choice={choice}
             session={coachSession ?? null}
-            observed={runState.result.components[claim.component]}
             onRetry={runUser}
             onCoached={handleCoached}
             onCoachInteract={onCoachInteract}

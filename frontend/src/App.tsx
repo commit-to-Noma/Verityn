@@ -38,7 +38,12 @@ import {
   subscribeCoachSpeechFinished,
 } from './voice/coachVoice'
 import { shellLocation, stageFor, type ShellLocation, type Stage } from './journey/stages'
-import { REALITY_FOLLOWUP_QUESTION, realityReplyFor } from './journey/realityReply'
+import {
+  REALITY_FOLLOWUP_QUESTION,
+  REALITY_REPLY_NUDGE,
+  realityReplyFor,
+  replyEngagesQuestion,
+} from './journey/realityReply'
 import { setTraceStage } from './trace/session'
 import {
   JOURNEY_PROGRESS_VERSION,
@@ -66,7 +71,15 @@ interface ChapterGate {
   advance: () => void
   /** Reality-check only: the model disagreed, so the coach is invited in. */
   coach?: 'invited' | 'heard'
+  /** Reality-check only: set while Solo waits on an engaged reply or a
+   * retest excursion. The card shows this instead of the advance button;
+   * scripted auto/demo timers still advance past it. */
+  waiting?: string
 }
+
+/** Reality gate hold: the reply must earn Solo. Mention every unlock path. */
+const REALITY_WAITING =
+  'Answer the coach to unlock Solo: reply by voice, save one line naming the part you would change, or retest with the switch closed.'
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -119,7 +132,12 @@ export default function App() {
   const [labSwoosh, setLabSwoosh] = useState(false)
   const swooshTimer = useRef<number | null>(null)
   const [coachVoiceEnabled, setCoachVoiceEnabled] = useState(false)
-  const [learnerReply, setLearnerReply] = useState('')
+  // A Heard line belongs to the question it answered: the draft is stamped
+  // with its stage, so a Predict transcript never reads as a Reality reply.
+  const [learnerReply, setLearnerReply] = useState<{ text: string; stage: Stage | null }>({
+    text: '',
+    stage: null,
+  })
   const [predictionTranscript, setPredictionTranscript] = useState<{
     id: number
     stage: 'l1-predict' | 'reality-predict'
@@ -240,6 +258,9 @@ export default function App() {
       window.clearTimeout(advanceTimer.current)
       advanceTimer.current = null
     }
+    // The flip beat owns the same timer: a cancelled beat must disarm,
+    // or a later excursion can never re-arm it.
+    flipArmedRef.current = false
     setAutoPending(false)
   }, [])
 
@@ -351,9 +372,10 @@ export default function App() {
    * so it sees fresh stage/gate state, never stale mirrors. */
   const [flipTick, setFlipTick] = useState(0)
 
-  /** Flip-to-Solo: both switch positions live-tested plus an engaged path
-   * (coach reply or completed retest excursion) moves on automatically.
-   * Demos and auto runs keep their scripted beats instead. */
+  /** Flip-to-Solo: watching the circuit cut and continue (close, then
+   * reopen) moves on automatically. An engaged reply only unlocks the
+   * gate button — the learner presses it. Demos and auto runs keep
+   * their scripted beats instead. */
   const armFlipAdvance = useCallback(() => {
     if (
       flipArmedRef.current ||
@@ -361,14 +383,14 @@ export default function App() {
       completeRef.current?.chapter !== 'reality' ||
       !realityPositionsRef.current.has(true) ||
       !realityPositionsRef.current.has(false) ||
-      (!realityRepliedRef.current && !excursionDoneRef.current) ||
+      !excursionDoneRef.current ||
       demoRef.current.active ||
       autoRef.current
     ) {
       return
     }
-    flipArmedRef.current = true
     cancelAdvance()
+    flipArmedRef.current = true
     announceCoach('You have seen the circuit cut and continue. Moving to the Solo challenge.')
     setAutoPending(true)
     advanceTimer.current = window.setTimeout(() => {
@@ -449,7 +471,7 @@ export default function App() {
       }
       if (matchesExpected(result, L1.twist.expectedFixed)) {
         let text =
-          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Try flipping the switch off and on — the bench keeps running, so you can watch the bulb cut out and light again without pressing anything. Next, you will try a new circuit on your own in Solo.'
+          'With the switch open, no current flows and the bulb stays off. The battery is still connected; the gap in the switch breaks the loop. Try flipping the switch off and on — the bench keeps running, so you can watch the bulb cut out and light again without pressing anything.'
         if (!realityQuestionAsked.current) {
           realityQuestionAsked.current = true
           text += ` ${REALITY_FOLLOWUP_QUESTION}`
@@ -512,7 +534,10 @@ export default function App() {
     [showGate],
   )
 
-  /** A contradicted reality check invites the coach in; the gate stays passable. */
+  /** A contradicted reality check invites the coach in and holds Solo
+   * until the reply earns it: an engaged voice reply, an engaged saved
+   * line, or a completed retest excursion. Scripted auto/demo runs keep
+   * their timers and never see the hold. */
   const handleRealityVerdict = useCallback(
     (status: VerdictStatus) => {
       if (status !== 'CONTRADICTED') {
@@ -533,9 +558,15 @@ export default function App() {
           ? {
               ...gate,
               title: 'Prediction did not match',
-              detail:
-                'Review the measurement. The coach is available for a hint, or you can continue on your own.',
+              detail: 'Review the measurement, then answer the coach to continue.',
               coach: 'invited',
+              waiting:
+                autoRef.current ||
+                demoRef.current.active ||
+                realityRepliedRef.current ||
+                excursionDoneRef.current
+                  ? undefined
+                  : REALITY_WAITING,
             }
           : gate,
       )
@@ -549,51 +580,67 @@ export default function App() {
       if (complete?.chapter !== 'reality') {
         return
       }
-      if (!demoRef.current.active) {
-        // Presenter fallback, unchanged: the first heard rung starts the beat.
-        if (complete.coach !== 'invited') {
-          return
+      if (demoRef.current.active) {
+        // Guided demo: the full ladder plays, and only R4 may advance the gate.
+        if (complete.coach === 'invited') {
+          setComplete({
+            ...complete,
+            title: 'Coach heard',
+            detail: 'Continue when ready.',
+            coach: 'heard',
+          })
         }
-        setComplete({
-          ...complete,
-          title: 'Coach heard',
-          detail: 'Continue when ready.',
-          coach: 'heard',
-        })
-        if (autoRef.current) {
-          cancelAdvance()
-          setAutoPending(true)
-          advanceTimer.current = window.setTimeout(() => {
-            advanceTimer.current = null
-            setAutoPending(false)
-            setComplete(null)
-            complete.advance()
-          }, COACHED_BEAT_MS)
+        if (outcome?.phase === 'done' && outcome.rung === 'R4') {
+          realityR4.current = true
+          if (!demoRef.current.paused) {
+            cancelAdvance()
+            setAutoPending(true)
+            advanceTimer.current = window.setTimeout(() => {
+              advanceTimer.current = null
+              setAutoPending(false)
+              setComplete(null)
+              complete.advance()
+            }, COACHED_BEAT_MS)
+          }
         }
         return
       }
-      // Guided demo: the full ladder plays, and only R4 may advance the gate.
-      if (complete.coach === 'invited') {
+      if (complete.coach !== 'invited') {
+        return
+      }
+      if (autoRef.current) {
+        // Presenter fallback, unchanged: the first heard rung starts the beat.
         setComplete({
           ...complete,
           title: 'Coach heard',
           detail: 'Continue when ready.',
           coach: 'heard',
         })
+        cancelAdvance()
+        setAutoPending(true)
+        advanceTimer.current = window.setTimeout(() => {
+          advanceTimer.current = null
+          setAutoPending(false)
+          setComplete(null)
+          complete.advance()
+        }, COACHED_BEAT_MS)
+        return
       }
-      if (outcome?.phase === 'done' && outcome.rung === 'R4') {
-        realityR4.current = true
-        if (!demoRef.current.paused) {
-          cancelAdvance()
-          setAutoPending(true)
-          advanceTimer.current = window.setTimeout(() => {
-            advanceTimer.current = null
-            setAutoPending(false)
-            setComplete(null)
-            complete.advance()
-          }, COACHED_BEAT_MS)
-        }
+      // Manual: a served rung asks, it never answers. Only a saved line
+      // that engages the question unlocks Solo.
+      const thought = outcome?.phase === 'done' ? (outcome.learnerReply ?? '') : ''
+      if (thought === '' || !replyEngagesQuestion(thought)) {
+        return
       }
+      realityRepliedRef.current = true
+      setFlipTick((tick) => tick + 1)
+      setComplete({
+        ...complete,
+        title: 'Coach heard',
+        detail: 'Continue when ready.',
+        coach: 'heard',
+        waiting: undefined,
+      })
     },
     [cancelAdvance, complete],
   )
@@ -673,7 +720,7 @@ export default function App() {
     })
     setResumedCheckpoint(false)
     setL1Prediction(null)
-    setLearnerReply('')
+    setLearnerReply({ text: '', stage: null })
     setPredictionTranscript(null)
     setRealityStarted(false)
     setRealityPrediction(null)
@@ -977,14 +1024,29 @@ export default function App() {
     return false
   }
 
-  /** Reality Check replies are answered in code, never by a coach provider. */
+  /** Reality Check replies are answered in code, never by a coach provider.
+   * Only an engaged reply unlocks Solo; anything else earns a re-prompt. */
   const handleRealityReply = useCallback(
     (transcript: string): string | null => {
       if (stage !== 'reality-build' || !realityQuestionAsked.current) {
         return null
       }
+      if (!replyEngagesQuestion(transcript)) {
+        return REALITY_REPLY_NUDGE
+      }
       realityRepliedRef.current = true
       setFlipTick((tick) => tick + 1)
+      setComplete((gate) =>
+        gate?.chapter === 'reality'
+          ? {
+              ...gate,
+              title: 'Coach heard',
+              detail: 'Continue when ready.',
+              coach: 'heard',
+              waiting: undefined,
+            }
+          : gate,
+      )
       return realityReplyFor(transcript)
     },
     [stage],
@@ -1001,6 +1063,17 @@ export default function App() {
       retestClosedRef.current = true
     } else if (retestClosedRef.current) {
       excursionDoneRef.current = true
+      // Watching the circuit cut and continue is a second honest unlock.
+      setComplete((gate) =>
+        gate?.chapter === 'reality'
+          ? {
+              ...gate,
+              title: 'Ready for Solo',
+              detail: 'The circuit cut and continued. Continue when ready.',
+              waiting: undefined,
+            }
+          : gate,
+      )
     }
     setFlipTick((tick) => tick + 1)
   }, [])
@@ -1161,6 +1234,7 @@ export default function App() {
         title={complete.title}
         detail={complete.detail}
         nextLabel={complete.nextLabel}
+        waiting={complete.waiting}
         auto={autoPending}
         onContinue={handleContinue}
       />
@@ -1185,8 +1259,8 @@ export default function App() {
           onEnabledChange={setCoachVoiceEnabled}
           stage={stage}
           replyAvailable={complete === null || complete.coach !== undefined}
-          learnerText={learnerReply}
-          onLearnerTextChange={setLearnerReply}
+          learnerText={learnerReply.stage === stage ? learnerReply.text : ''}
+          onLearnerTextChange={(text) => setLearnerReply({ text, stage })}
           onPrediction={handleSpokenPrediction}
           onReply={handleRealityReply}
         />

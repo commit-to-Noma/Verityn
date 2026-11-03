@@ -786,6 +786,7 @@ async function drive() {
   await captureScreenshot('reality-check-after-test')
   check('reality verdict line visible', await hasText('You predicted Yes'))
   check('reality verdict personal', await hasText('That disagreed with your prediction'))
+  check('solo waits on an engaged reply', await hasText('Answer the coach to unlock Solo') && !(await hasText('Start the Solo challenge')))
   check('reality battery supplies wording', await ev(`(document.querySelector('section[aria-labelledby="canvas-heading"]')?.innerText ?? '').includes('supplies 0.0 A (0.0 W)')`))
   await assertOneVoice('reality-after')
   check('reality follow-up asked', await ev(`document.body.textContent.includes('What would you change to make the bulb light?')`))
@@ -797,12 +798,6 @@ async function drive() {
     const text = row.innerText;
     return text.includes('Complete loop lights') && text.includes('MEASURED BY THE SOLVER');
   })()`))
-  check('reality action row groups retest and gate', await ev(`(() => {
-    const row = document.querySelector('[aria-label="Sandbox actions"]');
-    if (!row || row.offsetParent === null) return false;
-    const text = row.innerText;
-    return text.includes('Close the switch and test again') && text.includes('Start the Solo challenge');
-  })()`))
   await ev(`[...document.querySelectorAll('[aria-label="Coach dock"] summary')].find((e) => e.textContent.includes('Earlier'))?.click()`)
   check('coach invites live flipping', await hasText('Try flipping the switch off and on'))
   await captureScreenshot('reality-followup')
@@ -810,14 +805,24 @@ async function drive() {
   await waitFor(() => askRequestIds.length >= 1, 'automatic R1 question', 25000)
   check('dock retained muted state', await ev(`document.querySelector('[aria-label="Coach dock"] button[title="Browser voice, not Meta"]')?.getAttribute('aria-pressed') === 'false'`))
   await waitFor(() => hasText('Fallback coach'), 'fake R1', 20000)
+  await fillInput('coach-reply', 'close the switch S1')
+  await clickButton('Save')
+  await waitFor(() => hasText('Coach heard'), 'engaged reply unlocks', 10000)
+  check('engaged reply unlocks solo', await hasText('Start the Solo challenge'))
+  check('reality action row groups retest and gate', await ev(`(() => {
+    const row = document.querySelector('[aria-label="Sandbox actions"]');
+    if (!row || row.offsetParent === null) return false;
+    const text = row.innerText;
+    return text.includes('Close the switch and test again') && text.includes('Start the Solo challenge');
+  })()`))
   check('trace drawer present', await hasText('What Meta did / What code checked'))
   check('R1 request recorded for the trace drawer', askRequestIds.length === 1, `got ${askRequestIds.length}`)
   check('trace drawer closed by default', await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.open !== true`))
   await ev(`[...document.querySelectorAll('details')].find((e) => e.querySelector('summary')?.textContent.includes('What Meta did'))?.querySelector('summary')?.click()`)
   await waitFor(() => hasText('Template fallback'), 'trace event recorded', 10000)
   check('trace names serving tool', await hasText('prototype-fake'))
-  await clickButton('Show me the pointer')
-  await waitFor(() => hasText('Pointer'), 'r2', 20000)
+  await clickButton('Point to it on the circuit')
+  await waitFor(() => hasText('Show me'), 'r2', 20000)
   check('fake coach line is not marked Meta', await ev(`!document.querySelector('[aria-label="Coach dock"]')?.innerText.includes('Meta Spark')`))
   check('earlier coach lines are expandable', await ev(`!!document.querySelector('[aria-label="Coach dock"] details summary')`))
   check('dock speaker plays the current line', await setDockVoice(true))
