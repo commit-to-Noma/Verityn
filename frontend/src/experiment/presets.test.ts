@@ -6,9 +6,9 @@ describe('EXPERIMENT_PRESETS', () => {
   it('offers the six documented starters with prompts', () => {
     expect(EXPERIMENT_PRESETS.map((preset) => preset.id)).toEqual([
       'light-bulb',
-      'open-switch',
+      'polarity-duel',
       'time-bomb',
-      'parallel-power',
+      'dim-duo',
       'shorted-battery',
       'overload-bulb',
     ])
@@ -38,7 +38,7 @@ describe('EXPERIMENT_PRESETS', () => {
     }
   })
 
-  it('wires the closed loop, the open switch, the bomb, the parallel trio, and the short', () => {
+  it('wires the closed loop, the duel, the bomb, the dim duo, and the short', () => {
     const nets = new Map(
       EXPERIMENT_PRESETS.map((preset) => [
         preset.id,
@@ -47,11 +47,21 @@ describe('EXPERIMENT_PRESETS', () => {
     )
     const closed = nets.get('light-bulb')?.components.find((part) => part.id === 'S1')
     expect(closed).toMatchObject({ type: 'switch', closed: true })
-    const open = nets.get('open-switch')?.components.find((part) => part.id === 'S1')
-    expect(open).toMatchObject({ type: 'switch', closed: false })
+    const duel = nets.get('polarity-duel')
     expect(
-      nets.get('open-switch')?.components.filter((part) => part.type === 'wire'),
-    ).toHaveLength(3)
+      duel?.components.filter((part) => part.type === 'battery').map((part) => part.id).sort(),
+    ).toEqual(['B1', 'B2'])
+    // The batteries share their b terminals and push from opposite a ends.
+    expect(duel?.components.find((part) => part.id === 'W1')).toMatchObject({
+      type: 'wire',
+      a: 'B1.b',
+      b: 'B2.b',
+    })
+    expect(duel?.components.find((part) => part.id === 'W4')).toMatchObject({
+      type: 'wire',
+      a: 'L1.b',
+      b: 'B2.a',
+    })
     const bomb = nets.get('time-bomb')
     expect(bomb?.components.find((part) => part.id === 'B1')).toMatchObject({
       type: 'battery',
@@ -61,22 +71,22 @@ describe('EXPERIMENT_PRESETS', () => {
       type: 'switch',
       closed: true,
     })
-    const trio = nets.get('parallel-power')?.components.filter((part) => part.type === 'bulb')
-    expect(trio?.map((part) => part.id).sort()).toEqual(['L1', 'L2', 'L3'])
+    const duo = nets.get('dim-duo')?.components.filter((part) => part.type === 'bulb')
+    expect(duo?.map((part) => part.id).sort()).toEqual(['L1', 'L2'])
     expect(
-      nets.get('parallel-power')?.components.filter((part) => part.type === 'wire'),
-    ).toHaveLength(6)
+      nets.get('dim-duo')?.components.filter((part) => part.type === 'wire'),
+    ).toHaveLength(3)
     const short = nets.get('shorted-battery')?.components.find((part) => part.id === 'W1')
     expect(short).toMatchObject({ type: 'wire', a: 'B1.a', b: 'B1.b' })
   })
 
-  it('seeds the overwork bench with an unrated bulb and a 6 V battery', () => {
+  it('seeds the overwork bench with an unrated bulb and an 18 V battery', () => {
     const netlist = toNetlist({
       nodes: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.nodes ?? [],
       edges: EXPERIMENT_PRESETS.find((preset) => preset.id === 'overload-bulb')?.seed.edges ?? [],
     })
     const byId = new Map(netlist.components.map((part) => [part.id, part]))
-    expect(byId.get('B1')).toMatchObject({ type: 'battery', volts: 6 })
+    expect(byId.get('B1')).toMatchObject({ type: 'battery', volts: 18 })
     expect(byId.get('S1')).toMatchObject({ type: 'switch', closed: true })
     // No per-bulb ratings: the classroom 12 V / 14.4 W defaults apply.
     expect(byId.get('L1')).toMatchObject({ type: 'bulb' })

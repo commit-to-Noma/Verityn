@@ -6,6 +6,7 @@ export interface HudReading {
   sourceVolts: number
   amps: number
   lit: boolean
+  strain: boolean
 }
 
 export interface BannerModel {
@@ -16,6 +17,8 @@ export interface BannerModel {
   /** Bulb outcome phrase. */
   outcome: string
   lit: boolean
+  /** Any lit bulb is straining past its rating; the outcome names it. */
+  strain: boolean
 }
 
 /** Pure hero line for a solved circuit; null when the run did not solve. */
@@ -33,6 +36,7 @@ export function bannerModel(result: SimulateResult, netlist: Netlist): BannerMod
   const litBulbs = bulbIds.filter(
     (id) => conditions[id] !== 'exploded' && (result.components[id]?.power ?? 0) > LIT_POWER_W,
   )
+  const strained = litBulbs.filter((id) => conditions[id] === 'overworked')
   const amps = bulbIds.reduce(
     (peak, id) =>
       conditions[id] === 'exploded'
@@ -47,17 +51,22 @@ export function bannerModel(result: SimulateResult, netlist: Netlist): BannerMod
     state: litBulbs.length > 0 ? 'CLOSED LOOP' : hasOpenSwitch ? 'LOOP OPEN' : 'NO GLOW',
     amps,
     outcome:
-      litBulbs.length > 0
-        ? litBulbs.length === 1
-          ? 'BULB LIT'
-          : `${litBulbs.length} BULBS LIT`
-        : exploded.length > 0
-          ? exploded.length === 1
-            ? 'BULB EXPLODED'
-            : `${exploded.length} BULBS EXPLODED`
-          : bulbIds.length === 0
-            ? 'NO BULBS'
-            : 'BULB DARK',
+      strained.length > 0
+        ? strained.length === 1
+          ? 'BULB OVERWORKED'
+          : `${strained.length} BULBS OVERWORKED`
+        : litBulbs.length > 0
+          ? litBulbs.length === 1
+            ? 'BULB LIT'
+            : `${litBulbs.length} BULBS LIT`
+          : exploded.length > 0
+            ? exploded.length === 1
+              ? 'BULB EXPLODED'
+              : `${exploded.length} BULBS EXPLODED`
+            : bulbIds.length === 0
+              ? 'NO BULBS'
+              : 'BULB DARK',
     lit: litBulbs.length > 0,
+    strain: strained.length > 0,
   }
 }

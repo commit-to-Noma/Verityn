@@ -35,3 +35,6 @@ the Under the hood Smart details section, and the README.
 - Sketch pad Insulated Trace Mode trims fresh ink within 8 px of existing ink, flashes the collision, undoes a split stroke as one batch — [stroke tests](../frontend/src/sketch/strokes.test.ts), also exercised by the browser smoke.
 - Reality Check keeps the mandated neutral verdict line; the switch-practice explainer is compressed to one line — browser smoke reality-switch-practice checks.
 - Run failures distinguish transport loss (auto-retry, "is the backend running?") from stale-backend contract mismatches (no retry, "restart the backend") — browser smoke stale-honesty checks; sweep stop notes match the kind.
+- Strain headlines: banner/HUD name BULB OVERWORKED with flowing amps; shake doubled; Overwork preset loads hot at 18 V — [banner tests](../frontend/src/canvas/banner.test.ts), smoke strain checks.
+- Time Bomb breathes: 1.4 s strain beat plus a detonation flash frame; exploded nodes hold gap volts with zero amps/watts — smoke `explosion stages a strain beat`.
+- Starter grid refreshed: Polarity Duel (0 V standoff, flip to 12 V), Dim Duo (series split), The Forbidden Wire (short reframe); Overwork loads hot — [preset tests](../frontend/src/experiment/presets.test.ts), smoke duo/duel checks.

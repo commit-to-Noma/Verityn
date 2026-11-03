@@ -33,23 +33,26 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     expected: 'L1 0.6 A, 3.6 W, lit',
   },
   {
-    id: 'open-switch',
-    title: 'Open the switch',
-    tagline: 'Break the loop → current stops → bulb stays dark',
-    prompt: 'The wiring is complete but the switch is open. Run it, then close the switch and run again.',
+    id: 'polarity-duel',
+    title: 'Polarity Duel',
+    tagline: 'Two batteries push opposite ways → 0 V standoff',
+    prompt:
+      'Two batteries, one bulb — and darkness. Double-click a battery to flip its polarity, then run again: 0 V becomes 12 V.',
     seed: {
       nodes: [
-        { id: 'B1', kind: 'battery', x: 230, y: 30 },
-        { id: 'S1', kind: 'switch', closed: false, x: 40, y: 160 },
+        { id: 'B1', kind: 'battery', volts: 6, x: 80, y: 30 },
+        { id: 'B2', kind: 'battery', volts: 6, x: 380, y: 30 },
+        { id: 'S1', kind: 'switch', closed: true, x: 40, y: 160 },
         { id: 'L1', kind: 'bulb', x: 230, y: 290 },
       ],
       edges: [
-        { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
-        { id: 'W2', source: 'S1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'a' },
-        { id: 'W3', source: 'B1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
+        { id: 'W1', source: 'B1', sourceTerminal: 'b', target: 'B2', targetTerminal: 'b' },
+        { id: 'W2', source: 'B1', sourceTerminal: 'a', target: 'S1', targetTerminal: 'a' },
+        { id: 'W3', source: 'S1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'a' },
+        { id: 'W4', source: 'L1', sourceTerminal: 'b', target: 'B2', targetTerminal: 'a' },
       ],
     },
-    expected: 'valid, L1 0.0 A, 0.0 W, dark',
+    expected: 'L1 0.0 A dark while opposing; 12 V 1.2 A lit after flipping one battery',
   },
   {
     id: 'time-bomb',
@@ -71,34 +74,31 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
     expected: 'L1 explodes on the first run (24 V past the 18 V blow point)',
   },
   {
-    id: 'parallel-power',
-    title: 'Parallel Power',
-    tagline: 'Three bulbs across one battery → all lit, full brightness',
+    id: 'dim-duo',
+    title: 'Dim Duo',
+    tagline: 'Two bulbs split one battery → both dim',
     prompt:
-      'Three bulbs share the same battery terminals. In series they would dim; in parallel each gets the full 6 V. Run it and compare.',
+      'Each bulb gets half the push. Run it, then add a second battery in series — what changes?',
     seed: {
       nodes: [
-        { id: 'B1', kind: 'battery', volts: 6, x: 300, y: 30 },
+        { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },
         { id: 'L1', kind: 'bulb', x: 60, y: 160 },
-        { id: 'L2', kind: 'bulb', x: 300, y: 290 },
-        { id: 'L3', kind: 'bulb', x: 540, y: 160 },
+        { id: 'L2', kind: 'bulb', x: 230, y: 290 },
       ],
       edges: [
         { id: 'W1', source: 'B1', sourceTerminal: 'a', target: 'L1', targetTerminal: 'a' },
-        { id: 'W2', source: 'B1', sourceTerminal: 'a', target: 'L2', targetTerminal: 'a' },
-        { id: 'W3', source: 'B1', sourceTerminal: 'a', target: 'L3', targetTerminal: 'a' },
-        { id: 'W4', source: 'L1', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
-        { id: 'W5', source: 'L2', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
-        { id: 'W6', source: 'L3', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
+        { id: 'W2', source: 'L1', sourceTerminal: 'b', target: 'L2', targetTerminal: 'a' },
+        { id: 'W3', source: 'L2', sourceTerminal: 'b', target: 'B1', targetTerminal: 'b' },
       ],
     },
-    expected: 'L1, L2, L3 0.6 A, 3.6 W each, all lit',
+    expected: 'L1, L2 0.3 A, 0.9 W each, both dim-lit',
   },
   {
     id: 'shorted-battery',
-    title: 'Shorted battery',
-    tagline: 'Explore why a direct wire across a battery is rejected',
-    prompt: 'A wire connects the battery straight back to itself. What does the simulator say, and why?',
+    title: 'The Forbidden Wire',
+    tagline: 'Wire a battery straight back to itself → refused',
+    prompt:
+      'No bulb, no switch — just a wire across the terminals. Run it and watch the simulator refuse: red glow, zap, and the reason why.',
     seed: {
       nodes: [{ id: 'B1', kind: 'battery', x: 230, y: 160 }],
       edges: [
@@ -110,12 +110,12 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
   {
     id: 'overload-bulb',
     title: 'Overwork the bulb',
-    tagline: 'Stack batteries → find where intact ends and the bulb blows',
+    tagline: 'Loaded hot at 18 V → watch the bulb strain',
     prompt:
-      'Run it with one battery first. Add a second in series and run again  -  still intact at 12 V. Add a third for 18 V, then a fourth: what happens past 18 V?',
+      'This bench loads past the 12 V rating. Run it and watch the bulb strain, then drop to 12 V for intact and push past 18 V to blow it.',
     seed: {
       nodes: [
-        { id: 'B1', kind: 'battery', volts: 6, x: 230, y: 30 },
+        { id: 'B1', kind: 'battery', volts: 18, x: 230, y: 30 },
         { id: 'S1', kind: 'switch', closed: true, x: 40, y: 160 },
         { id: 'L1', kind: 'bulb', x: 230, y: 290 },
       ],
@@ -125,6 +125,6 @@ export const EXPERIMENT_PRESETS: ExperimentPreset[] = [
         { id: 'W3', source: 'B1', sourceTerminal: 'b', target: 'L1', targetTerminal: 'b' },
       ],
     },
-    expected: 'L1 0.6 A, 3.6 W, intact; 12 V intact; 18 V overworked; past 18 V exploded',
+    expected: 'L1 1.8 A, 32.4 W, overworked at 18 V; 12 V intact; past 18 V exploded',
   },
 ]

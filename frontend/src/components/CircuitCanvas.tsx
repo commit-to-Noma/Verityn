@@ -1093,6 +1093,8 @@ function CanvasInner({
   const [toast, setToast] = useState<
     null | { phase: 'retrying' } | { phase: 'failed'; message?: string }
   >(null)
+  /** Detonation flash key; set when a fresh explosion lands. */
+  const [blastFlash, setBlastFlash] = useState<number | null>(null)
   const retryTimer = useRef<number | null>(null)
   const attemptRef = useRef(0)
   const retryRunRef = useRef(() => {})
@@ -1485,35 +1487,48 @@ function CanvasInner({
         )
         const applyResultToNodes = (staged: boolean): void => {
           setNodes((current) =>
-            current.map((node) => ({
-              ...node,
-              data: {
-                ...node.data,
-                glow: result.ok && node.data.kind === 'bulb'
-                  ? glowIntensity(result.components[node.id]?.power ?? 0)
-                  : 0,
-                glowBurst: result.ok && node.data.kind === 'bulb' &&
-                  shouldBurstGlow(node.data.glow, result.components[node.id]?.power ?? 0),
-                invalid: offenders.has(node.id),
-                measurement: result.ok ? result.components[node.id] : undefined,
-                condition:
-                  mode === 'experiment' && result.ok
-                    ? staged && newlyExploded.has(node.id)
-                      ? 'overworked'
-                      : result.conditions[node.id]
-                    : undefined,
-              },
-            })),
+            current.map((node) => {
+              const appliedCondition =
+                mode === 'experiment' && result.ok
+                  ? staged && newlyExploded.has(node.id)
+                    ? 'overworked'
+                    : result.conditions[node.id]
+                  : undefined
+              // A blown filament is an open gap: it holds voltage but carries
+              // no current and dissipates no power. The raw surge numbers are
+              // the cause of death, shown on the battery — never as flow.
+              const destroyed = appliedCondition === 'exploded'
+              const raw = result.ok ? result.components[node.id] : undefined
+              const measurement =
+                raw !== undefined && destroyed ? { ...raw, current: 0, power: 0 } : raw
+              const watts = measurement?.power ?? 0
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  glow: result.ok && node.data.kind === 'bulb' ? glowIntensity(watts) : 0,
+                  glowBurst:
+                    result.ok &&
+                    node.data.kind === 'bulb' &&
+                    shouldBurstGlow(node.data.glow, watts),
+                  invalid: offenders.has(node.id),
+                  measurement,
+                  condition: appliedCondition,
+                },
+              }
+            }),
           )
         }
         if (newlyExploded.size > 0 && !reducedMotion()) {
           applyResultToNodes(true)
-          // Paint beat: let the shake render before the blast.
-          await new Promise((resolve) => window.setTimeout(resolve, 600))
+          // Strain beat: a long shake so the demo can narrate the stress
+          // before the blast. Skipped under reduced motion.
+          await new Promise((resolve) => window.setTimeout(resolve, 1400))
           if (requestId.current !== id) {
             return
           }
           applyResultToNodes(false)
+          setBlastFlash(Date.now())
         } else {
           applyResultToNodes(false)
         }
@@ -2279,11 +2294,14 @@ function CanvasInner({
             aria-label="Result heads-up display"
             className="border-glass-border pointer-events-none absolute right-3 top-3 z-10 rounded-full border bg-black/60 px-3 py-1 font-mono text-xs backdrop-blur-sm"
           >
-            {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.lit ? 'Lit' : 'Dark'}
+            {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.strain ? 'Overworked' : hud.lit ? 'Lit' : 'Dark'}
           </div>
         )}
         {mode === 'experiment' && toolDock}
         {dockTools === 'top' && toolDockTop}
+        {blastFlash !== null && (
+          <div key={blastFlash} aria-hidden="true" className="blast-flash pointer-events-none absolute inset-0 z-20" />
+        )}
       </div>
     </>
   )

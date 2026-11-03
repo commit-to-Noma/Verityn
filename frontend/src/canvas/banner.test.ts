@@ -39,7 +39,7 @@ describe('bannerModel', () => {
         { id: 'L1', type: 'bulb' },
       ]),
     )
-    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: 'BULB LIT', lit: true })
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: 'BULB LIT', lit: true, strain: false })
   })
 
   it('models the open-switch twist as loop open and dark', () => {
@@ -51,7 +51,7 @@ describe('bannerModel', () => {
         { id: 'L1', type: 'bulb' },
       ]),
     )
-    expect(model).toEqual({ state: 'LOOP OPEN', amps: 0, outcome: 'BULB DARK', lit: false })
+    expect(model).toEqual({ state: 'LOOP OPEN', amps: 0, outcome: 'BULB DARK', lit: false, strain: false })
   })
 
   it('counts both parallel transfer bulbs and takes the largest current', () => {
@@ -66,7 +66,7 @@ describe('bannerModel', () => {
         { id: 'L2', type: 'bulb' },
       ]),
     )
-    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: '2 BULBS LIT', lit: true })
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: '2 BULBS LIT', lit: true, strain: false })
   })
 
   it('handles a solved circuit with no bulbs', () => {
@@ -74,7 +74,7 @@ describe('bannerModel', () => {
       solved({ B1: { voltage: 6, current: 0, power: 0 } }),
       netlist([{ id: 'B1', type: 'battery' }]),
     )
-    expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'NO BULBS', lit: false })
+    expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'NO BULBS', lit: false, strain: false })
   })
 
   it('reports an exploded bulb as exploded, never lit, with zero headline amps', () => {
@@ -88,7 +88,7 @@ describe('bannerModel', () => {
         { id: 'L1', type: 'bulb' },
       ]),
     )
-    expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'BULB EXPLODED', lit: false })
+    expect(model).toEqual({ state: 'NO GLOW', amps: 0, outcome: 'BULB EXPLODED', lit: false, strain: false })
   })
 
   it('still celebrates the lit sibling of an exploded bulb', () => {
@@ -105,6 +105,37 @@ describe('bannerModel', () => {
         { id: 'L2', type: 'bulb' },
       ]),
     )
-    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: 'BULB LIT', lit: true })
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 0.6, outcome: 'BULB LIT', lit: true, strain: false })
+  })
+
+  it('names a straining bulb overworked while keeping its flowing amps', () => {
+    const result = solved({ L1: { voltage: 18, current: 1.8, power: 32.4 } })
+    result.conditions = { L1: 'overworked' }
+    const model = bannerModel(
+      result,
+      netlist([
+        { id: 'B1', type: 'battery' },
+        { id: 'S1', type: 'switch', closed: true },
+        { id: 'L1', type: 'bulb' },
+      ]),
+    )
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 1.8, outcome: 'BULB OVERWORKED', lit: true, strain: true })
+  })
+
+  it('headlines strain over fine siblings', () => {
+    const result = solved({
+      L1: { voltage: 18, current: 1.8, power: 32.4 },
+      L2: { voltage: 6, current: 0.6, power: 3.6 },
+    })
+    result.conditions = { L1: 'overworked', L2: 'intact' }
+    const model = bannerModel(
+      result,
+      netlist([
+        { id: 'B1', type: 'battery' },
+        { id: 'L1', type: 'bulb' },
+        { id: 'L2', type: 'bulb' },
+      ]),
+    )
+    expect(model).toEqual({ state: 'CLOSED LOOP', amps: 1.8, outcome: 'BULB OVERWORKED', lit: true, strain: true })
   })
 })

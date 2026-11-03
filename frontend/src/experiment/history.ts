@@ -90,7 +90,7 @@ export function hudReading(result: SimulateResult, netlist: Netlist): HudReading
   if (banner === null) {
     return null
   }
-  return { sourceVolts: measuredSourceVolts(result, netlist), amps: banner.amps, lit: banner.lit }
+  return { sourceVolts: measuredSourceVolts(result, netlist), amps: banner.amps, lit: banner.lit, strain: banner.strain }
 }
 
 /** Describe a fresh solver run; invalid runs keep their rejection code. */

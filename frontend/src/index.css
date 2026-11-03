@@ -378,16 +378,41 @@ body {
     transform: translate(0, 0) rotate(0deg);
   }
   25% {
-    transform: translate(0.8px, -0.6px) rotate(0.6deg);
+    transform: translate(1.6px, -1.2px) rotate(1.2deg);
   }
   50% {
-    transform: translate(-0.7px, 0.5px) rotate(-0.5deg);
+    transform: translate(-1.4px, 1px) rotate(-1deg);
   }
   75% {
-    transform: translate(0.6px, 0.6px) rotate(0.4deg);
+    transform: translate(1.2px, 1.2px) rotate(0.8deg);
   }
   100% {
     transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+/* Detonation flash: a white-orange frame at the blast instant. Opacity
+   rests at 0 so reduced-motion (animation none) renders nothing. */
+.blast-flash {
+  background: radial-gradient(
+    circle at 50% 55%,
+    rgb(255 240 200 / 0.85),
+    rgb(255 150 60 / 0.35) 45%,
+    transparent 70%
+  );
+  opacity: 0;
+  animation: blast-flash-frame 0.5s ease-out both;
+}
+
+@keyframes blast-flash-frame {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

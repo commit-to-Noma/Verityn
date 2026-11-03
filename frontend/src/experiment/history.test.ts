@@ -259,7 +259,19 @@ describe('compareRuns', () => {
 
 describe('hudReading', () => {
   it('reads net source volts, headline amps, and the lit word', () => {
-    expect(hudReading(solved(3.6, 0.6), LOOP)).toEqual({ sourceVolts: 6, amps: 0.6, lit: true })
+    expect(hudReading(solved(3.6, 0.6), LOOP)).toEqual({ sourceVolts: 6, amps: 0.6, lit: true, strain: false })
+  })
+
+  it('flags straining runs for the overworked word', () => {
+    const strained = {
+      ...solved(32.4, 1.8),
+      components: {
+        B1: { voltage: 18, current: -1.8, power: -32.4 },
+        L1: { voltage: 18, current: 1.8, power: 32.4 },
+      },
+      conditions: { L1: 'overworked' },
+    } as unknown as SimulateResult
+    expect(hudReading(strained, LOOP)).toEqual({ sourceVolts: 18, amps: 1.8, lit: true, strain: true })
   })
 
   it('reads dark runs with zero amps', () => {
@@ -270,7 +282,7 @@ describe('hudReading', () => {
         L1: { voltage: 0, current: 0, power: 0 },
       },
     } as unknown as SimulateResult
-    expect(hudReading(dark, LOOP)).toEqual({ sourceVolts: 0, amps: 0, lit: false })
+    expect(hudReading(dark, LOOP)).toEqual({ sourceVolts: 0, amps: 0, lit: false, strain: false })
   })
 
   it('returns null for rejections', () => {
