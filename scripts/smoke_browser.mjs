@@ -649,6 +649,10 @@ async function drive() {
   await waitFor(() => hasText('1 / 5 · VERITYN TOOLS'), 'turntable back to lab')
   await clickButtonStarts('Open Guided Lab')
   await waitFor(() => hasText('loose ends'), 'station opens lab')
+  await waitFor(() => hasText('Mounting Engineering Workspace'), 'gateway shows', 5000)
+  check('guided gateway mounts the workspace', await hasText('Initializing Module 1'))
+  await clickButton('Skip')
+  await waitFor(async () => !(await hasText('Mounting Engineering Workspace')), 'gateway skipped', 5000)
   await clickButton('Hub')
   await waitFor(() => hasText('Imagine it. Test it. Understand it.'), 'hub again')
   await clickTab('Experiment Bay')
@@ -689,10 +693,7 @@ async function drive() {
   await clickButton('Start your own lab')
 
   await waitFor(() => hasText('loose ends'), 'l1 predict')
-  await waitFor(() => hasText('Mounting Engineering Workspace'), 'gateway shows', 5000)
-  check('guided gateway mounts the workspace', await hasText('Initializing Module 1'))
-  await clickButton('Skip')
-  await waitFor(async () => !(await hasText('Mounting Engineering Workspace')), 'gateway skipped', 5000)
+  check('gateway shows once per session', !(await hasText('Mounting Engineering Workspace')))
   check('Built with Meta disclosures are hidden in the Guided Lab', !(await hasText('Built with Meta')))
   check(
     'guided lab opens with the task',

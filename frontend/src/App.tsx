@@ -708,16 +708,22 @@ export default function App() {
   }, [lensPage, experimentPage, stage])
 
   /** Gateway transition: once per session, first guided entry gets a 3 s
-   * mount screen. Skipped for demos, auto runs, and reduced motion. */
+   * mount screen. Skipped for demos, auto runs, and reduced motion.
+   * Leaving the lab context forces it closed, so a mid-transition exit can
+   * never orphan the dialog over the Hub. Split from the timer below so a
+   * StrictMode remount re-arms the timeout instead of stranding the dialog. */
   useEffect(() => {
     if (
       stage === 'intro' ||
       lensPage ||
       experimentPage ||
-      gatewayShown.current ||
       auto ||
       demo.active
     ) {
+      setGateway(false)
+      return
+    }
+    if (gatewayShown.current) {
       return
     }
     gatewayShown.current = true
@@ -725,9 +731,16 @@ export default function App() {
       return
     }
     setGateway(true)
+  }, [stage, lensPage, experimentPage, auto, demo.active])
+
+  /** Gateway auto-dismiss; cleanup-safe under effect re-runs. */
+  useEffect(() => {
+    if (!gateway) {
+      return
+    }
     const timer = window.setTimeout(() => setGateway(false), 3000)
     return () => window.clearTimeout(timer)
-  }, [stage, lensPage, experimentPage, auto, demo.active])
+  }, [gateway])
 
   /** Reality Lens is a first-class workspace, not a footer tool. Leaving the
    * journey unmounts the canvases, so any latched gate is cleared: builds must
