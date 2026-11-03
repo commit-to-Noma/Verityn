@@ -60,8 +60,10 @@ evidence verification before it reaches the learner.
   explicit runs, session-local history with current-vs-previous
   comparison, an optional solver-first explanation, a Stress
   Test Rig that sweeps one battery through a voltage ladder and
-  tables each threshold, and eight session missions checked
-  against recorded runs.
+  tables each threshold, eight session missions checked
+  against recorded runs, plain-words rejection guidance with
+  history pills and per-run detail, and failure-proof sweeps
+  (bench lock, paced points, stop notes, no zombie locks).
 - Overwork physics (simplified classroom model): rated bulbs
   (12 V / 14.4 W defaults), assessed intact/overworked/exploded
   conditions, per-battery voltage controls, and a session

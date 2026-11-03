@@ -1,5 +1,5 @@
 import type { ComponentCondition, Netlist, SimulateResult } from '../api/client'
-import { bannerModel } from '../canvas/banner'
+import { bannerModel, type HudReading } from '../canvas/banner'
 import { friendlyComponentName } from '../components/componentNames'
 import { LIT_POWER_W } from '../lessons/lesson'
 
@@ -84,6 +84,15 @@ function formatVolts(value: number): string {
   return `${Number.isInteger(value) ? value.toString() : value.toFixed(1)} V`
 }
 
+/** Heads-up reading for the canvas overlay; null unless the run solved. */
+export function hudReading(result: SimulateResult, netlist: Netlist): HudReading | null {
+  const banner = bannerModel(result, netlist)
+  if (banner === null) {
+    return null
+  }
+  return { sourceVolts: measuredSourceVolts(result, netlist), amps: banner.amps, lit: banner.lit }
+}
+
 /** Describe a fresh solver run; invalid runs keep their rejection code. */
 export function describeRun(
   n: number,
@@ -120,23 +129,43 @@ export function describeRun(
   }
 }
 
-function bulbWords(record: RunRecord): string {
-  if (record.bulbCount === 0) {
-    return 'no bulbs'
-  }
-  if (record.bulbsLit === 0) {
-    return 'bulb dark'
-  }
-  return record.bulbsLit === 1 ? '1 bulb lit' : `${record.bulbsLit} bulbs lit`
+const ERROR_WORDS: Record<string, string> = {
+  DANGLING_TERMINAL: 'Loose wire',
+  FLOATING_COMPONENT: 'Unwired part',
+  SHORTED_BATTERY: 'Short circuit',
+  CONFLICTING_SOURCES: 'Conflicting batteries',
+  EMPTY_CIRCUIT: 'Empty bench',
+  NO_BATTERY: 'No battery',
+  MALFORMED_NETLIST: 'Unreadable circuit',
+  INVALID_VALUE: 'Bad value',
+  UNSOLVABLE: 'Unsolvable',
+  NO_PATH: 'Incomplete loop',
+  SHORT_CIRCUIT: 'Short circuit',
 }
 
-/** One line per run, e.g. `Run 3  -  Switch opened  -  0.0 A  -  bulb dark`. */
+/** Solver rejection codes in plain words; unknown codes are humanized,
+ * never shown raw outside Trace. */
+export function friendlyErrorCode(code: string | null | undefined): string {
+  if (code === null || code === undefined || code === '') {
+    return 'Rejected'
+  }
+  const known = ERROR_WORDS[code]
+  if (known !== undefined) {
+    return known
+  }
+  return code
+    .split('_')
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+/** One line per run, e.g. `Run 3  -  Switch opened  -  0.0 A`; the
+ * outcome pill beside it carries lit/dark/rejected. */
 export function summarizeRun(record: RunRecord): string {
   if (!record.valid) {
-    const code = record.errorCode ?? 'rejected'
-    return `Run ${record.n}  -  ${record.label}  -  not testable (${code})`
+    return `Run ${record.n}  -  ${record.label}  -  not testable (${friendlyErrorCode(record.errorCode)})`
   }
-  const base = `Run ${record.n}  -  ${record.label}  -  ${record.sourceVolts.toFixed(1)} V net source  -  ${record.amps.toFixed(1)} A  -  ${bulbWords(record)}`
+  const base = `Run ${record.n}  -  ${record.label}  -  ${record.sourceVolts.toFixed(1)} V net source  -  ${record.amps.toFixed(1)} A`
   const events = record.bulbs
     .filter((bulb) => bulb.condition === 'overworked' || bulb.condition === 'exploded')
     .map((bulb) => `${friendlyComponentName(bulb.id)} ${bulb.condition}`)
@@ -208,7 +237,44 @@ export function diagnoseRun(
   previous: RunRecord | null,
 ): string[] {
   if (!result.ok) {
-    return []
+    const code = result.error_code ?? 'rejected'
+    const names = (result.component_ids ?? []).map((id) => friendlyComponentName(id))
+    const who = names.length === 0 ? null : names.join(', ')
+    if (code === 'DANGLING_TERMINAL') {
+      return [
+        who === null
+          ? 'Loose wire: some terminals are not connected, so the loop is incomplete. Connect every open terminal and run again.'
+          : `Loose wire: ${who} ${names.length === 1 ? 'has' : 'have'} a loose end, so the loop is incomplete. Connect every open terminal and run again.`,
+      ]
+    }
+    if (code === 'FLOATING_COMPONENT') {
+      return [
+        who === null
+          ? 'Unwired part: a part is not wired into the loop. Connect every component, then run again.'
+          : `Unwired part: ${who} ${names.length === 1 ? 'is' : 'are'} not wired into the loop. Connect every component, then run again.`,
+      ]
+    }
+    if (code === 'SHORTED_BATTERY') {
+      const cells = (result.component_ids ?? [])
+        .filter((id) => netlist.components.some((part) => part.id === id && part.type === 'battery'))
+        .map((id) => friendlyComponentName(id))
+      const target = cells.length > 0 ? cells.join(', ') : who
+      return [
+        target === null
+          ? 'Short circuit: a wire connects the battery straight back to itself. Give the current a path through a bulb instead.'
+          : `Short circuit: a wire connects ${target} straight back to itself. Give the current a path through a bulb instead.`,
+      ]
+    }
+    if (code === 'CONFLICTING_SOURCES') {
+      return [
+        who === null
+          ? 'Conflicting batteries: two batteries fight each other, so the circuit cannot settle. Use one battery at a time.'
+          : `Conflicting batteries: ${who} fight each other, so the circuit cannot settle. Use one battery at a time.`,
+      ]
+    }
+    return [
+      `Not testable (${friendlyErrorCode(code)}). Fix the wiring and run again.`,
+    ]
   }
   const lines: string[] = []
   for (const bulb of netlist.components.filter((part) => part.type === 'bulb')) {

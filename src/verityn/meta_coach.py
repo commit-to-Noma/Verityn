@@ -114,9 +114,11 @@ _EXPLAIN_SYSTEM = (
 
 
 def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
-                         conditions=None, batteries=None):
+                         conditions=None, batteries=None,
+                         component_ids=None):
     conditions = conditions or {}
     batteries = batteries or {}
+    component_ids = component_ids or []
     if valid:
         opposing = facts.get("source.opposed") is True
         source_note = ("Some batteries face opposite directions and partly cancel."
@@ -134,13 +136,16 @@ def _explain_user_message(*, facts, valid, error_code, switches, bulbs,
             "Name an overworked or exploded bulb only when the "
             "conditions say so."
         )
+    offenders = ", ".join(component_ids) if component_ids else "unknown"
     return (
         "The simulator rejected this circuit: no measurements exist.\n"
         f"Rejection code: {error_code}.\n"
+        f"Offending parts: {offenders}.\n"
         f"Switches: {json.dumps(switches, sort_keys=True)}. "
         f"Bulbs: {json.dumps(bulbs)}.\n"
         f"Batteries: {json.dumps(batteries, sort_keys=True)}.\n"
-        "Explain why it cannot be tested, without citing any numbers."
+        "Explain why it cannot be tested, naming the offending parts, "
+        "without citing any numbers."
     )
 
 
@@ -488,7 +493,8 @@ class MetaSparkProvider:
                      facts=facts or {}, valid=valid,
                      error_code=error_code, switches=switches or {},
                      bulbs=bulbs or [], conditions=conditions,
-                     batteries=batteries)},
+                     batteries=batteries,
+                     component_ids=component_ids)},
             ],
             "temperature": 0,
             "reasoning_effort": META_REASONING_EFFORT,

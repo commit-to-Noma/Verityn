@@ -128,15 +128,36 @@ def friendly_name(component_id):
 
 
 def explain_experiment(*, facts, valid, error_code, switches, bulbs,
-                       conditions=None, batteries=None):
+                       conditions=None, batteries=None,
+                       component_ids=None):
     """Deterministic experiment explanation from server-side facts only.
 
     Numbers come from the solver facts; invalid circuits get the
-    code-owned hint; overworked and exploded bulbs get their measured
-    verdict; the closing suggestion names only parts that exist.
-    Never calls a model.
+    code-owned hint naming the offending parts; overworked and
+    exploded bulbs get their measured verdict; the closing suggestion
+    names only parts that exist. Never calls a model.
     """
     if not valid:
+        names = [friendly_name(cid) for cid in (component_ids or [])]
+        who = ", ".join(names) if names else None
+        if error_code == "DANGLING_TERMINAL" and who is not None:
+            plural = len(names) != 1
+            return (f"{who} {'have' if plural else 'has'} a loose end, "
+                    "so the loop is incomplete. Connect every open "
+                    "terminal and run again.")
+        if error_code == "FLOATING_COMPONENT" and who is not None:
+            plural = len(names) != 1
+            return (f"{who} {'are' if plural else 'is'} not wired into "
+                    "the loop. Connect every component, then run again.")
+        if error_code == "SHORTED_BATTERY" and who is not None:
+            cells = [friendly_name(cid) for cid in (component_ids or [])
+                     if re.match(r"^[Bb]\d+$", cid.strip())]
+            target = ", ".join(cells) if cells else who
+            return (f"A wire connects {target} straight back to itself. "
+                    "Give the current a path through a bulb instead.")
+        if error_code == "CONFLICTING_SOURCES" and who is not None:
+            return (f"{who} fight each other, so the circuit cannot "
+                    "settle. Use one battery at a time.")
         return EXPLAIN_INVALID.get(
             error_code,
             "The simulator could not test this circuit. Fix the wiring "
@@ -227,7 +248,8 @@ class FakeCoachProvider:
         return explain_experiment(facts=facts, valid=valid,
                                   error_code=error_code, switches=switches,
                                   bulbs=bulbs, conditions=conditions,
-                                  batteries=batteries)
+                                  batteries=batteries,
+                                  component_ids=component_ids)
 
     def conversation_reply(self, message, context=""):
         if self.fail:

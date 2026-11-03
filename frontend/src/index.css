@@ -444,6 +444,15 @@ body {
 
 .react-flow__edge.wire-dead path {
   animation: none !important;
+  stroke: var(--color-bad);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px var(--color-bad));
+}
+
+/* Recessed console screen: the flow grid sits INTO the bench, not on it. */
+.canvas-recessed {
+  border: 1px solid #374151;
+  box-shadow: inset 0 2px 14px rgb(0 0 0 / 0.55);
 }
 
 /* Overvoltage battery: the charge bar throbs instead of sitting still. */

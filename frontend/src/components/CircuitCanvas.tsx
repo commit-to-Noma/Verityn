@@ -19,6 +19,7 @@ import { CircleX, Eraser, Lightbulb, LoaderCircle, ToggleLeft, Zap } from 'lucid
 import type { CSSProperties } from 'react'
 import type { Claim, Netlist, SimulateResult, VerdictResult, VerdictStatus } from '../api/client'
 import { ApiError, askCoach, evaluateClaim, providerBadge, simulate } from '../api/client'
+import type { HudReading } from '../canvas/banner'
 import { toNetlist } from '../canvas/toNetlist'
 import { openTerminals } from '../canvas/openTerminals'
 import { closedSwitchNotice, nextTerminalInstruction } from '../canvas/terminalGuidance'
@@ -65,7 +66,7 @@ import type { LessonSeed } from '../lessons/lesson'
 
 const FLOW_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: 'var(--color-flow)' }
 const STRESS_EDGE_STYLE: CSSProperties = { strokeWidth: 2.5, stroke: '#ff6b35' }
-const DEAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: '#52525b' }
+const DEAD_EDGE_STYLE: CSSProperties = { strokeWidth: 2, stroke: '#fb7185' }
 const UNCERTAIN_EDGE_STYLE: CSSProperties = {
   strokeWidth: 2,
   stroke: 'var(--color-unknown)',
@@ -939,6 +940,8 @@ function CanvasInner({
   demoPaused = false,
   demoAutoUndo = false,
   onDemoTakeover,
+  hud = null,
+  onFailed,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -1007,6 +1010,10 @@ function CanvasInner({
   gate?: ReactNode
   /** Trace stage id for proof chips; canvases without one show no chips. */
   proofStage?: string
+  /** Compact result overlay in the canvas corner; null hides it. */
+  hud?: HudReading | null
+  /** Fired when a run fails terminally (retry budget spent); rejections excluded. */
+  onFailed?: () => void
 }) {
   const initialSeed = importRequest?.seed ?? seed
   const initialUncertain = importRequest?.uncertainIds ?? []
@@ -1072,6 +1079,18 @@ function CanvasInner({
   }, [fitView, importNonce])
   const [tool, setTool] = useState<Tool>(null)
   const [runState, setRunState] = useState<RunState>({ phase: 'idle' })
+  /** Transport failures toast instead of blocking: the bench stays editable. */
+  const [toast, setToast] = useState<null | { phase: 'retrying' } | { phase: 'failed' }>(null)
+  const retryTimer = useRef<number | null>(null)
+  const attemptRef = useRef(0)
+  const retryRunRef = useRef(() => {})
+  const clearRetry = useCallback(() => {
+    if (retryTimer.current !== null) {
+      window.clearTimeout(retryTimer.current)
+      retryTimer.current = null
+    }
+  }, [])
+  useEffect(() => clearRetry, [clearRetry])
   /** Experiment copy: idle after a run means the circuit changed. */
   const ranOnceRef = useRef(false)
   const [verdictState, setVerdictState] = useState<VerdictState>({ phase: 'idle' })
@@ -1096,6 +1115,8 @@ function CanvasInner({
     wire: initialSeed?.edges.length ?? 0,
   })
   // Callback mirrors: orchestration events must not re-fire on parent renders.
+  const onFailedRef = useRef(onFailed)
+  onFailedRef.current = onFailed
   const onDirtyRef = useRef(onDirty)
   const onVerdictRef = useRef(onVerdict)
   const onCoachDoneRef = useRef(onCoachDone)
@@ -1155,6 +1176,8 @@ function CanvasInner({
 
   const invalidate = () => {
     controller.current?.abort()
+    clearRetry()
+    setToast(null)
     requestId.current += 1
     stopHum()
     setRunState({ phase: 'idle' })
@@ -1372,6 +1395,8 @@ function CanvasInner({
     if (simulateLocked !== null) {
       return
     }
+    clearRetry()
+    setToast(null)
     controller.current?.abort()
     const next = new AbortController()
     controller.current = next
@@ -1414,6 +1439,12 @@ function CanvasInner({
       }
     }
     void (async () => {
+      // A hung backend must not hang the bench: 30 s, then fail loudly.
+      let timedOut = false
+      const watchdog = window.setTimeout(() => {
+        timedOut = true
+        next.abort()
+      }, 30000)
       try {
         const result = await simulate(netlist, next.signal)
         if (requestId.current !== id) {
@@ -1495,6 +1526,7 @@ function CanvasInner({
           }
         }
         setRunState({ phase: 'done', result, netlist })
+        attemptRef.current = 0
         ranOnceRef.current = true
         // Lessons only report solved runs; the free bench also reports
         // rejections (history + explanations need them), as does any
@@ -1527,17 +1559,43 @@ function CanvasInner({
             }
           }
         }
-      } catch (err) {
-        if (next.signal.aborted || requestId.current !== id) {
+      } catch {
+        if (requestId.current !== id) {
           return
         }
-        setRunState({
-          phase: 'error',
-          message: err instanceof ApiError ? err.message : 'Request failed.',
-        })
+        if (next.signal.aborted && !timedOut) {
+          return
+        }
+        // Transport failure (rejections arrive as data): stay editable,
+        // toast, and retry once before asking the learner to retry.
+        // The server message stays in the backend log; learners get the toast.
+        setRunState({ phase: 'idle' })
+        if (attemptRef.current < 1) {
+          attemptRef.current += 1
+          setToast({ phase: 'retrying' })
+          retryTimer.current = window.setTimeout(() => {
+            retryTimer.current = null
+            if (requestId.current !== id) {
+              return
+            }
+            retryRunRef.current()
+          }, 1500)
+        } else {
+          setToast({ phase: 'failed' })
+          onFailedRef.current?.()
+        }
+      } finally {
+        window.clearTimeout(watchdog)
       }
     })()
-  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode, reportRejections])
+  }, [edges, nodes, onSolved, setEdges, setNodes, choice, claim, simulateLocked, mode, reportRejections, clearRetry])
+  retryRunRef.current = run
+
+  /** User-initiated runs reset the auto-retry budget. */
+  const runUser = useCallback(() => {
+    attemptRef.current = 0
+    run()
+  }, [run])
 
   const loopClosed = isClosedLoop(nodes, edges)
   const unwiredTerminals = useMemo(
@@ -1603,10 +1661,10 @@ function CanvasInner({
     }
     const timer = window.setTimeout(() => {
       runRequestRef.current = runRequest
-      run()
+      runUser()
     }, 60)
     return () => window.clearTimeout(timer)
-  }, [runRequest, run])
+  }, [runRequest, runUser])
 
   /** Bench damage/voltage state, always current for the next run. */
   const benchConditionsRef = useRef(benchConditions)
@@ -2066,7 +2124,7 @@ function CanvasInner({
   )
   const canvasPane = (
     <>
-      <div ref={canvasContainerRef} className={`border-glass-border relative h-105 overflow-hidden rounded-2xl border lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : 'lg:h-[min(58vh,620px)]'}`}>
+      <div ref={canvasContainerRef} className={`canvas-recessed relative h-105 overflow-hidden rounded-2xl lg:min-h-[500px] ${layout === 'split' ? 'lg:h-full' : 'lg:h-[min(58vh,620px)]'}`}>
         <BatteryFlipContext.Provider value={flipBattery}>
         <SwitchToggleContext.Provider value={toggleSwitch}>
           <ReactFlow
@@ -2131,6 +2189,14 @@ function CanvasInner({
             <p className="text-ink-muted text-sm">Place a battery to begin</p>
           </div>
         )}
+        {hud !== null && (
+          <div
+            aria-label="Result heads-up display"
+            className="border-glass-border pointer-events-none absolute right-3 top-3 z-10 rounded-full border bg-black/60 px-3 py-1 font-mono text-xs backdrop-blur-sm"
+          >
+            {hud.sourceVolts.toFixed(1)} V · {hud.amps.toFixed(1)} A · {hud.lit ? 'Lit' : 'Dark'}
+          </div>
+        )}
       </div>
     </>
   )
@@ -2145,7 +2211,7 @@ function CanvasInner({
         <button
           type="button"
           disabled={runState.phase === 'loading' || simulateLocked !== null}
-          onClick={run}
+          onClick={runUser}
           title={simulateLocked ?? undefined}
           className="bg-flow text-on-accent flex min-h-[44px] min-w-40 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
         >
@@ -2349,7 +2415,7 @@ function CanvasInner({
             choice={choice}
             session={coachSession ?? null}
             observed={runState.result.components[claim.component]}
-            onRetry={run}
+            onRetry={runUser}
             onCoached={handleCoached}
             onCoachInteract={onCoachInteract}
             coachAvailable={!solo}
@@ -2396,17 +2462,30 @@ function CanvasInner({
           <StartVerdict prediction={prediction} challenge={challenge} result={runState.result} />
         </div>
       )}
-      {runState.phase === 'error' && (
-        <div className="glass-panel flex items-center gap-3 p-4" role="alert">
-          <CircleX className="text-bad h-6 w-6 shrink-0" aria-hidden="true" />
-          <p className="min-w-0 flex-1 text-base">{runState.message}</p>
-          <button
-            type="button"
-            onClick={run}
-            className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
-          >
-            Retry
-          </button>
+      {toast !== null && (
+        <div
+          role="alert"
+          className="glass-panel fixed right-4 top-4 z-50 flex max-w-sm items-center gap-3 p-3 shadow-xl"
+        >
+          {toast.phase === 'retrying' ? (
+            <LoaderCircle className="text-flow h-5 w-5 shrink-0 animate-spin" aria-hidden="true" />
+          ) : (
+            <CircleX className="text-bad h-5 w-5 shrink-0" aria-hidden="true" />
+          )}
+          <p className="min-w-0 flex-1 text-sm">
+            {toast.phase === 'retrying'
+              ? 'Simulator connection lost. Retrying…'
+              : 'Simulator unavailable — is the backend running? Your circuit is untouched.'}
+          </p>
+          {toast.phase === 'failed' && (
+            <button
+              type="button"
+              onClick={runUser}
+              className="border-glass-border min-h-[44px] shrink-0 rounded-[10px] border px-4 text-sm font-medium"
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
       {!completed && gate}
@@ -2610,6 +2689,8 @@ export default function CircuitCanvas({
   demoPaused,
   demoAutoUndo,
   onDemoTakeover,
+  hud,
+  onFailed,
 }: {
   seed?: LessonSeed
   eyebrow?: string
@@ -2653,6 +2734,8 @@ export default function CircuitCanvas({
   demoPaused?: boolean
   demoAutoUndo?: boolean
   onDemoTakeover?: () => void
+  hud?: HudReading | null
+  onFailed?: () => void
 }) {
   return (
     <ReactFlowProvider>
@@ -2699,6 +2782,8 @@ export default function CircuitCanvas({
         demoPaused={demoPaused}
         demoAutoUndo={demoAutoUndo}
         onDemoTakeover={onDemoTakeover}
+        hud={hud}
+        onFailed={onFailed}
       />
     </ReactFlowProvider>
   )

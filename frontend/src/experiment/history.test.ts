@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Netlist, SimulateResult } from '../api/client'
-import { batteriesOppose, compareRuns, describeRun, diagnoseRun, summarizeRun } from './history'
+import { batteriesOppose, compareRuns, describeRun, diagnoseRun, friendlyErrorCode, hudReading, summarizeRun } from './history'
 
 const LOOP: Netlist = {
   components: [
@@ -76,9 +76,8 @@ describe('diagnoseRun', () => {
     } as unknown as SimulateResult
   }
 
-  it('stays silent for healthy and rejected runs', () => {
+  it('stays silent for healthy runs', () => {
     expect(diagnoseRun(solved(3.6, 0.6), LOOP, null)).toEqual([])
-    expect(diagnoseRun(REJECTED, LOOP, null)).toEqual([])
   })
 
   it('names the overloaded bulb with its measured numbers', () => {
@@ -115,16 +114,16 @@ describe('diagnoseRun', () => {
 describe('summarizeRun', () => {
   it('renders the one-line run format', () => {
     expect(summarizeRun(describeRun(3, 'Switch opened', solved(0, 0), LOOP))).toBe(
-      'Run 3  -  Switch opened  -  6.0 V net source  -  0.0 A  -  bulb dark',
+      'Run 3  -  Switch opened  -  6.0 V net source  -  0.0 A',
     )
     expect(summarizeRun(describeRun(1, 'Light a bulb', solved(3.6, 0.6), LOOP))).toBe(
-      'Run 1  -  Light a bulb  -  6.0 V net source  -  0.6 A  -  1 bulb lit',
+      'Run 1  -  Light a bulb  -  6.0 V net source  -  0.6 A',
     )
   })
 
   it('renders rejections honestly', () => {
     expect(summarizeRun(describeRun(2, 'Shorted battery', REJECTED, LOOP))).toBe(
-      'Run 2  -  Shorted battery  -  not testable (SHORTED_BATTERY)',
+      'Run 2  -  Shorted battery  -  not testable (Short circuit)',
     )
   })
 
@@ -136,7 +135,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(overloaded)).toBe(
-      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  1 bulb lit  -  Light 1 overworked',
+      'Run 2  -  Overload the bulb  -  6.0 V net source  -  1.2 A  -  Light 1 overworked',
     )
     const damaged = describeRun(
       3,
@@ -145,7 +144,7 @@ describe('summarizeRun', () => {
       LOOP,
     )
     expect(summarizeRun(damaged)).toBe(
-      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  bulb dark  -  Light 1 exploded',
+      'Run 3  -  Overload the bulb  -  6.0 V net source  -  0.0 A  -  Light 1 exploded',
     )
   })
 })
@@ -245,5 +244,60 @@ describe('compareRuns', () => {
     const prev = describeRun(1, 'Light a bulb', solved(3.6, 0.6), LOOP)
     const curr = describeRun(2, 'Free build', solved(3.6, 0.6), LOOP)
     expect(compareRuns(prev, curr)).toBe('Compared with run 1: about the same current.')
+  })
+})
+
+describe('hudReading', () => {
+  it('reads net source volts, headline amps, and the lit word', () => {
+    expect(hudReading(solved(3.6, 0.6), LOOP)).toEqual({ sourceVolts: 6, amps: 0.6, lit: true })
+  })
+
+  it('reads dark runs with zero amps', () => {
+    const dark = {
+      ...solved(0, 0),
+      components: {
+        B1: { voltage: 6, current: 0, power: 0 },
+        L1: { voltage: 0, current: 0, power: 0 },
+      },
+    } as unknown as SimulateResult
+    expect(hudReading(dark, LOOP)).toEqual({ sourceVolts: 0, amps: 0, lit: false })
+  })
+
+  it('returns null for rejections', () => {
+    expect(hudReading(REJECTED, LOOP)).toBeNull()
+  })
+})
+
+describe('friendlyErrorCode', () => {
+  it('maps known solver codes to plain words', () => {
+    expect(friendlyErrorCode('DANGLING_TERMINAL')).toBe('Loose wire')
+    expect(friendlyErrorCode('SHORTED_BATTERY')).toBe('Short circuit')
+    expect(friendlyErrorCode('CONFLICTING_SOURCES')).toBe('Conflicting batteries')
+    expect(friendlyErrorCode('NO_PATH')).toBe('Incomplete loop')
+  })
+
+  it('humanizes unknown codes and blanks', () => {
+    expect(friendlyErrorCode('SOME_NEW_FAULT')).toBe('Some New Fault')
+    expect(friendlyErrorCode(null)).toBe('Rejected')
+    expect(friendlyErrorCode('')).toBe('Rejected')
+  })
+})
+
+describe('diagnoseRun rejections', () => {
+  it('names the loose part for dangling terminals', () => {
+    const dangling = {
+      ...REJECTED,
+      error_code: 'DANGLING_TERMINAL',
+      component_ids: ['L1'],
+    } as unknown as SimulateResult
+    expect(diagnoseRun(dangling, LOOP, null)).toEqual([
+      'Loose wire: Light 1 has a loose end, so the loop is incomplete. Connect every open terminal and run again.',
+    ])
+  })
+
+  it('names the shorted battery', () => {
+    expect(diagnoseRun(REJECTED, LOOP, null)).toEqual([
+      'Short circuit: a wire connects Battery 1 straight back to itself. Give the current a path through a bulb instead.',
+    ])
   })
 })

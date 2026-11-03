@@ -454,3 +454,25 @@ def test_meta_explain_accepts_limit_citation(monkeypatch):
     assert provider.explain(facts=facts, valid=True, error_code=None,
                             component_ids=[], switches={},
                             bulbs=["L1"]) == text
+
+
+def test_explain_dangling_names_the_loose_parts(client):
+    res = client.post("/api/coach/explain", json={"netlist": {"components": [
+        {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+        {"id": "L1", "type": "bulb", "a": "p", "b": "q"},
+    ]}})
+    body = res.get_json()
+    assert body["valid"] is False
+    assert body["error_code"] == "DANGLING_TERMINAL"
+    assert "Battery 1, Light 1 have a loose end" in body["text"]
+
+
+def test_explain_shorted_names_the_battery(client):
+    res = client.post("/api/coach/explain", json={"netlist": {"components": [
+        {"id": "B1", "type": "battery", "volts": 6, "a": "p", "b": "0"},
+        {"id": "W1", "type": "wire", "a": "p", "b": "0"},
+    ]}})
+    body = res.get_json()
+    assert body["valid"] is False
+    assert body["error_code"] == "SHORTED_BATTERY"
+    assert "connects Battery 1 straight back to itself" in body["text"]

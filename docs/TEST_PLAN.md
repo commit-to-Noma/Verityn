@@ -444,6 +444,20 @@ Phase 6 result acceptance (all in the real browser unless noted):
   recovery, demolition, finished sweep); each card shows Done
   or its next-step hint (unit: all predicates; browser: seven
   completions, screenshot `bay-missions`).
+- Transport failures toast (retry once, then a Retry toast) and
+  never block the bench; solver rejections keep plain-words
+  names everywhere (codes stay in Trace) with part-naming
+  guidance in diagnostics and explanations, color-coded history
+  pills, and per-run detail on click; the canvas is recessed
+  and rejected wires glow red (unit: codes, guidance, summary;
+  browser: friendly short, diagnostics, explain round trip,
+  pills, run detail, screenshot `bay-history`).
+- A running sweep locks the bench (overlay, disabled controls),
+  paces points 400 ms apart, stops on the first rejection with
+  a fix-it note, and always releases on terminal failure — a
+  dead backend yields a stop note, never a zombie lock — with
+  a 30 s run watchdog (browser: lock, cancel, short refusal;
+  probes: rage-click, dead-backend sweep).
 - Explanations unlock for fresh runs only; the server adds
   limits, battery count/total, conditions, and volts to the
   grounded facts (unit: spy payload, fake overwork/exploded

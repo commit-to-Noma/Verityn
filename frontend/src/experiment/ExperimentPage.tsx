@@ -10,7 +10,7 @@ import {
 } from '../api/client'
 import type { LessonSeed } from '../lessons/lesson'
 import { latchedExplosion, validateBatteryVolts } from './bench'
-import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
+import { BULB_OHMS, batteriesOppose, compareRuns, describeRun, diagnoseRun, friendlyErrorCode, hudReading, measuredSourceVolts, summarizeRun, type RunRecord } from './history'
 import { EXPERIMENT_PRESETS } from './presets'
 import {
   POINT_STATE_LABEL,
@@ -53,10 +53,12 @@ function BatteryRow({
   id,
   volts,
   onApply,
+  disabled = false,
 }: {
   id: string
   volts: number
   onApply: (id: string, value: number) => void
+  disabled?: boolean
 }) {
   const [draft, setDraft] = useState(String(volts))
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +81,7 @@ function BatteryRow({
           <input
             id={`battery-${id}-volts`}
             value={draft}
+            disabled={disabled}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
@@ -96,8 +99,9 @@ function BatteryRow({
       <button
         type="button"
         onClick={apply}
+        disabled={disabled}
         aria-label={`Apply ${id} voltage`}
-        className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+        className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
       >
         Apply
       </button>
@@ -133,11 +137,10 @@ function LatestResult({
 }) {
   const { result, netlist } = fresh
   if (!result.ok) {
-    const code = result.error_code ?? 'rejected'
     return (
-      <section aria-label="Latest result" className="glass-panel flex flex-col gap-2 p-4">
+      <section aria-label="Latest result" className="glass-panel flex flex-col gap-2 p-3">
         <h3 className="text-base font-semibold">Latest result</h3>
-        <p className="text-sm">Not testable ({code}).</p>
+        <p className="text-sm">Not testable ({friendlyErrorCode(result.error_code)}).</p>
         <p className="text-ink-muted text-xs">Measured by Verityn Solver.</p>
       </section>
     )
@@ -148,7 +151,7 @@ function LatestResult({
   const sourceVolts = measuredSourceVolts(result, netlist)
   const opposingSources = batteriesOppose(result, netlist)
   return (
-    <section aria-label="Latest result" className="glass-panel flex flex-col gap-3 p-4">
+    <section aria-label="Latest result" className="glass-panel flex flex-col gap-2 p-3">
       <h3 className="text-base font-semibold">Latest result</h3>
       <p className="text-sm">Net source voltage: {sourceVolts.toFixed(1)} V</p>
       {opposingSources && (
@@ -157,7 +160,7 @@ function LatestResult({
       {bulbs.length === 0 ? (
         <p className="text-ink-muted text-sm">No bulbs in this circuit.</p>
       ) : (
-        <ul className="flex flex-col gap-3" aria-live="polite">
+        <ul className="flex flex-col gap-2" aria-live="polite">
           {bulbs.map((bulb) => {
             const measured = result.components[bulb.id]
             const condition = conditions[bulb.id]
@@ -216,7 +219,7 @@ function LatestResult({
 type RigState =
   | { phase: 'idle' }
   | { phase: 'running'; plan: SweepPlan; points: SweepPoint[] }
-  | { phase: 'done'; plan: SweepPlan; points: SweepPoint[]; stopped: boolean }
+  | { phase: 'done'; plan: SweepPlan; points: SweepPoint[]; stopped: boolean; stopNote?: string }
 
 /** Voltage-ladder sweep over one bench battery. Every point runs the
  * real bench through the normal path; the table only reads history. */
@@ -254,10 +257,10 @@ function StressRigPanel({
   return (
     <section
       aria-label="Stress Test Rig"
-      className="glass-panel relative flex flex-col gap-3 overflow-hidden p-4"
+      className="glass-panel border-light/30 relative flex flex-col gap-3 overflow-hidden bg-black/25 p-4"
     >
-      <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
-      <h3 className="text-base font-semibold">Stress Test Rig</h3>
+      <div aria-hidden="true" className="bg-light absolute inset-x-0 top-0 h-0.5" />
+      <h3 className="text-light text-base font-semibold">Stress Test Rig</h3>
       <p className="text-ink-muted text-sm">
         Step one battery through a voltage ladder and watch each threshold land. Every point is a
         real bench run, logged in the history below.
@@ -350,7 +353,9 @@ function StressRigPanel({
       )}
       {rig.phase === 'done' &&
         (rig.points.length === 0 ? (
-          <p className="text-ink-muted text-sm">Stopped before the first point recorded.</p>
+          <p className="text-ink-muted text-sm">
+            {rig.stopNote ?? 'Stopped before the first point recorded.'}
+          </p>
         ) : (
           <div className="flex flex-col gap-2">
             <table className="w-full text-sm">
@@ -410,12 +415,73 @@ function StressRigPanel({
             </ul>
             {rig.stopped && (
               <p className="text-ink-muted text-sm">
-                Stopped early — the bench changed during the sweep.
+                {rig.stopNote ?? 'Stopped early — the bench changed during the sweep.'}
               </p>
             )}
           </div>
         ))}
     </section>
+  )
+}
+
+/** Color-coded outcome pill so the history scans at a glance. */
+function RunPill({ run }: { run: RunRecord }) {
+  if (!run.valid) {
+    return (
+      <span className="border-bad/60 text-bad shrink-0 rounded-full border px-2 py-px text-xs font-medium">
+        {friendlyErrorCode(run.errorCode)}
+      </span>
+    )
+  }
+  if (run.bulbsLit > 0) {
+    return (
+      <span className="border-light/60 text-light shrink-0 rounded-full border px-2 py-px text-xs font-medium">
+        Lit
+      </span>
+    )
+  }
+  if (run.bulbCount === 0) {
+    return (
+      <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-2 py-px text-xs font-medium">
+        No bulbs
+      </span>
+    )
+  }
+  return (
+    <span className="border-glass-border text-ink-muted shrink-0 rounded-full border px-2 py-px text-xs font-medium">
+      Dark
+    </span>
+  )
+}
+
+/** Saved parameters for one history run: per-bulb readings and conditions. */
+function RunDetail({ run }: { run: RunRecord }) {
+  return (
+    <div className="border-glass-border rounded-[10px] border p-3" aria-live="polite">
+      <p className="text-sm font-medium">
+        Run {run.n} — {run.label}
+      </p>
+      {!run.valid ? (
+        <p className="text-ink-muted text-sm">
+          No readings — not testable ({friendlyErrorCode(run.errorCode)}).
+        </p>
+      ) : run.bulbs.length === 0 ? (
+        <p className="text-ink-muted text-sm">
+          Net source {run.sourceVolts.toFixed(1)} V · {run.amps.toFixed(1)} A · no bulbs on the
+          bench.
+        </p>
+      ) : (
+        <ul className="mt-1 flex flex-col gap-1">
+          {run.bulbs.map((bulb) => (
+            <li key={bulb.id} className="font-mono text-xs">
+              {friendlyComponentName(bulb.id)}: {bulb.volts.toFixed(1)} V ·{' '}
+              {bulb.amps.toFixed(1)} A · {bulb.watts.toFixed(1)} W
+              {bulb.condition !== null && ` · ${bulb.condition}`}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -476,6 +542,7 @@ export default function ExperimentPage({
   const [rigStep, setRigStep] = useState('2')
   const [rigError, setRigError] = useState<string | null>(null)
   const [missions, setMissions] = useState(initialMissionProgress)
+  const [selectedRun, setSelectedRun] = useState<number | null>(null)
   const controller = useRef<AbortController | null>(null)
   useEffect(() => () => controller.current?.abort(), [])
   /** Sweep chaining runs through onSolved callbacks (never effects), so
@@ -489,6 +556,15 @@ export default function ExperimentPage({
    * bump produces exactly one nonce-driven onDirty from the canvas;
    * counting them tells rig traffic apart from genuine user edits. */
   const nonceBumpRef = useRef(0)
+  /** Pacing timer between sweep points; cleared on cancel, abort, unmount. */
+  const rigIssueTimer = useRef<number | null>(null)
+  const clearRigTimer = useCallback(() => {
+    if (rigIssueTimer.current !== null) {
+      window.clearTimeout(rigIssueTimer.current)
+      rigIssueTimer.current = null
+    }
+  }, [])
+  useEffect(() => clearRigTimer, [clearRigTimer])
 
   const issueRigPoint = useCallback((plan: SweepPlan, volts: number) => {
     rigPendingRef.current = { batteryId: plan.batteryId, volts }
@@ -500,8 +576,9 @@ export default function ExperimentPage({
 
   const abortRig = useCallback(() => {
     rigPendingRef.current = null
+    clearRigTimer()
     setRig({ phase: 'idle' })
-  }, [])
+  }, [clearRigTimer])
 
   const startRig = useCallback(
     (batteryId: string) => {
@@ -518,24 +595,32 @@ export default function ExperimentPage({
         return
       }
       setRigError(null)
+      clearRigTimer()
       setRig({ phase: 'running', plan: checked.plan, points: [] })
       issueRigPoint(checked.plan, checked.plan.points[0])
     },
-    [issueRigPoint, rigStart, rigEnd, rigStep],
+    [clearRigTimer, issueRigPoint, rigStart, rigEnd, rigStep],
   )
 
   const cancelRig = useCallback(() => {
     rigPendingRef.current = null
+    clearRigTimer()
     const active = rigRef.current
     if (active.phase === 'running' && active.points.length >= 2) {
       setMissions((current) => markSweepComplete(current, active.points.length))
     }
     setRig((current) =>
       current.phase === 'running'
-        ? { phase: 'done', plan: current.plan, points: current.points, stopped: true }
+        ? {
+            phase: 'done',
+            plan: current.plan,
+            points: current.points,
+            stopped: true,
+            stopNote: 'Sweep cancelled — recorded points kept.',
+          }
         : current,
     )
-  }, [])
+  }, [clearRigTimer])
 
   const loadPreset = useCallback(
     (id: string, andRun: boolean) => {
@@ -593,9 +678,24 @@ export default function ExperimentPage({
       setMissions((current) => updateMissionProgress(current, record, result, netlist))
       if (activeRig.phase === 'running' && pending !== null) {
         const points = [...activeRig.points, { setVolts: pending.volts, run: record }]
-        if (points.length < activeRig.plan.points.length) {
+        if (!record.valid) {
+          // A locked bench rejects every point identically: stop at the first.
+          setRig({
+            phase: 'done',
+            plan: activeRig.plan,
+            points,
+            stopped: true,
+            stopNote: `Sweep stopped: ${friendlyErrorCode(record.errorCode)}. Fix the bench and run again.`,
+          })
+          setMissions((current) => markSweepComplete(current, points.length))
+        } else if (points.length < activeRig.plan.points.length) {
           setRig({ phase: 'running', plan: activeRig.plan, points })
-          issueRigPoint(activeRig.plan, activeRig.plan.points[points.length])
+          // A beat between points: the backend answers sequentially and
+          // the bench visuals settle before the next step lands.
+          rigIssueTimer.current = window.setTimeout(() => {
+            rigIssueTimer.current = null
+            issueRigPoint(activeRig.plan, activeRig.plan.points[points.length])
+          }, 400)
         } else {
           setRig({ phase: 'done', plan: activeRig.plan, points, stopped: false })
           setMissions((current) => markSweepComplete(current, points.length))
@@ -614,6 +714,25 @@ export default function ExperimentPage({
   const handleParts = useCallback((next: { id: string; kind: string; volts?: number }[]) => {
     setParts(next)
   }, [])
+
+  /** Terminal run failure (retry budget spent): never leave a running
+   * sweep locked — stop it with its recorded points and a clear note. */
+  const handleFailed = useCallback(() => {
+    const active = rigRef.current
+    if (active.phase !== 'running') {
+      return
+    }
+    rigPendingRef.current = null
+    clearRigTimer()
+    setRig({
+      phase: 'done',
+      plan: active.plan,
+      points: active.points,
+      stopped: true,
+      stopNote: 'Sweep stopped: simulator connection lost. Check the backend and run again.',
+    })
+    setMissions((current) => markSweepComplete(current, active.points.length))
+  }, [clearRigTimer])
 
   const handleVoltage = useCallback(
     (id: string, value: number) => {
@@ -683,6 +802,8 @@ export default function ExperimentPage({
   const rigBatteryId = batteries.some((part) => part.id === rigBattery)
     ? rigBattery
     : (batteries[0]?.id ?? '')
+  const hud = fresh === null ? null : hudReading(fresh.result, fresh.netlist)
+  const rigRunning = rig.phase === 'running'
 
   return (
     <div className="flex flex-col gap-6">
@@ -697,27 +818,38 @@ export default function ExperimentPage({
             <div
               key={preset.id}
               className={`glass-panel relative flex flex-col gap-2 overflow-hidden p-4 ${
-                activePreset === preset.id ? 'border-flow/60' : ''
+                activePreset === preset.id
+                  ? 'border-flow shadow-[0_0_24px_-6px_var(--color-flow)]'
+                  : ''
               }`}
             >
               {activePreset === preset.id && (
                 <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
               )}
-              <p className="text-base font-medium">{preset.title}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-base font-medium">{preset.title}</p>
+                {activePreset === preset.id && (
+                  <span className="bg-flow text-on-accent shrink-0 rounded-full px-2 py-px text-[11px] font-semibold">
+                    In progress
+                  </span>
+                )}
+              </div>
               <p className="text-ink-muted text-sm">{preset.tagline}</p>
               <div className="mt-auto flex flex-wrap gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => loadPreset(preset.id, false)}
+                  disabled={rigRunning}
                   aria-pressed={activePreset === preset.id}
-                  className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+                  className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Load
                 </button>
                 <button
                   type="button"
                   onClick={() => loadPreset(preset.id, true)}
-                  className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium"
+                  disabled={rigRunning}
+                  className="bg-flow text-on-accent min-h-[44px] rounded-[10px] px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Test
                 </button>
@@ -729,7 +861,8 @@ export default function ExperimentPage({
           <button
             type="button"
             onClick={resetBench}
-            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium"
+            disabled={rigRunning}
+            className="border-glass-border min-h-[44px] rounded-[10px] border px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-40"
           >
             Reset to blank
           </button>
@@ -772,8 +905,9 @@ export default function ExperimentPage({
       </section>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
-          <CircuitCanvas
+        <div className="relative min-w-0">
+          <Suspense fallback={<p className="text-ink-muted text-sm">Preparing the workbench…</p>}>
+            <CircuitCanvas
             key={`experiment-${bench.key}`}
             mode="experiment"
             proofStage="experiment"
@@ -788,8 +922,22 @@ export default function ExperimentPage({
             onParts={handleParts}
             onSolved={handleSolved}
             onDirty={handleDirty}
+            hud={hud}
+            onFailed={handleFailed}
           />
         </Suspense>
+          {rigRunning && (
+            <div
+              role="status"
+              aria-label="Sweep running, bench locked"
+              className="absolute inset-0 z-20 cursor-not-allowed rounded-2xl"
+            >
+              <p className="border-glass-border absolute left-3 top-3 rounded-full border bg-black/70 px-3 py-1 text-xs">
+                Sweep running — bench locked
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="flex min-w-0 flex-col gap-6">
           {batteries.length > 0 && (
@@ -812,6 +960,7 @@ export default function ExperimentPage({
                       id={part.id}
                       volts={applied}
                       onApply={handleVoltage}
+                      disabled={rigRunning}
                     />
                   )
                 })}
@@ -854,8 +1003,18 @@ export default function ExperimentPage({
           ) : (
             <ol className="flex flex-col gap-1">
               {runs.map((run) => (
-                <li key={run.n} className="text-sm">
-                  {summarizeRun(run)}
+                <li key={run.n} className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    data-run={run.n}
+                    aria-expanded={selectedRun === run.n}
+                    onClick={() => setSelectedRun((current) => (current === run.n ? null : run.n))}
+                    className="flex w-full flex-wrap items-center gap-2 rounded-[8px] px-1 py-0.5 text-left text-sm"
+                  >
+                    <span>{summarizeRun(run)}</span>
+                    <RunPill run={run} />
+                  </button>
+                  {selectedRun === run.n && <RunDetail run={run} />}
                 </li>
               ))}
             </ol>

@@ -1,6 +1,13 @@
 import type { Netlist, SimulateResult } from '../api/client'
 import { LIT_POWER_W } from '../lessons/lesson'
 
+/** Compact canvas overlay reading: net source volts, headline amps, lit word. */
+export interface HudReading {
+  sourceVolts: number
+  amps: number
+  lit: boolean
+}
+
 export interface BannerModel {
   /** Loop topology read from the netlist: closed, open switch, or no glow. */
   state: string
