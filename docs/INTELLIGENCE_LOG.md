@@ -57,3 +57,5 @@ the Under the hood Smart details section, and the README.
 - Roadmap copy follows the 3D interactive-labs vision in two sentences per discipline — [homepage tests](../frontend/src/components/LabIntro.test.ts).
 - STEM backdrop faded to a true background (25% silhouette, softer hue/glow) so the headline stays readable — verified by hero screenshot.
 - Why-Verityn reasons split 2 + 3 across two columns to fill the section width — smoke five-reasons check.
+- STEM backdrop is a soft blurred silhouette (6px blur, 40%) that keeps its shape without fighting the headline — verified by hero screenshot.
+- Why-Verityn reasons rebuilt as a glowing-node timeline with no boxes, ending the stretched-cell gaps — smoke five-reasons check.

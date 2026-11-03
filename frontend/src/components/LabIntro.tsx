@@ -621,7 +621,7 @@ export default function LabIntro({
                 background: `radial-gradient(circle, ${FIELD_GLOW[stemField]}28 0%, transparent 70%)`,
               }}
             />
-            <span className="block scale-[2.9] opacity-25 sm:scale-[3.5]">
+            <span className="block scale-[2.9] opacity-40 blur-[6px] sm:scale-[3.5]">
               <FieldIcon field={stemField} />
             </span>
           </div>
@@ -791,30 +791,27 @@ export default function LabIntro({
           Predicting before the AI speaks keeps the reasoning with you — Verityn sharpens thinking instead of letting
           it atrophy.
         </p>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {[IMPACT_CASES.slice(0, 2), IMPACT_CASES.slice(2)].map((column, columnIndex) => (
-            <ol key={columnIndex} className="flex flex-col gap-3">
-              {column.map((reason, index) => {
-                const number = columnIndex * 2 + index + 1
-                return (
-                  <li key={reason.title} className="glass-panel flex flex-1 flex-col gap-1.5 p-5">
-                    <p className="text-base font-semibold">
-                      <span className="mr-3 font-mono text-xs font-semibold text-light">
-                        0{number}
-                      </span>
-                      {reason.title}
-                    </p>
-                    <p className="text-sm leading-6 text-ink-muted">{reason.problem}</p>
-                    <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
-                      <span className="mr-1 font-semibold text-flow">Verityn:</span>
-                      {reason.response}
-                    </p>
-                  </li>
-                )
-              })}
-            </ol>
+        <ol className="relative mt-6 flex max-w-3xl flex-col gap-8">
+          <div aria-hidden="true" className="absolute bottom-3 left-[19px] top-3 w-px bg-glass-border" />
+          {IMPACT_CASES.map((reason, index) => (
+            <li key={reason.title} className="relative flex gap-4">
+              <span
+                aria-hidden="true"
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-flow bg-flow/20 font-mono text-xs font-bold text-flow shadow-[0_0_16px_var(--color-flow)]"
+              >
+                0{index + 1}
+              </span>
+              <div className="flex flex-col gap-1 pt-1.5">
+                <p className="text-base font-semibold">{reason.title}</p>
+                <p className="text-sm leading-6 text-ink-muted">{reason.problem}</p>
+                <p className="border-l-2 border-flow/70 pl-3 text-sm leading-6 text-ink">
+                  <span className="mr-1 font-semibold text-flow">Verityn:</span>
+                  {reason.response}
+                </p>
+              </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     </section>
   )
