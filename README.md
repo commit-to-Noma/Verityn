@@ -58,9 +58,10 @@ evidence verification before it reaches the learner.
   infer. A confirmed circuit can move to the Experiment Bay for free-form testing.
 - Experiment bench: free-form canvas with five starter presets,
   explicit runs, session-local history with current-vs-previous
-  comparison, an optional solver-first explanation, and a Stress
+  comparison, an optional solver-first explanation, a Stress
   Test Rig that sweeps one battery through a voltage ladder and
-  tables each threshold.
+  tables each threshold, and eight session missions checked
+  against recorded runs.
 - Overwork physics (simplified classroom model): rated bulbs
   (12 V / 14.4 W defaults), assessed intact/overworked/exploded
   conditions, per-battery voltage controls, and a session

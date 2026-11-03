@@ -438,6 +438,12 @@ Phase 6 result acceptance (all in the real browser unless noted):
   from history, and the summary names first glow, overwork,
   and the blow point (unit: ladder, states, summary; browser:
   2–8 V sweep, threshold table, screenshot `rig-after-sweep`).
+- Eight session missions complete only from recorded runs and
+  their netlists (first light, threshold pair, open-switch gap,
+  closed lit loop, opposing-battery tug of war, redline plus
+  recovery, demolition, finished sweep); each card shows Done
+  or its next-step hint (unit: all predicates; browser: seven
+  completions, screenshot `bay-missions`).
 - Explanations unlock for fresh runs only; the server adds
   limits, battery count/total, conditions, and volts to the
   grounded facts (unit: spy payload, fake overwork/exploded

@@ -20,6 +20,12 @@ import {
   type SweepPlan,
   type SweepPoint,
 } from './stressRig'
+import {
+  MISSIONS,
+  initialMissionProgress,
+  markSweepComplete,
+  updateMissionProgress,
+} from './missions'
 import { friendlyComponentName } from '../components/componentNames'
 
 const CircuitCanvas = lazy(() => import('../components/CircuitCanvas'))
@@ -469,6 +475,7 @@ export default function ExperimentPage({
   const [rigEnd, setRigEnd] = useState('24')
   const [rigStep, setRigStep] = useState('2')
   const [rigError, setRigError] = useState<string | null>(null)
+  const [missions, setMissions] = useState(initialMissionProgress)
   const controller = useRef<AbortController | null>(null)
   useEffect(() => () => controller.current?.abort(), [])
   /** Sweep chaining runs through onSolved callbacks (never effects), so
@@ -519,6 +526,10 @@ export default function ExperimentPage({
 
   const cancelRig = useCallback(() => {
     rigPendingRef.current = null
+    const active = rigRef.current
+    if (active.phase === 'running' && active.points.length >= 2) {
+      setMissions((current) => markSweepComplete(current, active.points.length))
+    }
     setRig((current) =>
       current.phase === 'running'
         ? { phase: 'done', plan: current.plan, points: current.points, stopped: true }
@@ -572,12 +583,14 @@ export default function ExperimentPage({
           points: activeRig.points,
           stopped: true,
         })
+        setMissions((current) => markSweepComplete(current, activeRig.points.length))
       } else if (activeRig.phase === 'running' && pending !== null) {
         rigPendingRef.current = null
         label = `Rig ${pending.batteryId} ${pending.volts} V`
       }
       const record = describeRun(runsRef.current.length + 1, label, result, netlist)
       setRuns((current) => [...current, record])
+      setMissions((current) => updateMissionProgress(current, record, result, netlist))
       if (activeRig.phase === 'running' && pending !== null) {
         const points = [...activeRig.points, { setVolts: pending.volts, run: record }]
         if (points.length < activeRig.plan.points.length) {
@@ -585,6 +598,7 @@ export default function ExperimentPage({
           issueRigPoint(activeRig.plan, activeRig.plan.points[points.length])
         } else {
           setRig({ phase: 'done', plan: activeRig.plan, points, stopped: false })
+          setMissions((current) => markSweepComplete(current, points.length))
         }
       }
       setFresh({ result, netlist })
@@ -724,6 +738,36 @@ export default function ExperimentPage({
               {activePrompt}
             </p>
           )}
+        </div>
+      </section>
+
+      <section aria-label="Missions" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h3 className="text-base font-semibold">Missions</h3>
+          <p className="text-ink-muted text-sm" aria-live="polite">
+            {missions.done.length} of {MISSIONS.length} complete — session challenges, in any order.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {MISSIONS.map((mission) => {
+            const done = missions.done.includes(mission.id)
+            return (
+              <div
+                key={mission.id}
+                data-mission={mission.id}
+                className="glass-panel relative flex flex-col gap-1 overflow-hidden p-4"
+              >
+                {done && (
+                  <div aria-hidden="true" className="bg-flow absolute inset-x-0 top-0 h-0.5" />
+                )}
+                <p className="text-base font-medium">{mission.title}</p>
+                <p className="text-ink-muted text-sm">{mission.goal}</p>
+                <p className={`text-sm font-medium ${done ? 'text-ok' : 'text-flow'}`}>
+                  {done ? 'Done' : mission.hint(missions)}
+                </p>
+              </div>
+            )
+          })}
         </div>
       </section>
 

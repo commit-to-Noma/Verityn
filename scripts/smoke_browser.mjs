@@ -12,6 +12,7 @@
  *     -> Overload flow: intact run, voltage edit, overload, damage latch,
  *        grounded explanation, reset restores intact
  *     -> Stress rig sweep: voltage ladder, threshold table, Rig history labels
+ *     -> Missions: first light, threshold, gap, loop, demolition, redline, spectrum
  *
  * Verifies React rendering, API wiring, lazy chunk loading, and button
  * interactions. Coach and vision responses are stubbed at the network layer:
@@ -308,6 +309,10 @@ async function clickPresetButton(title, label) {
     return true;
   })()`)
   if (!ok) throw new Error('preset button not found: ' + title + '/' + label)
+}
+
+async function missionDone(id) {
+  return ev(`document.querySelector('[data-mission="${id}"]')?.lastElementChild?.textContent.trim() === 'Done'`)
 }
 
 async function fillInput(id, value) {
@@ -1183,6 +1188,8 @@ async function drive() {
   await waitFor(() => hasText('Run 1 - Light a bulb'), 'history run 1', 25000)
   check('preset measures honestly', await hasText('0.6 A'))
   check('ask unlocked after run', await ev(`[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Ask Muse Spark about this result' && !b.disabled)`))
+  check('mission first light', await missionDone('first-light'))
+  check('mission loop closer', await missionDone('loop-closer'))
   await clickButton('Trace')
   check('trace off hides readings', !(await ev(`!!document.querySelector('[aria-label="Simulation result"]')`)))
   check('trace off hides trace drawer', !(await hasText('What Meta did / What code checked')))
@@ -1196,6 +1203,9 @@ async function drive() {
   await waitFor(() => hasText('Run 2 - Free build'), 'history run 2', 25000)
   check('open switch measures dark', await hasText('0.0 A'))
   check('run comparison shown', await hasText('Compared with run 1'))
+  check('mission threshold', await missionDone('threshold'))
+  check('mission gap finder', await missionDone('gap-finder'))
+  await captureScreenshot('bay-missions', 1440, '[aria-label="Missions"]')
   await clickButton('Ask Muse Spark about this result')
   await waitFor(() => hasText('Fallback coach'), 'explain served', 20000)
   check('explain caption honest', await hasText('Deterministic prototype - no model call.'))
@@ -1226,6 +1236,7 @@ async function drive() {
   await waitFor(() => hasText('Run 6 - Free build'), 'exploded run', 25000)
   check('exploded latched', await hasText('Exploded'))
   check('exploded reads dark', await hasText('0.0 A'))
+  check('mission demolition', await missionDone('demolition'))
   await captureScreenshot('bay-exploded', 1440, '[aria-label="Latest result"]')
   await clickButton('Ask Muse Spark about this result')
   await waitFor(() => hasText('exploded and no longer completes the circuit'), 'exploded explain', 20000)
@@ -1236,6 +1247,7 @@ async function drive() {
   await clickPresetButton('Overwork the bulb', 'Test')
   await waitFor(() => hasText('Run 7 - Overwork the bulb'), 'overwork after reset', 25000)
   check('reset restores intact', await hasText('Intact') && !(await hasText('Exploded')))
+  check('mission redline recovered', await missionDone('redline'))
   await fillInput('rig-start-volts', '2')
   await fillInput('rig-end-volts', '8')
   await fillInput('rig-step-volts', '2')
@@ -1243,6 +1255,7 @@ async function drive() {
   await waitFor(() => hasText('First glow at 4 V (run 9).'), 'rig thresholds', 90000)
   check('rig history labels', await hasText('Run 8 - Rig B1 2 V'))
   check('rig table states', await ev(`[...document.querySelectorAll('section[aria-label="Stress Test Rig"] tbody tr')].map((tr) => tr.lastElementChild.textContent).join(',')`) === 'Dark,Lit,Lit,Lit')
+  check('mission full spectrum', await missionDone('full-spectrum'))
   await captureScreenshot('rig-after-sweep', 1440, '[aria-label="Stress Test Rig"]')
   await clickButton('Guided Lab')
   await waitFor(() => hasText('Continue to fix it'), 'guided clean')
