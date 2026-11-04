@@ -1,5 +1,9 @@
 # Verityn  -  A STEM laboratory for thinking first
 
+Built for the Meta Global AI Developer Hackathon (Push the Frontier
+track statement), Oct 26 - Nov 4, 2026. Every commit is in-event;
+no pre-existing product or codebase. Solo entrant.
+
 Verityn is an evidence-first learning platform for **Science, Technology,
 Engineering, and Mathematics**. Its purpose is broader than any one subject:
 learners make a prediction, build or interpret a model, test it against

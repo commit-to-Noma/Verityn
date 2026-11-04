@@ -8,6 +8,9 @@ tree; unchecked items need the human owner (recording, upload).
 - [x] Backend tests pass (647).
 - [x] Frontend tests pass (627).
 - [x] Lint clean (0 errors; 16 pre-existing warnings).
+- [x] New work only: first commit Oct 26 (kickoff), all work Oct 26 -
+      Nov 4, no pre-existing code; stated in README.
+- [ ] Video states the hackathon scope (built Oct 26 - Nov 4).
 - [x] Production build clean.
 - [x] `scripts/smoke_live.py` passes (ladder + solo zero-coach).
 - [x] `scripts/smoke_browser.mjs` passes against a fresh backend
