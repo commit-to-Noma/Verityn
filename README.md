@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)
 ![Node 20+](https://img.shields.io/badge/node-20+-green)
+![React + Vite](https://img.shields.io/badge/frontend-react%20%2B%20vite-61DAFB)
+![Flask](https://img.shields.io/badge/backend-flask-lightgrey)
 
 Built for the Meta Global AI Developer Hackathon (Indie track,
 Build for Your World problem statement), Oct 26 - Nov 4, 2026.
@@ -11,11 +13,18 @@ Every commit is in-event; no pre-existing product or codebase.
 Solo entrant.
 
 **Live app:** https://verityn-9sqj.vercel.app
-**Demo video:** (paste the link here before submitting)
+
+[![Verityn 3-minute demo](https://img.youtube.com/vi/MRwITo-nEOs/hqdefault.jpg)](https://youtu.be/MRwITo-nEOs)
+
+*Watch: the 3-minute hackathon demo (https://youtu.be/MRwITo-nEOs)*
 
 | Hub: four disciplines, circuits live first | Guided Lab: prediction vs measured truth |
 |---|---|
 | ![Verityn Hub](docs/images/hub.png) | ![Reality Check result](docs/images/reality-check.png) |
+
+| Experiment Bay: sweep it until it pops | Reality Lens: sketch in, measured circuit out |
+|---|---|
+| ![Experiment Bay explosion](docs/images/bay.png) | ![Reality Lens tested](docs/images/lens.png) |
 
 ```mermaid
 flowchart LR
@@ -29,6 +38,23 @@ flowchart LR
   SO --> E[Evidence Journey]
   I[Vision proposes] --> CF[Learner confirms] --> S
 ```
+
+## Contents
+
+- [Why Verityn](#why-verityn)
+- [Features](#features)
+- [Smart details](#smart-details)
+- [Deliberately out of scope](#deliberately-out-of-scope)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Coach providers](#coach-providers)
+- [Launch](#launch)
+- [Checks](#checks)
+- [Deploy](#deploy)
+- [Built with Meta](#built-with-meta)
+- [Notes](#notes)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
 
 Verityn is an evidence-first learning platform for **Science, Technology,
 Engineering, and Mathematics**. Its purpose is broader than any one subject:
