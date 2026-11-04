@@ -48,6 +48,8 @@ Solo entrant: Nomathemba Ncube.
 ## Contents
 
 - [60-second tour](#60-second-tour)
+- [Where to look](#where-to-look)
+- [Built with Meta](#built-with-meta)
 - [Why Verityn](#why-verityn)
 - [Features](#features)
 - [Smart details](#smart-details)
@@ -58,20 +60,17 @@ Solo entrant: Nomathemba Ncube.
 - [Launch](#launch)
 - [Checks](#checks)
 - [Deploy](#deploy)
-- [Built with Meta](#built-with-meta)
 - [Notes](#notes)
 - [Contributing](#contributing)
 - [Troubleshooting](#troubleshooting)
 
 Verityn is an evidence-first learning platform for **Science, Technology,
-Engineering, and Mathematics**. Its purpose is broader than any one subject:
-learners make a prediction, build or interpret a model, test it against
+Engineering, and Mathematics**. Learners make a prediction, build or interpret a model, test it against
 evidence, and explain what they observe.
 
-**Engineering circuits are the first live module**, not the definition of the
-platform. The guided circuit lab demonstrates Verityn's learning loop today;
-Science, Technology, and Mathematics are future learning pathways, clearly
-labelled as such in the interface.
+**Engineering circuits are the first live module.** Science, Technology,
+and Mathematics are future learning pathways, clearly labelled as such
+in the interface.
 
 The system keeps reasoning and measurement distinct: a deterministic
 modified-nodal-analysis solver establishes circuit ground truth, while Muse
@@ -97,6 +96,17 @@ On the [live app](https://verityn-9sqj.vercel.app), no key needed:
 6. (0:50) Build the second-bulb Solo circuit with the coach off,
    or detonate the Time Bomb in the Experiment Bay.
 
+## Where to look
+
+- Try it now: the [live app](https://verityn-9sqj.vercel.app) plus the
+  [60-second tour](#60-second-tour) above. No key needed.
+- Meta usage proof: [Built with Meta](#built-with-meta), the in-app
+  Trace drawer, and the [demo video](https://youtu.be/MRwITo-nEOs).
+- How it works: the diagram at the top, then `docs/ARCHITECTURE.md`.
+- Test evidence: [Checks](#checks) and [Smart details](#smart-details).
+- Honest limits: [Deliberately out of scope](#deliberately-out-of-scope).
+- Run it yourself: [Setup](#setup) and [Launch](#launch).
+
 ## Why Verityn
 
 Answers are everywhere; understanding is not. Verityn brings back
@@ -107,7 +117,59 @@ bulbs safely, watch what the simulator measures, then ask why. Wrong
 answers are data, not verdicts, and every Spark reply is checked
 against the solver's numbers before the learner sees it.
 
+Five beliefs shape every screen:
+
+1. **Thinking stays human.** AI can answer before a learner has
+   time to think, so learners predict first; a coach guides and
+   the solver checks.
+2. **Practice should not depend on a lab bench.** Build, reset,
+   and retry safely in the browser.
+3. **Diagrams should not stay static.** Turn diagrams into models
+   you can review and test.
+4. **A wrong answer should teach something.** Compare predictions
+   with results and learn what changed.
+5. **Curiosity needs room to play.** Wire anything, blow bulbs
+   safely, then ask why.
+
+## Built with Meta
+
+| Tool | Used for | Evidence |
+|---|---|---|
+| Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Trace and validation notes](./docs/INTELLIGENCE_LOG.md) |
+| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, Solo, and the Finale reflection | [Voice API notes](./docs/ARCHITECTURE.md) |
+| Segment Anything Model 3.1 (SAM 3.1) | Sample only; taps select saved segments, no live inference | [Sample probe results](./docs/sam-spike-results.json) |
+
+Pointer and Demonstration are deterministic by design, not model calls. SAM 3.1 is
+sample-only; no live SAM 3.1 inference is used.
+Browser speech playback is browser-native, not Meta text-to-speech.
+Provider labels and trace rows
+identify the provider that actually served each response.
+
 ## Features
+
+- **Guided Lab.** Predict before testing, repair and test the
+  circuit, meet the open-switch contradiction, earn Solo through
+  a spoken reply, then build a fresh circuit with the coach off.
+  Includes a 40-second presenter mode that plays the journey
+  through the real UI.
+- **Experiment Bay.** A free bench with starter presets, a
+  voltage sweep rig with gauge and replay, bulbs that overwork
+  and explode honestly, and mission prompts.
+- **Reality Lens.** Bring a photo or sketch, review the proposed
+  circuit beside your image, confirm before anything is measured.
+- **Muse Spark and Voice.** Socratic questions, grounded
+  explanations, and vision proposals from Spark; spoken replies
+  via Voice Transcribe. Every reply is checked against solver
+  numbers, with a labeled fallback when no key is set.
+- **Verityn Solver.** The deterministic circuit engine and claim
+  judge behind every measurement.
+- **Hub.** A four-discipline map with circuits live first, plus
+  a five-station turntable across the tools above.
+- **Across every tool.** Same-origin Flask API, full mocked-HTTP
+  test suites with lint and build gates, pinned dependencies.
+
+<details>
+<summary><strong>Full feature list</strong> - click to expand every detail</summary>
 
 - Guided lab: Predict → Build → Reality Check → Solo → Finale.
   The learner commits to a Yes / No / Not sure prediction with a
@@ -184,6 +246,8 @@ against the solver's numbers before the learner sees it.
   backend and frontend suites, lint, production build, plus
   `scripts/smoke_live.py` and `scripts/smoke_browser.mjs` end-to-end checks.
 - Pinned backend dependencies (`backend/requirements.txt`).
+
+</details>
 
 ## Smart details
 
@@ -322,20 +386,6 @@ deployed app needs no CORS config.
 3. Deploy. Coach sessions are per-instance memory, so rung order
    can reset if traffic spans fresh instances; single-user runs
    are unaffected. Full checklist: `docs/SUBMISSION.md`.
-
-## Built with Meta
-
-| Tool | Used for | Evidence |
-|---|---|---|
-| Muse Spark | R1 coach questions, solver-grounded explanation drafts, and Reality Lens vision proposals | [Trace and validation notes](./docs/INTELLIGENCE_LOG.md) |
-| Muse Voice Transcribe | Speech-to-text for Predict, Reality Check, Solo, and the Finale reflection | [Voice API notes](./docs/ARCHITECTURE.md) |
-| Segment Anything Model 3.1 (SAM 3.1) | Sample only; taps select saved segments, no live inference | [Sample probe results](./docs/sam-spike-results.json) |
-
-Pointer and Demonstration are deterministic by design, not model calls. SAM 3.1 is
-sample-only; no live SAM 3.1 inference is used.
-Browser speech playback is browser-native, not Meta text-to-speech.
-Provider labels and trace rows
-identify the provider that actually served each response.
 
 ## Notes
 
