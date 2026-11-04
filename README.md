@@ -1,5 +1,10 @@
 # Verityn  -  A STEM laboratory for thinking first
 
+[![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://verityn-9sqj.vercel.app)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue)
+![Node 20+](https://img.shields.io/badge/node-20+-green)
+
 Built for the Meta Global AI Developer Hackathon (Indie track,
 Build for Your World problem statement), Oct 26 - Nov 4, 2026.
 Every commit is in-event; no pre-existing product or codebase.
@@ -7,6 +12,23 @@ Solo entrant.
 
 **Live app:** https://verityn-9sqj.vercel.app
 **Demo video:** (paste the link here before submitting)
+
+| Hub: four disciplines, circuits live first | Guided Lab: prediction vs measured truth |
+|---|---|
+| ![Verityn Hub](docs/images/hub.png) | ![Reality Check result](docs/images/reality-check.png) |
+
+```mermaid
+flowchart LR
+  P[Learner predicts] --> B[Build and test]
+  B --> S[Python MNA solver measures]
+  S --> Q[Muse Spark asks]
+  V[Muse Voice transcribes replies] --> Q
+  Q --> J[Code judges the reply]
+  J --> R[Reality Check verdict]
+  R --> SO[Solo: coach off, server enforced]
+  SO --> E[Evidence Journey]
+  I[Vision proposes] --> CF[Learner confirms] --> S
+```
 
 Verityn is an evidence-first learning platform for **Science, Technology,
 Engineering, and Mathematics**. Its purpose is broader than any one subject:
@@ -118,6 +140,9 @@ evidence verification before it reaches the learner.
 
 ## Smart details
 
+<details>
+<summary><strong>25 verified behaviors</strong> - click to expand the full table</summary>
+
 | Behavior | Where to see it | Test or trace |
 |---|---|---|
 | Spoken correction of a choice | Predict, Reality Check, and Solo | [Spoken prediction tests](./frontend/src/voice/spokenPrediction.test.ts) |
@@ -144,6 +169,8 @@ evidence verification before it reaches the learner.
 | Voice transcripts are cleaned for display; raw text stays in Trace | Why boxes, Journey, and Trace drawer | [Transcript tests](./frontend/src/voice/displayTranscript.test.ts) |
 | Journey progress highlights Recap on the recap page | Guided Lab header | [Stage tests](./frontend/src/journey/stages.test.ts) |
 | Saved Reality Lens segments are tappable with SAM 3.1 provenance | Sample diagrams | [Sample segment tests](./frontend/src/lens/sampleSegments.test.ts) |
+
+</details>
 
 ## Deliberately out of scope
 
@@ -268,6 +295,14 @@ identify the provider that actually served each response.
   `LoaderCircle`); the spec doc predates the rename.
 - The UI font stack lists Space Grotesk / JetBrains Mono first with system
   fallbacks; the fontsource packages arrive with the first real screens.
+
+## Contributing
+
+PRs welcome. Set up with `## Setup`, then run the `## Checks`
+before pushing: frontend tests, production build, backend tests.
+The suites mock all model HTTP, so contributing costs no API
+credits. Keep solver physics and coach wording in their separate
+layers: the model proposes, code decides.
 
 ## Troubleshooting
 
