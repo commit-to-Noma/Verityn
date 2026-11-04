@@ -5,6 +5,9 @@ Build for Your World problem statement), Oct 26 - Nov 4, 2026.
 Every commit is in-event; no pre-existing product or codebase.
 Solo entrant.
 
+**Live app:** https://verityn-9sqj.vercel.app
+**Demo video:** (paste the link here before submitting)
+
 Verityn is an evidence-first learning platform for **Science, Technology,
 Engineering, and Mathematics**. Its purpose is broader than any one subject:
 learners make a prediction, build or interpret a model, test it against
@@ -79,7 +82,7 @@ evidence verification before it reaches the learner.
 - Guided demo: `Play the guided demo` performs the whole
   journey through the real UI in ~40 seconds (pause, resume,
   skip, exit, replay, manual takeover). This is the recording
-  path for the 60–90 second video.
+  path for the 3-minute video.
 - STEM homepage: a selectable four-discipline orbital map with
   Engineering circuits marked as the first live module, plus an
   interactive five-station turntable (Guided Lab, Experiment Bay,
