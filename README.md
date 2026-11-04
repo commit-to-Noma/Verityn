@@ -7,10 +7,11 @@
 ![React + Vite](https://img.shields.io/badge/frontend-react%20%2B%20vite-61DAFB)
 ![Flask](https://img.shields.io/badge/backend-flask-lightgrey)
 
-Built for the Meta Global AI Developer Hackathon (Indie track,
-Build for Your World problem statement), Oct 26 - Nov 4, 2026.
-Every commit is in-event; no pre-existing product or codebase.
-Solo entrant.
+> AI should not make students regress. Verityn has them predict first,
+> tests the idea against a simulator, and then takes the coach away.
+
+Built from my own second year of computer science, when I realised
+I could not recall my course material ahead of internship interviews.
 
 **Live app:** https://verityn-9sqj.vercel.app
 
@@ -39,8 +40,14 @@ flowchart LR
   I[Vision proposes] --> CF[Learner confirms] --> S
 ```
 
+Built for the Meta Global AI Developer Hackathon (Indie track,
+Build for Your World problem statement), Oct 26 - Nov 4, 2026.
+Every commit is in-event; no pre-existing product or codebase.
+Solo entrant: Nomathemba Ncube.
+
 ## Contents
 
+- [60-second tour](#60-second-tour)
 - [Why Verityn](#why-verityn)
 - [Features](#features)
 - [Smart details](#smart-details)
@@ -67,13 +74,28 @@ Science, Technology, and Mathematics are future learning pathways, clearly
 labelled as such in the interface.
 
 The system keeps reasoning and measurement distinct: a deterministic
-modified-nodal-analysis solver establishes circuit ground truth, while Meta
-Muse Spark guides Socratic reasoning. It is not a chatbot tutor: there is no
+modified-nodal-analysis solver establishes circuit ground truth, while Muse
+Spark guides Socratic reasoning. It is not a chatbot tutor: there is no
 open chat, predictions are constrained, verdicts are derived server-side, the
 model never touches physics, and Solo removes AI assistance entirely. Model
-outputs are proposals and pass grounded evidence verification before reaching
-the learner. See `docs/` for the architecture, UI spec, product plan, and test
-plan.
+outputs are proposals: every Spark reply is checked against the solver's
+numbers before the learner sees it, and vision proposals wait for the
+learner's confirm. See `docs/` for the architecture, UI spec, product plan,
+and test plan.
+
+## 60-second tour
+
+On the [live app](https://verityn-9sqj.vercel.app), no key needed:
+
+1. (0:00) Spin the Hub turntable, then start the Guided Lab.
+2. (0:10) Predict No with the reason `The circuit has a gap.`
+3. (0:20) Connect the loose terminals, test: 0.6 A, 3.6 W, bulb lit.
+4. (0:30) Reality Check: predict Yes, test with the switch open:
+   0 A, 0 W, prediction did not match.
+5. (0:40) Reply `I would close the switch to complete the loop.`
+   Solo unlocks.
+6. (0:50) Build the second-bulb Solo circuit with the coach off,
+   or detonate the Time Bomb in the Experiment Bay.
 
 ## Why Verityn
 
@@ -82,8 +104,8 @@ creativity and curiosity to science class: the Guided Lab makes
 learners think first and test against evidence, and the Experiment Bay
 gives them a bench for joyful messing about - wire anything, blow
 bulbs safely, watch what the simulator measures, then ask why. Wrong
-answers are data, not verdicts, and every model claim passes grounded
-evidence verification before it reaches the learner.
+answers are data, not verdicts, and every Spark reply is checked
+against the solver's numbers before the learner sees it.
 
 ## Features
 
@@ -96,7 +118,7 @@ evidence verification before it reaches the learner.
 - Socratic coach ladder: one Question grounded in the measured
   numbers, a Pointer citing the 0.0 A open-switch discrepancy, and a
   Demonstration confirmation. Served
-  by Meta Muse Spark when a key is configured, otherwise by the
+  by Muse Spark when a key is configured, otherwise by the
   labeled deterministic fallback. Eligibility is derived
   server-side; Solo makes zero coach calls, enforced by the
   backend as well as the UI.
@@ -105,7 +127,7 @@ evidence verification before it reaches the learner.
   applies, re-solves, and offers Undo. Invalid actions never
   mutate state.
 - Reality Lens: drop, paste, or upload a schematic or photo (or use a
-  sample); Meta Spark Vision proposes components, wire traces,
+  sample); Muse Spark vision proposes components, wire traces,
   connections, polarity, and provenance; the learner reviews
   the original beside the editable replica in Compare mode and must confirm
   before the solver runs. `needs_review` and `unsupported`
@@ -127,22 +149,21 @@ evidence verification before it reaches the learner.
   explosion latch  -  12 V stays intact, 18 V measures 1.8 A /
   32.4 W overworked, past 18 V explodes at 0.0 A on the run
   itself, reset restores intact.
-- Guided demo: `Play the guided demo` performs the whole
-  journey through the real UI in ~40 seconds (pause, resume,
-  skip, exit, replay, manual takeover). This is the recording
-  path for the 3-minute video.
+- Presenter mode: `Play the guided demo` plays the whole
+  journey through the real UI in about 40 seconds (pause,
+  resume, skip, exit, replay, manual takeover).
 - STEM homepage: a selectable four-discipline orbital map with
   Engineering circuits marked as the first live module, plus an
   interactive five-station turntable (Guided Lab, Experiment Bay,
-  Reality Lens, Meta Muse Spark, Verityn Solver). The existing
+  Reality Lens, Muse Spark, Verityn Solver). The existing
   side-arrow, keyboard, screen-reader, reduced-motion, and
   no-auto-rotation interactions are preserved.
 - Voice (optional, never required): tap-to-talk coach replies and a
-  microphone in every Why box and the Finale reflection. Meta Muse Voice Transcribe turns each
+  microphone in every Why box and the Finale reflection. Muse Voice Transcribe turns each
   recording into editable text; a clear spoken answer pre-selects the
   matching choice but never submits. Spoken coach playback is browser
   speech synthesis, defaults off, and uses a ranked English browser voice
-  with short sentence pauses (Meta Muse Voice Transcribe is not text-to-speech).
+  with short sentence pauses (Muse Voice Transcribe is not text-to-speech).
   Voice capture stops after 1.5 seconds of silence; stage timings are shown
   in Coach Dock for the current session.
   Typing and manual lab controls remain available.
@@ -239,7 +260,7 @@ npm install
 ## Coach providers
 
 Coaching defaults to fixed fake templates (no network, no key needed).
-To use Meta Spark with template fallback, export `MODEL_API_KEY` in the
+To use Muse Spark with template fallback, export `MODEL_API_KEY` in the
 backend's shell (e.g. `export MODEL_API_KEY=...`), then start the
 backend normally; recorded predictions and Why text are sent to the
 Meta Model API only in that mode. The backend auto-loads an untracked
@@ -273,6 +294,10 @@ The status badge reads “Simulator ready” when both servers run; stop the
 backend and it shows the error state with a retry button.
 
 ## Checks
+
+Last full run: 647 backend passed, 627 frontend passed, lint clean,
+`tsc -b` and production build clean, browser smoke passed
+(docs-only changes since).
 
 ```sh
 cd frontend && npm test         # frontend unit tests (vitest)
